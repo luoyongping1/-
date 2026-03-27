@@ -6,54 +6,53 @@
     <title>AI 小手机 - 增强版</title>
     <style>
         /* --- 手机全屏容器设置 --- */
+        body {
+            margin: 0;
+            padding: 0;
+            display: block; 
+            min-height: 100vh;
+            background-color: #000; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-color);
+            overflow: hidden; 
+        }
 
-body {
-    margin: 0;
-    padding: 0;
-    display: block; 
-    min-height: 100vh;
-    background-color: #000; 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: var(--text-color);
-    overflow: hidden; 
-}
+        .phone-container {
+            width: 100%;        
+            height: 100vh;      
+            background: var(--bg-color);
+            border: none;       
+            border-radius: 0;   
+            position: relative;
+            overflow: hidden;
+            box-shadow: none;   
+            background-size: cover;
+            background-position: center;
+            background-image: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=1000');
+        }
 
-.phone-container {
-    width: 100%;        
-    height: 100vh;      
-    background: var(--bg-color);
-    border: none;       
-    border-radius: 0;   
-    position: relative;
-    overflow: hidden;
-    box-shadow: none;   
-    background-size: cover;
-    background-position: center;
-    background-image: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=1000');
-}
-
-.content {
-    position: relative;
-    z-index: 2;
-    padding: 40px 20px 20px 20px; 
-    height: calc(100% - 60px);   
-    display: flex;
-    flex-direction: column;
-}
+        .content {
+            position: relative;
+            z-index: 2;
+            padding: 40px 20px 20px 20px; 
+            height: calc(100% - 60px);   
+            display: flex;
+            flex-direction: column;
+        }
 
         :root {
             --bg-color: #1a1a1a;
             --glass-bg: rgba(255, 255, 255, 0.1);
             --text-color: #ffffff;
             --accent-color: #ff6b6b;
+            --blue-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
 
-        /* 修改：去掉背景遮罩的暗色和模糊 */
         .overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0); /* 改为完全透明 */
-            backdrop-filter: none;      /* 去掉模糊 */
+            background: rgba(0,0,0,0);
+            backdrop-filter: none;
             z-index: 1;
         }
 
@@ -65,7 +64,6 @@ body {
         /* 主栅格 */
         .main-grid { display: flex; gap: 15px; flex: 1; }
 
-        /* 左侧透明小组件 */
         .left-widget {
             width: 140px;
             height: 140px;
@@ -135,7 +133,7 @@ body {
         
         .setting-group { margin-bottom: 15px; }
         label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
-        input, select {
+        input, select, textarea {
             width: 100%; padding: 12px; background: #333; border: 1px solid #444;
             color: white; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px;
         }
@@ -143,26 +141,79 @@ body {
             width: 100%; padding: 12px; background: var(--accent-color);
             border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px;
         }
-        .fetch-group { display: flex; gap: 10px; }
-        .fetch-group button { flex-shrink: 0; width: 100px; background: #555; }
+
+        /* --- 新增：菱形悬浮球 --- */
+        #floating-ball {
+            position: absolute;
+            width: 45px; height: 45px;
+            background: var(--blue-gradient);
+            z-index: 200;
+            display: none; /* 初始隐藏 */
+            cursor: move;
+            transform: rotate(45deg); /* 菱形效果 */
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.5);
+            border: 2px solid rgba(255,255,255,0.3);
+            touch-action: none;
+        }
+        #floating-ball::after {
+            content: "✕";
+            position: absolute;
+            transform: rotate(-45deg);
+            top: 10px; left: 14px;
+            color: white; font-weight: bold; font-size: 16px;
+        }
 
         /* App 启动层 */
         #app-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 100; display: none;
         }
-        .close-app-btn {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; color: white;
-            z-index: 101; cursor: pointer; border: 1px solid rgba(255,255,255,0.3);
+
+        /* --- 世界书页面样式 --- */
+        #worldbook-app {
+            width: 100%; height: 100%; background: #1a1a1a;
+            display: flex; flex-direction: column; color: white;
+        }
+        .wb-header {
+            padding: 50px 20px 10px; background: #222;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .wb-search {
+            flex: 1; padding: 8px 15px; border-radius: 20px;
+            border: none; background: #333; color: white; outline: none;
+        }
+        .wb-add-icon {
+            font-size: 24px; color: #4facfe; cursor: pointer;
+        }
+        .wb-content { flex: 1; overflow-y: auto; padding: 10px 20px; }
+        
+        .wb-group { margin-bottom: 10px; border-radius: 10px; background: rgba(255,255,255,0.05); overflow: hidden; }
+        .wb-group-title {
+            padding: 12px 15px; background: rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; cursor: pointer;
+            font-weight: bold; font-size: 14px;
+        }
+        .wb-group-content { display: block; }
+        .wb-group-content.collapsed { display: none; }
+        
+        .wb-item {
+            padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 13px; display: flex; flex-direction: column;
+        }
+        .wb-item-name { color: #00f2fe; margin-bottom: 4px; }
+        .wb-item-text { color: #ccc; font-size: 12px; }
+
+        /* 添加/分组弹窗 */
+        #wb-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 150; display: none;
+            padding: 40px 20px; box-sizing: border-box;
         }
     </style>
 </head>
 <body>
 
     <div class="phone-container" id="phone-bg">
-        <!-- 遮罩层已改为全透明 -->
         <div class="overlay"></div>
         
         <div class="content">
@@ -186,9 +237,9 @@ body {
                 <!-- 右侧区域 -->
                 <div class="right-area">
                     <div class="app-icons">
-                        <div class="icon-btn">世界书</div>
-                        <!-- 修改这一行，添加 onclick 事件 -->
-<div class="icon-btn" onclick="openQQ()">QQ</div>
+                        <!-- 世界书入口 -->
+                        <div class="icon-btn" onclick="openWorldBook()">世界书</div>
+                        <div class="icon-btn" onclick="openQQ()">QQ</div>
                         <div></div> 
                         <div class="icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
                     </div>
@@ -212,10 +263,42 @@ body {
             </div>
         </div>
 
+        <!-- 悬浮球 -->
+        <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
+
         <!-- App 启动层 -->
         <div id="app-overlay">
-            <div class="close-app-btn" onclick="closeApp()">✕</div>
-            <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            <!-- 里面的动态内容 -->
+            <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+            
+            <!-- 世界书本地界面 -->
+            <div id="worldbook-app" style="display: none;">
+                <div class="wb-header">
+                    <input type="text" class="wb-search" id="wb-search-input" placeholder="搜索世界书..." oninput="renderWorldBook()">
+                    <div class="wb-add-icon" onclick="showWbModal()">+</div>
+                </div>
+                <div class="wb-content" id="wb-list-container">
+                    <!-- 列表内容通过JS加载 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 世界书添加弹窗 -->
+        <div id="wb-modal">
+            <h3 style="margin-top:0">添加新书籍</h3>
+            <label>书籍名称</label>
+            <input type="text" id="new-wb-title" placeholder="输入名称">
+            <label>内容</label>
+            <textarea id="new-wb-content" rows="4" placeholder="输入内容"></textarea>
+            <label>选择/新增分组</label>
+            <div style="display:flex; gap:10px;">
+                <select id="wb-group-select" style="flex:1"></select>
+                <button class="set-btn" onclick="addNewGroup()">+</button>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="action-btn" style="background:#555" onclick="closeWbModal()">取消</button>
+                <button class="action-btn" onclick="saveNewBook()">保存</button>
+            </div>
         </div>
 
         <!-- 设置面板 -->
@@ -224,36 +307,32 @@ body {
                 <h3 id="panel-title">设置</h3>
                 <span style="cursor:pointer" onclick="closeSettings()">✕</span>
             </div>
-
             <div id="api-inputs" style="display:none">
                 <div class="setting-group">
-                    <label>API URL (例如: https://api.openai.com/v1)</label>
-                    <input type="text" id="api-url" placeholder="请输入 API 地址">
+                    <label>API URL</label>
+                    <input type="text" id="api-url" placeholder="https://api.openai.com/v1">
                 </div>
                 <div class="setting-group">
-                    <label>API 密钥 (Secret Key)</label>
-                    <input type="password" id="api-key" placeholder="请输入 Key">
+                    <label>API 密钥</label>
+                    <input type="password" id="api-key" placeholder="Key">
                 </div>
                 <div class="setting-group">
                     <label>模型选择</label>
-                    <div class="fetch-group">
-                        <select id="model-select">
-                            <option value="">请先拉取模型</option>
-                        </select>
-                        <button class="set-btn" onclick="fetchModels()">拉取模型</button>
+                    <div style="display:flex; gap:10px">
+                        <select id="model-select"><option value="">请先拉取</option></select>
+                        <button class="set-btn" onclick="fetchModels()">拉取</button>
                     </div>
                 </div>
                 <button class="action-btn" onclick="saveApiSettings()">保存配置</button>
             </div>
-
             <div id="appearance-inputs" style="display:none">
                 <div class="setting-group">
                     <label>修改手机背景图</label>
-                    <input type="file" id="phone-bg-input" accept="image/*" onchange="previewImage(this, 'phone-bg')">
+                    <input type="file" accept="image/*" onchange="previewImage(this, 'phone-bg')">
                 </div>
                 <div class="setting-group">
                     <label>修改左侧组件背景图</label>
-                    <input type="file" id="widget-bg-input" accept="image/*" onchange="previewImage(this, 'custom-widget')">
+                    <input type="file" accept="image/*" onchange="previewImage(this, 'custom-widget')">
                 </div>
                 <button class="action-btn" onclick="saveAppearance()">保存外观</button>
             </div>
@@ -261,34 +340,150 @@ body {
     </div>
 
     <script>
+        // --- 悬浮球拖拽逻辑 ---
+        let ball = document.getElementById('floating-ball');
+        let isDragging = false;
+        function startDrag(e) {
+            isDragging = false;
+            let startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            let startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            let shiftX = startX - ball.getBoundingClientRect().left;
+            let shiftY = startY - ball.getBoundingClientRect().top;
+
+            function moveAt(pageX, pageY) {
+                isDragging = true;
+                ball.style.left = pageX - shiftX + 'px';
+                ball.style.top = pageY - shiftY + 'px';
+            }
+
+            function onMouseMove(e) {
+                let pX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                let pY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+                moveAt(pX, pY);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('touchmove', onMouseMove);
+
+            document.onmouseup = document.ontouchend = function() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('touchmove', onMouseMove);
+                document.onmouseup = null;
+                document.ontouchend = null;
+            };
+        }
+
+        // --- App 控制逻辑 ---
         function openQQ() {
-    // 确保这里的文字和你在第二步创建的文件名一模一样
-    document.getElementById('app-frame').src = "qq.html"; 
-    document.getElementById('app-overlay').style.display = "block";
-}
+            showAppFrame("qq.html");
+        }
         function openApp() {
-            document.getElementById('app-frame').src = "书书小红书.html"; 
+            showAppFrame("书书小红书.html");
+        }
+        function showAppFrame(url) {
             document.getElementById('app-overlay').style.display = "block";
+            document.getElementById('app-frame').style.display = "block";
+            document.getElementById('app-frame').src = url;
+            showBall();
         }
-
+        function openWorldBook() {
+            document.getElementById('app-overlay').style.display = "block";
+            document.getElementById('worldbook-app').style.display = "flex";
+            renderWorldBook();
+            showBall();
+        }
+        function showBall() {
+            ball.style.display = "block";
+            ball.style.left = "80%"; ball.style.top = "80%"; // 初始位置
+        }
         function closeApp() {
+            if(isDragging) return; // 拖拽时不触发关闭
             document.getElementById('app-overlay').style.display = "none";
-            document.getElementById('app-frame').src = ""; 
+            document.getElementById('app-frame').src = "";
+            document.getElementById('app-frame').style.display = "none";
+            document.getElementById('worldbook-app').style.display = "none";
+            ball.style.display = "none";
         }
 
+        // --- 世界书数据与逻辑 ---
+        let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
+
+        function renderWorldBook() {
+            const container = document.getElementById('wb-list-container');
+            const searchTerm = document.getElementById('wb-search-input').value.toLowerCase();
+            container.innerHTML = "";
+
+            wbData.groups.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = "wb-group";
+                
+                const filteredBooks = wbData.books.filter(b => b.group === group && b.title.toLowerCase().includes(searchTerm));
+                
+                groupDiv.innerHTML = `
+                    <div class="wb-group-title" onclick="toggleGroup(this)">
+                        <span>📁 ${group}</span>
+                        <span>${filteredBooks.length}</span>
+                    </div>
+                    <div class="wb-group-content">
+                        ${filteredBooks.map(b => `
+                            <div class="wb-item">
+                                <div class="wb-item-name">${b.title}</div>
+                                <div class="wb-item-text">${b.content}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(groupDiv);
+            });
+        }
+
+        function toggleGroup(el) {
+            el.nextElementSibling.classList.toggle('collapsed');
+        }
+
+        function showWbModal() {
+            document.getElementById('wb-modal').style.display = "block";
+            const select = document.getElementById('wb-group-select');
+            select.innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+        }
+
+        function closeWbModal() {
+            document.getElementById('wb-modal').style.display = "none";
+        }
+
+        function addNewGroup() {
+            const name = prompt("请输入新分组名称:");
+            if(name && !wbData.groups.includes(name)) {
+                wbData.groups.push(name);
+                showWbModal();
+            }
+        }
+
+        function saveNewBook() {
+            const title = document.getElementById('new-wb-title').value;
+            const content = document.getElementById('new-wb-content').value;
+            const group = document.getElementById('wb-group-select').value;
+            if(!title) return alert("请输入标题");
+            wbData.books.push({ title, content, group });
+            localStorage.setItem('wb_data', JSON.stringify(wbData));
+            closeWbModal();
+            renderWorldBook();
+            document.getElementById('new-wb-title').value = "";
+            document.getElementById('new-wb-content').value = "";
+        }
+
+        // --- 原有逻辑保留 ---
         function updateTime() {
             const now = new Date();
             const weeks = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
             document.getElementById('date-display').innerText = `${now.getMonth()+1}月${now.getDate()}日 ${weeks[now.getDay()]}`;
             document.getElementById('clock-display').innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
             const start = new Date(now.getFullYear(), 0, 1);
             const end = new Date(now.getFullYear() + 1, 0, 1);
             const totalDays = (end - start) / 86400000;
             const remainDays = Math.ceil((end - now) / 86400000);
             document.getElementById('year-days').innerText = remainDays;
             document.getElementById('year-bar').style.width = (remainDays / totalDays * 100) + "%";
-
             const passedSecs = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
             const dayPercent = Math.floor(((86400 - passedSecs) / 86400) * 100);
             document.getElementById('day-percent').innerText = dayPercent;
