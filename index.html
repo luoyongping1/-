@@ -91,20 +91,24 @@
         }
         #battery-fill { height: 100%; background: #4cd137; width: 50%; border-radius: 2px; transition: width 0.5s; }
 
-        /* 右侧图标布局 */
+        /* 右侧图标布局优化 */
         .right-area { flex: 1; display: flex; flex-direction: column; gap: 10px; }
         .app-icons { 
             display: grid; 
-            grid-template-columns: 45px 45px; 
+            grid-template-columns: 65px 65px; /* 宽度增加 */
             grid-gap: 10px; 
             justify-content: end; 
         }
         .icon-btn {
-            width: 45px; height: 45px; background: var(--glass-bg);
-            border-radius: 12px; display: flex; justify-content: center;
-            align-items: center; font-size: 10px; backdrop-filter: blur(10px);
+            width: 65px; height: 65px; /* 高度增加 */
+            background: var(--glass-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px; display: flex; justify-content: center;
+            align-items: center; font-size: 11px; backdrop-filter: blur(10px);
             cursor: pointer; text-align: center; line-height: 1.2;
+            color: white; font-weight: 500;
         }
+        .icon-btn:active { transform: scale(0.95); }
 
         .progress-widgets { margin-top: auto; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
         .progress-item {
@@ -114,17 +118,10 @@
         .bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.2); margin-top: 5px; border-radius: 2px; }
         .bar-fill { height: 100%; background: var(--accent-color); border-radius: 2px; }
 
-        /* 设置栏 */
-        .settings-bar { margin-top: 20px; display: flex; gap: 10px; }
-        .set-btn {
-            background: rgba(255,255,255,0.15); border: none; color: white;
-            padding: 8px 15px; border-radius: 15px; font-size: 12px; cursor: pointer;
-        }
-
         /* 设置面板 */
         #settings-panel {
             position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%;
-            background: #222; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #1c1c1e; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border-top-left-radius: 30px; border-top-right-radius: 30px;
             padding: 20px; box-sizing: border-box; overflow-y: auto;
         }
@@ -134,23 +131,23 @@
         .setting-group { margin-bottom: 15px; }
         label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
         input, select, textarea {
-            width: 100%; padding: 12px; background: #333; border: 1px solid #444;
-            color: white; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px;
+            width: 100%; padding: 12px; background: #2c2c2e; border: 1px solid #3a3a3c;
+            color: white; border-radius: 10px; box-sizing: border-box; margin-bottom: 10px;
         }
         .action-btn {
             width: 100%; padding: 12px; background: var(--accent-color);
-            border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px;
+            border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 5px;
         }
 
-        /* --- 新增：菱形悬浮球 --- */
+        /* --- 菱形悬浮球 --- */
         #floating-ball {
             position: absolute;
             width: 45px; height: 45px;
             background: var(--blue-gradient);
             z-index: 200;
-            display: none; /* 初始隐藏 */
+            display: none; 
             cursor: move;
-            transform: rotate(45deg); /* 菱形效果 */
+            transform: rotate(45deg); 
             box-shadow: 0 4px 15px rgba(79, 172, 254, 0.5);
             border: 2px solid rgba(255,255,255,0.3);
             touch-action: none;
@@ -240,8 +237,10 @@
                         <!-- 世界书入口 -->
                         <div class="icon-btn" onclick="openWorldBook()">世界书</div>
                         <div class="icon-btn" onclick="openQQ()">QQ</div>
-                        <div></div> 
                         <div class="icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
+                        <!-- 新增 App 入口 -->
+                        <div class="icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2);">外观</div>
+                        <div class="icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1);">设置</div>
                     </div>
                     
                     <div class="progress-widgets">
@@ -256,11 +255,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="settings-bar">
-                <button class="set-btn" onclick="openSettings('appearance')">外观设置</button>
-                <button class="set-btn" onclick="openSettings('api')">API设置</button>
-            </div>
         </div>
 
         <!-- 悬浮球 -->
@@ -268,17 +262,14 @@
 
         <!-- App 启动层 -->
         <div id="app-overlay">
-            <!-- 里面的动态内容 -->
             <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
             
-            <!-- 世界书本地界面 -->
             <div id="worldbook-app" style="display: none;">
                 <div class="wb-header">
                     <input type="text" class="wb-search" id="wb-search-input" placeholder="搜索世界书..." oninput="renderWorldBook()">
                     <div class="wb-add-icon" onclick="showWbModal()">+</div>
                 </div>
                 <div class="wb-content" id="wb-list-container">
-                    <!-- 列表内容通过JS加载 -->
                 </div>
             </div>
         </div>
@@ -293,7 +284,7 @@
             <label>选择/新增分组</label>
             <div style="display:flex; gap:10px;">
                 <select id="wb-group-select" style="flex:1"></select>
-                <button class="set-btn" onclick="addNewGroup()">+</button>
+                <button style="padding: 8px; border-radius: 8px; border:none; background:#444; color:white;" onclick="addNewGroup()">+</button>
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button class="action-btn" style="background:#555" onclick="closeWbModal()">取消</button>
@@ -301,12 +292,13 @@
             </div>
         </div>
 
-        <!-- 设置面板 -->
+        <!-- 设置面板 (现在作为外观和设置App的展示容器) -->
         <div id="settings-panel">
             <div class="panel-header">
                 <h3 id="panel-title">设置</h3>
-                <span style="cursor:pointer" onclick="closeSettings()">✕</span>
+                <span style="cursor:pointer; font-size: 20px;" onclick="closeSettings()">✕</span>
             </div>
+            <!-- API 设置内容 -->
             <div id="api-inputs" style="display:none">
                 <div class="setting-group">
                     <label>API URL</label>
@@ -320,11 +312,12 @@
                     <label>模型选择</label>
                     <div style="display:flex; gap:10px">
                         <select id="model-select"><option value="">请先拉取</option></select>
-                        <button class="set-btn" onclick="fetchModels()">拉取</button>
+                        <button style="padding: 8px; border-radius: 8px; border:none; background:#4facfe; color:white; font-size: 12px;" onclick="fetchModels()">拉取</button>
                     </div>
                 </div>
                 <button class="action-btn" onclick="saveApiSettings()">保存配置</button>
             </div>
+            <!-- 外观设置内容 -->
             <div id="appearance-inputs" style="display:none">
                 <div class="setting-group">
                     <label>修改手机背景图</label>
@@ -374,12 +367,8 @@
         }
 
         // --- App 控制逻辑 ---
-        function openQQ() {
-            showAppFrame("qq.html");
-        }
-        function openApp() {
-            showAppFrame("书书小红书.html");
-        }
+        function openQQ() { showAppFrame("qq.html"); }
+        function openApp() { showAppFrame("书书小红书.html"); }
         function showAppFrame(url) {
             document.getElementById('app-overlay').style.display = "block";
             document.getElementById('app-frame').style.display = "block";
@@ -394,10 +383,10 @@
         }
         function showBall() {
             ball.style.display = "block";
-            ball.style.left = "80%"; ball.style.top = "80%"; // 初始位置
+            ball.style.left = "80%"; ball.style.top = "85%";
         }
         function closeApp() {
-            if(isDragging) return; // 拖拽时不触发关闭
+            if(isDragging) return;
             document.getElementById('app-overlay').style.display = "none";
             document.getElementById('app-frame').src = "";
             document.getElementById('app-frame').style.display = "none";
@@ -407,18 +396,14 @@
 
         // --- 世界书数据与逻辑 ---
         let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
-
         function renderWorldBook() {
             const container = document.getElementById('wb-list-container');
             const searchTerm = document.getElementById('wb-search-input').value.toLowerCase();
             container.innerHTML = "";
-
             wbData.groups.forEach(group => {
                 const groupDiv = document.createElement('div');
                 groupDiv.className = "wb-group";
-                
                 const filteredBooks = wbData.books.filter(b => b.group === group && b.title.toLowerCase().includes(searchTerm));
-                
                 groupDiv.innerHTML = `
                     <div class="wb-group-title" onclick="toggleGroup(this)">
                         <span>📁 ${group}</span>
@@ -436,21 +421,13 @@
                 container.appendChild(groupDiv);
             });
         }
-
-        function toggleGroup(el) {
-            el.nextElementSibling.classList.toggle('collapsed');
-        }
-
+        function toggleGroup(el) { el.nextElementSibling.classList.toggle('collapsed'); }
         function showWbModal() {
             document.getElementById('wb-modal').style.display = "block";
             const select = document.getElementById('wb-group-select');
             select.innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
         }
-
-        function closeWbModal() {
-            document.getElementById('wb-modal').style.display = "none";
-        }
-
+        function closeWbModal() { document.getElementById('wb-modal').style.display = "none"; }
         function addNewGroup() {
             const name = prompt("请输入新分组名称:");
             if(name && !wbData.groups.includes(name)) {
@@ -458,7 +435,6 @@
                 showWbModal();
             }
         }
-
         function saveNewBook() {
             const title = document.getElementById('new-wb-title').value;
             const content = document.getElementById('new-wb-content').value;
@@ -472,7 +448,7 @@
             document.getElementById('new-wb-content').value = "";
         }
 
-        // --- 原有逻辑保留 ---
+        // --- 时间更新 ---
         function updateTime() {
             const now = new Date();
             const weeks = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -489,6 +465,21 @@
             document.getElementById('day-percent').innerText = dayPercent;
             document.getElementById('day-bar').style.width = dayPercent + "%";
         }
+
+        // --- 外观与配置逻辑 ---
+        function openSettings(type) {
+            document.getElementById('settings-panel').classList.add('active');
+            if(type === 'api') {
+                document.getElementById('panel-title').innerText = "系统设置";
+                document.getElementById('api-inputs').style.display = "block";
+                document.getElementById('appearance-inputs').style.display = "none";
+            } else {
+                document.getElementById('panel-title').innerText = "外观美化";
+                document.getElementById('api-inputs').style.display = "none";
+                document.getElementById('appearance-inputs').style.display = "block";
+            }
+        }
+        function closeSettings() { document.getElementById('settings-panel').classList.remove('active'); }
 
         function previewImage(input, targetId) {
             const file = input.files[0];
@@ -541,24 +532,9 @@
                 model: document.getElementById('model-select').value
             };
             localStorage.setItem('ai_config', JSON.stringify(config));
-            alert('API 配置已保存！');
+            alert('配置已保存！');
             closeSettings();
         }
-
-        function openSettings(type) {
-            document.getElementById('settings-panel').classList.add('active');
-            if(type === 'api') {
-                document.getElementById('panel-title').innerText = "API 设置";
-                document.getElementById('api-inputs').style.display = "block";
-                document.getElementById('appearance-inputs').style.display = "none";
-            } else {
-                document.getElementById('panel-title').innerText = "外观设置";
-                document.getElementById('api-inputs').style.display = "none";
-                document.getElementById('appearance-inputs').style.display = "block";
-            }
-        }
-
-        function closeSettings() { document.getElementById('settings-panel').classList.remove('active'); }
 
         window.onload = function() {
             const savedPhoneBg = localStorage.getItem('phone_bg_data');
