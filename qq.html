@@ -17,7 +17,7 @@
             --z-moments: 300;
             --z-sub-page: 400;
             --z-editor: 500;
-            --z-model-sel: 600; /* 模型选择页层级最高 */
+            --z-model-sel: 600; 
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, system-ui, sans-serif; background: var(--bg-gray); color: var(--text-main); overflow: hidden; }
@@ -42,6 +42,14 @@
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .info { flex: 1; min-width: 0; }
         .name { font-size: 16px; }
+
+        /* “我”页面头部样式 */
+        .me-header { background: white; padding: 40px 20px; display: flex; align-items: center; gap: 15px; }
+        .me-avatar { width: 64px; height: 64px; border-radius: 8px; background: #eee; overflow: hidden; flex-shrink: 0; cursor: pointer; }
+        .me-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .me-info { flex: 1; }
+        .me-name { font-size: 20px; font-weight: bold; margin-bottom: 5px; cursor: pointer; }
+        .me-wxid { font-size: 14px; color: var(--text-sub); cursor: pointer; }
 
         /* 层级管理 */
         #chat-page { z-index: var(--z-chat); }
@@ -86,11 +94,39 @@
     </div>
     <div id="tab-discover" class="page">
         <div class="header">发现</div>
-        <div class="content"><div class="list-group"><div class="list-item" onclick="openMoments()">🎡 朋友圈</div></div></div>
+        <div class="content">
+            <div class="list-group">
+                <div class="list-item" onclick="openMoments()">🎡 朋友圈</div>
+            </div>
+        </div>
     </div>
     <div id="tab-me" class="page">
-        <div class="header">我</div>
-        <div class="content"><div class="list-group"><div class="list-item" onclick="openApiConfig()"><div class="info">API 与模型设置</div><span>></span></div></div></div>
+        <div class="header"></div> <!-- 微信的我页面通常没有Header -->
+        <div class="content">
+            <div class="me-header">
+                <div class="me-avatar" id="my-avatar-display" onclick="changeMyAvatar()">
+                    <!-- 我的头像 -->
+                </div>
+                <div class="me-info">
+                    <div class="me-name" id="my-name-display" onclick="changeMyName()">我</div>
+                    <div class="me-wxid" id="my-wxid-display" onclick="changeMyWxid()">微信号：wxid_001</div>
+                </div>
+                <div style="color:#ccc">></div>
+            </div>
+
+            <div class="list-group">
+                <div class="list-item" onclick="alert('进入服务')"><span style="margin-right:15px;color:#07c160">💳</span>钱包</div>
+            </div>
+
+            <div class="list-group">
+                <div class="list-item" onclick="alert('进入收藏')"><span style="margin-right:15px;color:#ff6b6b">📦</span>收藏</div>
+                <div class="list-item" onclick="alert('进入表情')"><span style="margin-right:15px;color:#ffbe00">😊</span>表情</div>
+            </div>
+
+            <div class="list-group">
+                <div class="list-item" onclick="openApiConfig()"><div class="info"><span style="margin-right:15px;color:#4facfe">⚙️</span>API 与模型设置</div><span>></span></div>
+            </div>
+        </div>
     </div>
 
     <!-- 底部导航 -->
@@ -142,9 +178,7 @@
     <!-- 世界书选择页 -->
     <div id="worldbook-page" class="page">
         <div class="header"><span onclick="closeWorldBookSelector()">〈 返回</span><span>挂载世界书</span><span class="btn-green" onclick="saveWorldBookConfig()">完成</span></div>
-        <div class="content" id="worldbook-list-container">
-            <!-- 动态生成世界书列表 -->
-        </div>
+        <div class="content" id="worldbook-list-container"></div>
     </div>
 
     <!-- 朋友圈设置 -->
@@ -171,9 +205,7 @@
     <!-- 模型选择页 -->
     <div id="model-selector-page" class="page">
         <div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div>
-        <div class="content" id="model-list-container">
-            <!-- 动态生成模型列表 -->
-        </div>
+        <div class="content" id="model-list-container"></div>
     </div>
 
     <!-- API 设置 -->
@@ -212,8 +244,9 @@
         <textarea id="persona-input" style="width:100%; height:100%; border:none; padding:15px; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
     </div>
 
-    <!-- 隐藏的图片上传控件 -->
-    <input type="file" id="avatar-upload" style="display:none" accept="image/*" onchange="handleAvatarUpload(this)">
+    <!-- 图片上传容器 -->
+    <input type="file" id="avatar-upload" style="display:none" accept="image/*">
+    <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
 
     <script>
         // --- 核心数据 ---
@@ -222,13 +255,51 @@
         let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
         let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
         let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+        let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
 
         function saveData() {
             localStorage.setItem('qq_friends', JSON.stringify(friends));
             localStorage.setItem('qq_history', JSON.stringify(chatHistories));
             localStorage.setItem('qq_moments', JSON.stringify(moments));
             localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+            localStorage.setItem('my_info', JSON.stringify(myInfo));
         }
+
+        // --- “我”页面功能 ---
+        function renderMePage() {
+            document.getElementById('my-name-display').innerText = myInfo.name;
+            document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid;
+            const av = document.getElementById('my-avatar-display');
+            av.innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : `<div style="width:100%;height:100%;background:#ccc;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold">ME</div>`;
+        }
+
+        function changeMyName() {
+            const n = prompt("修改名字:", myInfo.name);
+            if(n) { myInfo.name = n; saveData(); renderMePage(); }
+        }
+
+        function changeMyWxid() {
+            const n = prompt("修改微信号:", myInfo.wxid);
+            if(n) { myInfo.wxid = n; saveData(); renderMePage(); }
+        }
+
+        function changeMyAvatar() {
+            const choice = confirm("点击确定：输入图片URL\n点击取消：从本地相册选择");
+            if (choice) {
+                const url = prompt("请输入图片URL:");
+                if (url) { myInfo.avatar = url; saveData(); renderMePage(); }
+            } else {
+                document.getElementById('my-avatar-upload').click();
+            }
+        }
+
+        document.getElementById('my-avatar-upload').onchange = function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => { myInfo.avatar = e.target.result; saveData(); renderMePage(); };
+                reader.readAsDataURL(this.files[0]);
+            }
+        };
 
         // --- 导航 ---
         function switchTab(tabId, el) {
@@ -238,56 +309,46 @@
             document.getElementById(tabId).classList.add('active');
             if(tabId === 'tab-chat') renderChatList();
             if(tabId === 'tab-contacts') renderContactList();
+            if(tabId === 'tab-me') renderMePage();
         }
 
-        // --- 头像修改功能 ---
+        // --- 头像修改功能 (好友) ---
         function changeAvatar() {
             const choice = confirm("点击确定：输入图片URL\n点击取消：从本地相册选择");
             if (choice) {
                 const url = prompt("请输入图片URL:");
                 if (url) {
                     const friend = friends.find(f => f.name === currentFriendName);
-                    friend.avatarUrl = url;
-                    saveData();
-                    updateSettingsAvatarDisplay(friend);
-                    renderChatList();
-                    renderContactList();
+                    friend.avatarUrl = url; saveData(); updateSettingsAvatarDisplay(friend); renderChatList(); renderContactList();
                 }
             } else {
                 document.getElementById('avatar-upload').click();
             }
         }
 
-        function handleAvatarUpload(input) {
-            if (input.files && input.files[0]) {
+        document.getElementById('avatar-upload').onchange = function() {
+            if (this.files && this.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = (e) => {
                     const friend = friends.find(f => f.name === currentFriendName);
-                    friend.avatarUrl = e.target.result;
-                    saveData();
-                    updateSettingsAvatarDisplay(friend);
-                    renderChatList();
-                    renderContactList();
+                    friend.avatarUrl = e.target.result; saveData(); updateSettingsAvatarDisplay(friend); renderChatList(); renderContactList();
                 };
-                reader.readAsDataURL(input.files[0]);
+                reader.readAsDataURL(this.files[0]);
             }
-        }
+        };
 
         function updateSettingsAvatarDisplay(friend) {
             const div = document.getElementById('settings-avatar');
-            if (friend.avatarUrl) {
-                div.innerHTML = `<img src="${friend.avatarUrl}">`;
-            } else {
-                div.innerHTML = friend.initial;
-            }
+            div.innerHTML = friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial;
         }
 
-        // --- 世界书挂载功能 ---
+        // --- 世界书挂载功能 (修复版) ---
         function openWorldBookSelector() {
             const friend = friends.find(f => f.name === currentFriendName);
             const mounted = friend.mountedBooks || [];
-            // 从 localStorage 获取世界书应用的数据（假设键名为 world_books）
-            const allBooks = JSON.parse(localStorage.getItem('world_books') || '[]');
+            // 关键修复：读取主页面的键名 'wb_data'
+            const wbData = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
+            const allBooks = wbData.books || [];
             
             const container = document.getElementById('worldbook-list-container');
             container.innerHTML = '';
@@ -306,12 +367,7 @@
                         </div>
                         <input type="checkbox" class="wb-checkbox" value="${book.title}" ${isChecked ? 'checked' : ''}>
                     `;
-                    div.onclick = (e) => {
-                        if(e.target.type !== 'checkbox') {
-                            const cb = div.querySelector('input');
-                            cb.checked = !cb.checked;
-                        }
-                    };
+                    div.onclick = (e) => { if(e.target.type !== 'checkbox') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
                     container.appendChild(div);
                 });
             }
@@ -319,16 +375,12 @@
         }
 
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
-
         function saveWorldBookConfig() {
             const friend = friends.find(f => f.name === currentFriendName);
             const checkboxes = document.querySelectorAll('.wb-checkbox');
             const selected = [];
             checkboxes.forEach(cb => { if(cb.checked) selected.push(cb.value); });
-            friend.mountedBooks = selected;
-            saveData();
-            alert("挂载成功！");
-            closeWorldBookSelector();
+            friend.mountedBooks = selected; saveData(); alert("挂载成功！"); closeWorldBookSelector();
         }
 
         // --- API & 模型选择逻辑 ---
@@ -349,13 +401,11 @@
             const url = document.getElementById('api-url').value.replace(/\/$/, "");
             const key = document.getElementById('api-key').value;
             if(!url || !key) return alert("请先填写地址和Key");
-            
             try {
                 const res = await fetch(`${url}/models`, { headers: { 'Authorization': `Bearer ${key}` }});
                 const data = await res.json();
-                if(data.data && Array.isArray(data.data)) {
-                    showModelSelector(data.data.map(m => m.id));
-                } else { alert("获取列表失败"); }
+                if(data.data && Array.isArray(data.data)) { showModelSelector(data.data.map(m => m.id)); }
+                else { alert("获取列表失败"); }
             } catch (e) {
                 const manual = prompt("拉取失败，请输入模型名:");
                 if(manual) { aiConfig.model = manual; document.getElementById('current-model-display').innerText = manual; }
@@ -366,22 +416,16 @@
             const container = document.getElementById('model-list-container');
             container.innerHTML = '';
             modelIds.forEach(id => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
+                const div = document.createElement('div'); div.className = 'list-item';
                 div.innerHTML = `<div class="info">${id}</div>${id === aiConfig.model ? '<span style="color:var(--wechat-green)">✔</span>' : ''}`;
-                div.onclick = () => {
-                    aiConfig.model = id;
-                    document.getElementById('current-model-display').innerText = id;
-                    saveData();
-                    closeModelSelector();
-                };
+                div.onclick = () => { aiConfig.model = id; document.getElementById('current-model-display').innerText = id; saveData(); closeModelSelector(); };
                 container.appendChild(div);
             });
             document.getElementById('model-selector-page').classList.add('active');
         }
         function closeModelSelector() { document.getElementById('model-selector-page').classList.remove('active'); }
 
-        // --- 朋友圈设置与强制发帖 ---
+        // --- 朋友圈设置 ---
         function openMomentsConfig() {
             const friend = friends.find(f => f.name === currentFriendName);
             const freq = friend.freq || 0;
@@ -392,17 +436,12 @@
         }
         function closeMomentsConfig() { document.getElementById('moments-config-page').classList.remove('active'); }
         function setFreq(v) { document.querySelector(`input[name="freq"][value="${v}"]`).checked = true; }
-        
         function saveMomentsConfig() {
             const friend = friends.find(f => f.name === currentFriendName);
             const custom = document.getElementById('custom-freq').value;
             if(custom) friend.freq = parseInt(custom);
-            else {
-                const selected = document.querySelector('input[name="freq"]:checked');
-                friend.freq = selected ? parseInt(selected.value) : 0;
-            }
-            friend.lastMoment = Date.now();
-            saveData(); closeMomentsConfig();
+            else { const selected = document.querySelector('input[name="freq"]:checked'); friend.freq = selected ? parseInt(selected.value) : 0; }
+            friend.lastMoment = Date.now(); saveData(); closeMomentsConfig();
         }
 
         async function forceTriggerMoment() {
@@ -415,17 +454,12 @@
             alert("发布成功！请去朋友圈查看。");
         }
 
-        // --- 核心 AI 朋友圈生成逻辑 ---
         async function checkAndGenerateAiMoments() {
             const now = Date.now();
             for (let friend of friends) {
                 if (friend.freq > 0) {
                     const elapsedMin = (now - (friend.lastMoment || 0)) / (1000 * 60);
-                    if (elapsedMin >= friend.freq) {
-                        await triggerAiMoment(friend);
-                        friend.lastMoment = now;
-                        saveData();
-                    }
+                    if (elapsedMin >= friend.freq) { await triggerAiMoment(friend); friend.lastMoment = now; saveData(); }
                 }
             }
         }
@@ -445,19 +479,17 @@
                 const content = data.choices[0].message.content.trim();
                 const now = new Date();
                 moments.push({ name: friend.name, text: content, time: `${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}` });
-                saveData();
-                if(document.getElementById('moments-page').classList.contains('active')) renderMoments();
+                saveData(); if(document.getElementById('moments-page').classList.contains('active')) renderMoments();
             } catch (e) { console.error("AI发布失败", e); }
         }
 
         setInterval(checkAndGenerateAiMoments, 60000);
 
-        // --- 基础逻辑 (聊天、列表渲染等) ---
+        // --- 聊天渲染逻辑 ---
         function renderChatList() {
             const list = document.getElementById('chat-session-list'); list.innerHTML = '';
             friends.filter(f => f.lastMsg).forEach(f => {
-                const item = document.createElement('div');
-                item.className = 'list-item';
+                const item = document.createElement('div'); item.className = 'list-item';
                 item.onclick = () => openChat(f.name);
                 const avHtml = f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial;
                 item.innerHTML = `<div class="avatar">${avHtml}</div><div class="info"><div class="name">${f.name}</div><div style="font-size:13px;color:#999">${f.lastMsg}</div></div>`;
@@ -467,8 +499,7 @@
         function renderContactList() {
             const list = document.getElementById('contact-list'); list.innerHTML = '';
             friends.forEach(f => {
-                const item = document.createElement('div');
-                item.className = 'list-item';
+                const item = document.createElement('div'); item.className = 'list-item';
                 item.onclick = () => openChat(f.name);
                 const avHtml = f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial;
                 item.innerHTML = `<div class="avatar">${avHtml}</div><div class="info"><div class="name">${f.name}</div></div>`;
@@ -477,18 +508,25 @@
         }
         function openChat(name) { currentFriendName = name; document.getElementById('chat-title').innerText = name; document.getElementById('chat-page').classList.add('active'); renderMessages(); }
         function closeChat() { document.getElementById('chat-page').classList.remove('active'); renderChatList(); }
+        
         function renderMessages() {
             const container = document.getElementById('message-container'); container.innerHTML = '';
             const friend = friends.find(f => f.name === currentFriendName);
             const history = chatHistories[currentFriendName] || [];
             history.forEach(m => {
                 const div = document.createElement('div'); div.className = `msg ${m.type}`;
-                const avHtml = (m.type === 'friend' && friend.avatarUrl) ? `<img src="${friend.avatarUrl}">` : (m.type==='self'?'我':friend.initial);
+                let avHtml;
+                if(m.type === 'self') {
+                    avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我';
+                } else {
+                    avHtml = friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial;
+                }
                 div.innerHTML = `<div class="avatar" style="width:35px;height:35px;font-size:12px;background:${m.type==='self'?'#07c160':'#ccc'}">${avHtml}</div><div class="bubble">${m.text}</div>`;
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
         }
+
         function sendMsg() {
             const input = document.getElementById('msg-input'); if(!input.value.trim()) return;
             const text = input.value.trim();
@@ -497,6 +535,7 @@
             friends.find(f => f.name === currentFriendName).lastMsg = text;
             input.value = ''; saveData(); renderMessages();
         }
+
         function openSettings() {
             const friend = friends.find(f => f.name === currentFriendName);
             updateSettingsAvatarDisplay(friend);
@@ -505,6 +544,7 @@
             document.getElementById('settings-page').classList.add('active');
         }
         function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
+
         function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
         function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
         function renderMoments() {
@@ -517,8 +557,9 @@
         }
         function postMoment() {
             const t = prompt("这一刻的想法...");
-            if(t) { moments.push({ name: '我', text: t, time: '刚刚' }); saveData(); renderMoments(); }
+            if(t) { moments.push({ name: myInfo.name, text: t, time: '刚刚' }); saveData(); renderMoments(); }
         }
+
         function addFriend() {
             const n = prompt("昵称:");
             if(n) { friends.push({ name: n, initial: n[0].toUpperCase(), lastMsg: '', persona: '普通人', freq: 0, lastMoment: Date.now(), avatarUrl:'', mountedBooks:[] }); saveData(); renderContactList(); }
@@ -536,6 +577,7 @@
         function closePersonaEditor() { document.getElementById('editor-page').classList.remove('active'); }
         function savePersona() { friends.find(f => f.name === currentFriendName).persona = document.getElementById('persona-input').value; saveData(); closePersonaEditor(); }
 
+        // --- AI回复功能 (包含世界书逻辑与正在输入状态) ---
         async function getAiReply() {
             if(!aiConfig.key) return alert("请在'我'中配置API");
             const friend = friends.find(f => f.name === currentFriendName);
@@ -543,7 +585,8 @@
             
             // 组装世界书背景
             let worldBookPrompt = "";
-            const allBooks = JSON.parse(localStorage.getItem('world_books') || '[]');
+            const wbData = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
+            const allBooks = wbData.books || [];
             if (friend.mountedBooks && friend.mountedBooks.length > 0) {
                 const matched = allBooks.filter(b => friend.mountedBooks.includes(b.title));
                 if (matched.length > 0) {
@@ -551,7 +594,6 @@
                 }
             }
 
-            // 显示“正在输入中”
             document.getElementById('chat-typing').style.display = 'block';
 
             try {
@@ -560,10 +602,7 @@
                     headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         model: aiConfig.model, 
-                        messages: [
-                            {role: "system", content: friend.persona + worldBookPrompt}, 
-                            ...history
-                        ] 
+                        messages: [{role: "system", content: friend.persona + worldBookPrompt}, ...history] 
                     })
                 });
                 const data = await res.json();
@@ -571,15 +610,11 @@
                 if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
                 chatHistories[currentFriendName].push({ type: 'friend', text: reply });
                 friend.lastMsg = reply; saveData(); renderMessages();
-            } catch (e) { 
-                alert("回复失败，请检查配置或网络"); 
-            } finally {
-                // 隐藏“正在输入中”
-                document.getElementById('chat-typing').style.display = 'none';
-            }
+            } catch (e) { alert("回复失败"); }
+            finally { document.getElementById('chat-typing').style.display = 'none'; }
         }
 
-        window.onload = () => { renderChatList(); renderContactList(); };
+        window.onload = () => { renderChatList(); renderContactList(); renderMePage(); };
     </script>
 </body>
 </html>
