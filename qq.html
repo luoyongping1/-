@@ -20,40 +20,37 @@
             --z-editor: 500;
             --z-model-sel: 600; 
         }
-/* 新增：聊天气泡容器支持背景图 */
-#message-container {
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-/* 新增：充值卡片样式 */
-.recharge-card {
-    background: #fff;
-    border-radius: 8px;
-    padding: 12px;
-    width: 200px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    border-left: 4px solid var(--accent-color);
-}
-.card-header { font-size: 12px; color: #999; margin-bottom: 5px; }
-.card-body { font-size: 18px; font-weight: bold; color: #333; }
-.card-footer { font-size: 11px; color: var(--blue-link); margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px; }
+        /* 聊天气泡容器支持背景图 */
+        #message-container {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        /* 充值卡片样式 */
+        .recharge-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            width: 200px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+        .card-header { font-size: 12px; color: #999; margin-bottom: 5px; }
+        .card-body { font-size: 18px; font-weight: bold; color: #333; }
+        .card-footer { font-size: 11px; color: var(--blue-link); margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px; }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, system-ui, sans-serif; background: var(--bg-gray); color: var(--text-main); overflow: hidden; }
 
-        /* 基础页面结构 */
         .page { display: none; flex-direction: column; height: 100%; position: absolute; width: 100%; top: 0; left: 0; background: var(--bg-gray); }
         .page.active { display: flex; }
         .header { height: 50px; background: var(--bg-gray); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 17px; font-weight: 500; border-bottom: 0.5px solid var(--border-color); flex-shrink: 0; }
         .content { flex: 1; overflow-y: auto; padding-bottom: 60px; -webkit-overflow-scrolling: touch; }
 
-        /* 底部导航 */
         .tab-bar { position: fixed; bottom: 0; width: 100%; height: 55px; background: #f7f7f7; border-top: 0.5px solid #ccc; display: flex; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); z-index: 50; }
         .tab-item { display: flex; flex-direction: column; align-items: center; color: #333; font-size: 10px; cursor: pointer; }
         .tab-item.active { color: var(--wechat-green); }
         .tab-icon { font-size: 22px; margin-bottom: 2px; }
 
-        /* 列表样式 */
         .list-group { background: white; margin-top: 10px; }
         .list-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid var(--border-color); cursor: pointer; }
         .list-item:active { background: #f2f2f2; }
@@ -62,94 +59,75 @@
         .info { flex: 1; min-width: 0; }
         .name { font-size: 16px; }
 
-        /* “我”页面头部样式 */
         .me-header { background: white; padding: 40px 20px; display: flex; align-items: center; gap: 15px; }
         .me-avatar { width: 64px; height: 64px; border-radius: 8px; background: #eee; overflow: hidden; flex-shrink: 0; cursor: pointer; }
         .me-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .me-info { flex: 1; }
         .me-name { font-size: 20px; font-weight: bold; margin-bottom: 5px; cursor: pointer; }
         .me-wxid { font-size: 14px; color: var(--text-sub); cursor: pointer; }
 
-        /* 层级管理 */
         #chat-page { z-index: var(--z-chat); }
-#settings-page { z-index: var(--z-settings); }
-#moments-page { z-index: var(--z-moments); background: white; }
-#moments-config-page, #api-config-page, #editor-page, #worldbook-page, #wallet-page, #wallet-history-page { z-index: var(--z-sub-page); background: white; }
-#model-selector-page { z-index: var(--z-model-sel); background: white; }
+        #settings-page { z-index: var(--z-settings); }
+        #moments-page { z-index: var(--z-moments); background: white; }
+        #moments-config-page, #api-config-page, #editor-page, #worldbook-page, #wallet-page, #wallet-history-page, #favorites-page { z-index: var(--z-sub-page); background: var(--bg-gray); }
+        #model-selector-page { z-index: var(--z-model-sel); background: white; }
 
-        /* 朋友圈 */
         .moments-header-container { position: relative; height: 260px; background: #333; margin-bottom: 30px; }
         .moments-user { position: absolute; right: 15px; bottom: -15px; display: flex; align-items: center; }
         .moments-user .main-avatar { width: 65px; height: 65px; border-radius: 8px; border: 2px solid white; background: #0099ff; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
         .moment-item { display: flex; padding: 15px; border-bottom: 0.5px solid #eee; }
 
-        /* 消息气泡 */
-        #message-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; background: var(--bg-gray); }
-        .msg { display: flex; max-width: 85%; }
+        #message-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+        .msg { display: flex; max-width: 85%; align-items: flex-start; }
         .msg.self { align-self: flex-end; flex-direction: row-reverse; }
-        .msg .bubble { padding: 10px 12px; border-radius: 6px; font-size: 15px; line-height: 1.4; }
+        .msg .bubble { padding: 10px 12px; border-radius: 6px; font-size: 15px; line-height: 1.4; word-break: break-all; }
         .msg.friend .bubble { background: white; margin-left: 10px; }
         .msg.self .bubble { background: #95ec69; margin-right: 10px; }
+
         .input-bar { background: #f7f7f7; padding: 10px; display: flex; align-items: center; gap: 8px; border-top: 0.5px solid #ccc; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
         .input-bar input { flex: 1; border: none; padding: 10px; border-radius: 4px; outline: none; }
 
         .btn-green { color: var(--wechat-green); font-weight: bold; cursor: pointer; border:none; background:none; }
-        .radio-item { display: flex; justify-content: space-between; padding: 12px 16px; background:white; border-bottom: 0.5px solid #eee; }
-
-        /* 正在输入状态 */
         .typing-status { font-size: 11px; color: #555; font-weight: normal; display: none; }
 
-    /* 新增：仿微信钱包按钮样式 */
-    .wx-wallet-btn-container {
-        width: 100%;
-        margin-top: 50px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    .wx-btn {
-        width: 180px; /* 微信经典宽度 */
-        height: 48px;
-        border-radius: 8px;
-        font-size: 17px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-    }
-    /* 充值按钮：绿色背景白色字 */
-    .wx-btn-recharge {
-        background-color: #07c160;
-        color: #ffffff;
-        margin-bottom: 16px;
-    }
-    .wx-btn-recharge:active {
-        background-color: #06ad56;
-    }
-    /* 提现按钮：浅灰背景绿色字 */
-    .wx-btn-withdraw {
-        background-color: #f2f2f2;
-        color: #07c160;
-    }
-    .wx-btn-withdraw:active {
-        background-color: #e6e6e6;
-    }
-</style>
+        .wx-wallet-btn-container { width: 100%; margin-top: 50px; display: flex; flex-direction: column; align-items: center; }
+        .wx-btn { width: 180px; height: 48px; border-radius: 8px; font-size: 17px; font-weight: 500; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .wx-btn-recharge { background-color: #07c160; color: #ffffff; margin-bottom: 16px; }
+        .wx-btn-withdraw { background-color: #f2f2f2; color: #07c160; }
+
+        /* 长按菜单 */
+        #msg-context-menu { display: none; position: fixed; z-index: 2000; background: #4c4c4c; border-radius: 8px; padding: 5px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); color: white; min-width: 100px; }
+        .menu-item { padding: 12px 20px; font-size: 14px; border-bottom: 0.5px solid #666; text-align: center; cursor: pointer; }
+        .menu-item:last-child { border-bottom: none; }
+
+        /* 多选 */
+        .multi-select-checkbox { display: none; margin-right: 10px; transform: scale(1.2); }
+        .is-multi-selecting .multi-select-checkbox { display: block; }
+        #multi-select-bar { display: none; position: fixed; bottom: 0; width: 100%; height: 60px; background: #f7f7f7; border-top: 1px solid #ddd; z-index: 1500; justify-content: space-around; align-items: center; }
+
+        /* 引用 */
+        #quote-preview { display: none; background: #e9e9e9; padding: 8px 12px; font-size: 12px; color: #666; border-radius: 4px; margin: 5px 10px; position: relative; border-left: 4px solid #ccc; }
+        #quote-preview span { position: absolute; right: 8px; top: 8px; color: #999; }
+
+        /* 收藏搜索 */
+        .search-bar { padding: 10px; background: #fff; position: sticky; top: 0; z-index: 10; }
+        .search-bar input { width: 100%; padding: 10px; border: 1px solid #eee; border-radius: 8px; background: #f7f7f7; box-sizing: border-box; }
+    </style>
 </head>
 <body>
 
-    <!-- 底部四个主页 -->
+    <!-- 1. 微信列表页 -->
     <div id="tab-chat" class="page active">
         <div class="header">微信</div>
         <div class="content" id="chat-session-list"></div>
     </div>
+
+    <!-- 2. 通讯录页 -->
     <div id="tab-contacts" class="page">
         <div class="header"><span>通讯录</span><span class="btn-green" onclick="addFriend()">添加</span></div>
         <div class="content" id="contact-list"></div>
     </div>
+
+    <!-- 3. 发现页 -->
     <div id="tab-discover" class="page">
         <div class="header">发现</div>
         <div class="content">
@@ -158,6 +136,8 @@
             </div>
         </div>
     </div>
+
+    <!-- 4. 我（个人中心） -->
     <div id="tab-me" class="page">
         <div class="header"></div>
         <div class="content">
@@ -169,16 +149,13 @@
                 </div>
                 <div style="color:#ccc">></div>
             </div>
-
             <div class="list-group">
                 <div class="list-item" onclick="openWallet()"><span style="margin-right:15px;color:#07c160">💳</span>钱包</div>
             </div>
-
             <div class="list-group">
-                <div class="list-item" onclick="alert('收藏内容为空')"><span style="margin-right:15px;color:#ff6b6b">📦</span>收藏</div>
+                <div class="list-item" onclick="openFavorites()"><span style="margin-right:15px;color:#ff6b6b">📦</span>收藏</div>
                 <div class="list-item" onclick="alert('表情管理')"><span style="margin-right:15px;color:#ffbe00">😊</span>表情</div>
             </div>
-
             <div class="list-group">
                 <div class="list-item" onclick="openApiConfig()"><div class="info"><span style="margin-right:15px;color:#4facfe">⚙️</span>API 与模型设置</div><span>></span></div>
             </div>
@@ -193,7 +170,7 @@
         <div class="tab-item" onclick="switchTab('tab-me', this)">👤<span>我</span></div>
     </div>
 
-    <!-- 聊天详情 -->
+    <!-- 5. 聊天窗口 -->
     <div id="chat-page" class="page">
         <div class="header">
             <span onclick="closeChat()">〈 返回</span>
@@ -204,6 +181,7 @@
             <span style="font-size:24px;" onclick="openSettings()">···</span>
         </div>
         <div id="message-container"></div>
+        <div id="quote-preview">引用内容 <span onclick="clearQuote()">×</span></div>
         <div class="input-bar">
             <button class="btn-green" style="font-size:12px;" onclick="getAiReply()">AI回复</button>
             <input type="text" id="msg-input" placeholder="输入消息...">
@@ -211,7 +189,7 @@
         </div>
     </div>
 
-    <!-- 聊天设置 -->
+    <!-- 6. 聊天设置 -->
     <div id="settings-page" class="page">
         <div class="header"><span onclick="closeSettings()">〈 返回</span><span>聊天信息</span><span></span></div>
         <div class="content">
@@ -226,95 +204,91 @@
                 <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
                 <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
                 <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
-    <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
-</div>
+                <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
+            </div>
             <div class="list-group"><div class="list-item" onclick="deleteFriend()" style="color:#fa5151; justify-content:center; font-weight:bold;">删除好友</div></div>
         </div>
     </div>
 
-    <!-- 世界书选择页 -->
-    <div id="worldbook-page" class="page">
-        <div class="header"><span onclick="closeWorldBookSelector()">〈 返回</span><span>挂载世界书</span><span class="btn-green" onclick="saveWorldBookConfig()">完成</span></div>
-        <div class="content" id="worldbook-list-container"></div>
-    </div>
-
-    <!-- 朋友圈设置 -->
-    <div id="moments-config-page" class="page">
-        <div class="header"><span onclick="closeMomentsConfig()">〈 返回</span><span>朋友圈设置</span><span class="btn-green" onclick="saveMomentsConfig()">完成</span></div>
-        <div class="content">
-            <div style="padding:15px; font-size:13px; color:#888;">自动发朋友圈频率</div>
-            <div id="frequency-options">
-                <div class="radio-item" onclick="setFreq(10)">10分钟一次 <input type="radio" name="freq" value="10"></div>
-                <div class="radio-item" onclick="setFreq(20)">20分钟一次 <input type="radio" name="freq" value="20"></div>
-                <div class="radio-item" onclick="setFreq(30)">30分钟一次 <input type="radio" name="freq" value="30"></div>
-                <div class="radio-item" onclick="setFreq(0)">不自动发送 <input type="radio" name="freq" value="0"></div>
-            </div>
-            <div class="list-group"><div class="list-item"><span>自定义(分):</span><input type="number" id="custom-freq" style="border:none;flex:1;text-align:right;"></div></div>
-            
-            <div class="list-group" style="margin-top:30px;">
-                <div class="list-item" onclick="forceTriggerMoment()" style="justify-content:center; color:var(--blue-link); font-weight:500;">
-                    ✨ 强制让 AI 发一条朋友圈
-                </div>
+    <!-- 7. 钱包 -->
+    <div id="wallet-page" class="page">
+        <div class="header" style="background: #f1f1f1; border:none;"><span onclick="closeWallet()">〈 返回</span><span>零钱</span><span onclick="openWalletHistory()" style="font-size:14px;">零钱明细</span></div>
+        <div class="content" style="background: #f1f1f1; display: flex; flex-direction: column; align-items: center; padding-top: 50px;">
+            <div style="font-size: 60px; margin-bottom: 10px;">🪙</div>
+            <div style="font-size: 16px; color: #000;">我的零钱</div>
+            <div style="font-size: 48px; font-weight: 500; color: #000; margin-top: 10px;" id="wallet-balance">￥0.00</div>
+            <div class="wx-wallet-btn-container">
+                <button class="wx-btn wx-btn-recharge" onclick="showRechargeOptions()">充值</button>
+                <button class="wx-btn wx-btn-withdraw" onclick="alert('提现暂未开放')">提现</button>
             </div>
         </div>
     </div>
 
-    <!-- 模型选择页 -->
-    <div id="model-selector-page" class="page">
-        <div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div>
-        <div class="content" id="model-list-container"></div>
+    <!-- 8. 收藏 -->
+    <div id="favorites-page" class="page">
+        <div class="header"><span onclick="document.getElementById('favorites-page').classList.remove('active')">〈 返回</span><span>收藏</span><span></span></div>
+        <div class="search-bar"><input type="text" id="fav-search" placeholder="搜索收藏内容..." oninput="renderFavorites()"></div>
+        <div class="content" id="favorites-list"></div>
     </div>
 
-    <!-- API 设置 -->
-    <div id="api-config-page" class="page">
-        <div class="header"><span onclick="closeApiConfig()">〈 取消</span><span>API 设置</span><span class="btn-green" onclick="saveApiConfig()">保存</span></div>
-        <div class="content">
-            <div class="list-group">
-                <div class="list-item"><span>地址:</span><input type="text" id="api-url" style="border:none;flex:1;text-align:right;"></div>
-                <div class="list-item"><span>Key:</span><input type="password" id="api-key" style="border:none;flex:1;text-align:right;"></div>
-                <div class="list-item" onclick="fetchModels()">
-                    <div class="info">当前模型: <b id="current-model-display"></b></div>
-                    <span class="btn-green" style="font-size:12px">拉取并选择</span>
-                </div>
-            </div>
+    <!-- 各类弹窗与菜单 -->
+    <div id="recharge-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:3000; background:rgba(0,0,0,0.3); align-items:center; justify-content:center;">
+        <div style="background: rgba(235, 220, 255, 0.8); backdrop-filter: blur(15px); width: 80%; border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.3);">
+            <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">选择充值方式</h3>
+            <div class="list-item" style="background:white; border-radius:12px; margin-bottom:10px;" onclick="selfRecharge()">自己充值</div>
+            <div class="list-item" style="background:white; border-radius:12px;" onclick="askFriendRecharge()">找朋友帮我充</div>
+            <div style="text-align:center; margin-top:20px; color:#888;" onclick="document.getElementById('recharge-modal').style.display='none'">取消</div>
         </div>
     </div>
 
-    <!-- 朋友圈主页 -->
+    <div id="msg-context-menu">
+        <div class="menu-item" onclick="redoReply()">重回</div>
+        <div class="menu-item" onclick="enterMultiSelect()">多选</div>
+        <div class="menu-item" onclick="deleteSingleMsg()">删除</div>
+        <div class="menu-item" onclick="quoteMsg()">引用</div>
+    </div>
+
+    <div id="multi-select-bar">
+        <div onclick="cancelMultiSelect()">取消</div>
+        <div style="color: #576b95;" onclick="batchFavorite()">收藏</div>
+        <div style="color: #fa5151;" onclick="batchDelete()">删除</div>
+    </div>
+
+    <!-- 其他隐藏功能页 -->
     <div id="moments-page" class="page">
-        <div class="header" style="background:transparent; position:absolute; border:none; color:white; z-index:10;">
-            <span onclick="closeMoments()">〈 发现</span>
-            <span onclick="postMoment()" style="font-size:20px;">📷</span>
-        </div>
+        <div class="header" style="background:transparent; position:absolute; border:none; color:white; z-index:10;"><span onclick="closeMoments()">〈 发现</span><span onclick="postMoment()" style="font-size:20px;">📷</span></div>
         <div class="content" style="padding-bottom:0">
-            <div class="moments-header-container">
-                <div style="width:100%; height:100%; background: #444;"></div>
-                <div class="moments-user"><span style="color:white; margin-right:10px;">我</span><div class="main-avatar">ME</div></div>
-            </div>
+            <div class="moments-header-container"><div style="width:100%; height:100%; background: #444;"></div><div class="moments-user"><span style="color:white; margin-right:10px;">我</span><div class="main-avatar">ME</div></div></div>
             <div id="moments-list"></div>
         </div>
     </div>
-
-    <!-- 文案编辑器 -->
-    <div id="editor-page" class="page">
-        <div class="header"><span onclick="closePersonaEditor()">取消</span><span>编辑</span><span class="btn-green" onclick="savePersona()">完成</span></div>
-        <textarea id="persona-input" style="width:100%; height:100%; border:none; padding:15px; font-size:16px; outline:none; box-sizing:border-box;"></textarea>
+    <div id="worldbook-page" class="page"><div class="header"><span onclick="closeWorldBookSelector()">〈 返回</span><span>挂载世界书</span><span class="btn-green" onclick="saveWorldBookConfig()">完成</span></div><div class="content" id="worldbook-list-container"></div></div>
+    <div id="moments-config-page" class="page">
+        <div class="header"><span onclick="closeMomentsConfig()">〈 返回</span><span>朋友圈设置</span><span class="btn-green" onclick="saveMomentsConfig()">完成</span></div>
+        <div class="content"><div class="list-group"><div class="list-item">自定义(分):<input type="number" id="custom-freq" style="border:none;flex:1;text-align:right;"></div></div><div class="list-group"><div class="list-item" onclick="forceTriggerMoment()" style="justify-content:center; color:var(--blue-link);">✨ 强制让 AI 发一条朋友圈</div></div></div>
     </div>
+    <div id="api-config-page" class="page"><div class="header"><span onclick="closeApiConfig()">〈 取消</span><span>API 设置</span><span class="btn-green" onclick="saveApiConfig()">保存</span></div><div class="content"><div class="list-group"><div class="list-item">地址:<input type="text" id="api-url" style="border:none;flex:1;text-align:right;"></div><div class="list-item">Key:<input type="password" id="api-key" style="border:none;flex:1;text-align:right;"></div><div class="list-item" onclick="fetchModels()">当前模型: <b id="current-model-display"></b> <span class="btn-green" style="font-size:12px;margin-left:10px;">拉取</span></div></div></div></div>
+    <div id="model-selector-page" class="page"><div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div><div class="content" id="model-list-container"></div></div>
+    <div id="editor-page" class="page"><div class="header"><span onclick="closePersonaEditor()">取消</span><span>人设编辑</span><span class="btn-green" onclick="savePersona()">完成</span></div><textarea id="persona-input" style="width:100%;height:100%;border:none;padding:15px;font-size:16px;outline:none;"></textarea></div>
+    <div id="wallet-history-page" class="page"><div class="header"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div><div class="content" id="wallet-history-list"></div></div>
 
-    <!-- 图片上传容器 -->
     <input type="file" id="avatar-upload" style="display:none" accept="image/*">
     <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
 
     <script>
-        // --- 核心数据 ---
+        // --- 数据定义 ---
         let currentFriendName = "";
         let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [] }];
         let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
         let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
         let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
         let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
-// 新增钱包数据
-let walletData = JSON.parse(localStorage.getItem('wallet_data')) || { balance: 0.00, history: [] };
+        let walletData = JSON.parse(localStorage.getItem('wallet_data')) || { balance: 0.00, history: [] };
+        let favorites = JSON.parse(localStorage.getItem('qq_favorites_list')) || [];
+        
+        let menuTargetIndex = -1;
+        let isMultiSelecting = false;
+        let quotedText = "";
 
         function saveData() {
             localStorage.setItem('qq_friends', JSON.stringify(friends));
@@ -322,528 +296,277 @@ let walletData = JSON.parse(localStorage.getItem('wallet_data')) || { balance: 0
             localStorage.setItem('qq_moments', JSON.stringify(moments));
             localStorage.setItem('ai_config', JSON.stringify(aiConfig));
             localStorage.setItem('my_info', JSON.stringify(myInfo));
+            localStorage.setItem('wallet_data', JSON.stringify(walletData));
+            localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
         }
 
-// --- 聊天背景逻辑 ---
-function changeChatBackground() {
-    const choice = confirm("点击确定：输入背景URL\n点击取消：从相册选择");
-    const friend = friends.find(f => f.name === currentFriendName);
-    if (choice) {
-        const url = prompt("背景图片URL:");
-        if (url) { friend.chatBg = url; saveData(); renderMessages(); }
-    } else {
-        const input = document.createElement('input');
-        input.type = 'file'; input.accept = 'image/*';
-        input.onchange = (e) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => { friend.chatBg = ev.target.result; saveData(); renderMessages(); };
-            reader.readAsDataURL(e.target.files[0]);
-        };
-        input.click();
-    }
-}
-
-// --- 钱包功能逻辑 ---
-function openWallet() {
-    document.getElementById('wallet-page').classList.add('active');
-    updateWalletUI();
-}
-function closeWallet() { document.getElementById('wallet-page').classList.remove('active'); }
-function updateWalletUI() {
-    document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`;
-    localStorage.setItem('wallet_data', JSON.stringify(walletData));
-}
-function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
-
-function selfRecharge() {
-    const amount = prompt("请输入充值金额:");
-    if (amount && !isNaN(amount)) {
-        const val = parseFloat(amount);
-        walletData.balance += val;
-        walletData.history.push({ type: '收入', title: '零钱充值', amount: `+${val.toFixed(2)}`, time: new Date().toLocaleString() });
-        updateWalletUI();
-        alert("充值成功");
-        document.getElementById('recharge-modal').style.display = 'none';
-    }
-}
-
-function askFriendRecharge() {
-    const amount = prompt("想让朋友帮你充多少钱？");
-    if (amount && !isNaN(amount)) {
-        document.getElementById('recharge-modal').style.display = 'none';
-        closeWallet();
-        // 切换到消息列表页
-        switchTab('tab-chat', document.querySelector('.tab-item'));
-        alert("请选择一个好友发送申请");
-        window.pendingRecharge = parseFloat(amount);
-    }
-}
-
-function openWalletHistory() {
-    const list = document.getElementById('wallet-history-list');
-    list.innerHTML = '';
-    walletData.history.slice().reverse().forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = `<div class="info"><div>${item.title}</div><div style="font-size:12px;color:#999">${item.time}</div></div><div style="font-weight:bold">${item.amount}</div>`;
-        list.appendChild(div);
-    });
-    document.getElementById('wallet-history-page').classList.add('active');
-}
-        // --- “我”页面功能 ---
-        function renderMePage() {
-            document.getElementById('my-name-display').innerText = myInfo.name;
-            document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid;
-            const av = document.getElementById('my-avatar-display');
-            av.innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : `<div style="width:100%;height:100%;background:#ccc;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold">ME</div>`;
-        }
-
-        function changeMyName() {
-            const n = prompt("修改名字:", myInfo.name);
-            if(n) { myInfo.name = n; saveData(); renderMePage(); }
-        }
-
-        function changeMyWxid() {
-            const n = prompt("修改微信号:", myInfo.wxid);
-            if(n) { myInfo.wxid = n; saveData(); renderMePage(); }
-        }
-
-        function changeMyAvatar() {
-            const choice = confirm("点击确定：输入图片URL\n点击取消：从本地相册选择");
-            if (choice) {
-                const url = prompt("请输入图片URL:");
-                if (url) { myInfo.avatar = url; saveData(); renderMePage(); }
-            } else {
-                document.getElementById('my-avatar-upload').click();
-            }
-        }
-
-        document.getElementById('my-avatar-upload').onchange = function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => { myInfo.avatar = e.target.result; saveData(); renderMePage(); };
-                reader.readAsDataURL(this.files[0]);
-            }
-        };
-
-        // --- 导航 ---
+        // --- 核心逻辑：导航 ---
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-bar .tab-item').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
-            document.querySelectorAll('.page').forEach(p => { if(!['chat-page','settings-page','moments-page','moments-config-page','api-config-page','editor-page','model-selector-page','worldbook-page'].includes(p.id)) p.classList.remove('active')});
+            document.querySelectorAll('.page').forEach(p => { 
+                if(!['chat-page','settings-page','moments-page','moments-config-page','api-config-page','editor-page','model-selector-page','worldbook-page','wallet-page','wallet-history-page','favorites-page'].includes(p.id)) p.classList.remove('active')
+            });
             document.getElementById(tabId).classList.add('active');
             if(tabId === 'tab-chat') renderChatList();
             if(tabId === 'tab-contacts') renderContactList();
             if(tabId === 'tab-me') renderMePage();
         }
 
-        // --- 好友头像修改 ---
-        function changeAvatar() {
-            const choice = confirm("点击确定：输入图片URL\n点击取消：从本地相册选择");
-            if (choice) {
-                const url = prompt("请输入图片URL:");
-                if (url) {
-                    const friend = friends.find(f => f.name === currentFriendName);
-                    friend.avatarUrl = url; saveData(); updateSettingsAvatarDisplay(friend); renderChatList(); renderContactList();
+        // --- 核心逻辑：渲染消息 ---
+        function renderMessages() {
+            const container = document.getElementById('message-container');
+            container.innerHTML = '';
+            const friend = friends.find(f => f.name === currentFriendName);
+            container.style.backgroundImage = friend.chatBg ? `url(${friend.chatBg})` : 'none';
+
+            const history = chatHistories[currentFriendName] || [];
+            history.forEach((m, index) => {
+                const div = document.createElement('div');
+                div.className = `msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}`;
+                
+                let avHtml = m.type === 'self' ? (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
+                let contentHtml = m.text;
+
+                if (m.isCard) {
+                    contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
                 }
-            } else {
-                document.getElementById('avatar-upload').click();
-            }
-        }
 
-        document.getElementById('avatar-upload').onchange = function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const friend = friends.find(f => f.name === currentFriendName);
-                    friend.avatarUrl = e.target.result; saveData(); updateSettingsAvatarDisplay(friend); renderChatList(); renderContactList();
+                div.innerHTML = `
+                    <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${index})">
+                    <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${m.type==='self'?'#07c160':'#ccc'}">${avHtml}</div>
+                    <div class="${m.isCard ? '' : 'bubble'}">
+                        ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
+                        ${contentHtml}
+                    </div>`;
+
+                let timer;
+                const bubble = div.querySelector('.bubble') || div.querySelector('.recharge-card');
+                const start = (e) => { 
+                    const touch = e.touches ? e.touches[0] : e;
+                    timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, index), 700); 
                 };
-                reader.readAsDataURL(this.files[0]);
-            }
-        };
+                const stop = () => clearTimeout(timer);
+                bubble.onmousedown = start; bubble.onmouseup = stop;
+                bubble.ontouchstart = start; bubble.ontouchend = stop;
 
-        function updateSettingsAvatarDisplay(friend) {
-            const div = document.getElementById('settings-avatar');
-            div.innerHTML = friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial;
-        }
-
-        // --- 世界书挂载 (修复版) ---
-        function openWorldBookSelector() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            const mounted = friend.mountedBooks || [];
-            const wbData = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
-            const allBooks = wbData.books || [];
-            const container = document.getElementById('worldbook-list-container');
-            container.innerHTML = '';
-            if (allBooks.length === 0) {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">暂无世界书</div>';
-            } else {
-                allBooks.forEach(book => {
-                    const isChecked = mounted.includes(book.title);
-                    const div = document.createElement('div');
-                    div.className = 'list-item';
-                    div.innerHTML = `<div class="info"><div class="name">${book.title}</div></div><input type="checkbox" class="wb-checkbox" value="${book.title}" ${isChecked ? 'checked' : ''}>`;
-                    div.onclick = (e) => { if(e.target.type !== 'checkbox') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
-                    container.appendChild(div);
-                });
-            }
-            document.getElementById('worldbook-page').classList.add('active');
-        }
-
-        function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
-        function saveWorldBookConfig() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            const checkboxes = document.querySelectorAll('.wb-checkbox');
-            const selected = [];
-            checkboxes.forEach(cb => { if(cb.checked) selected.push(cb.value); });
-            friend.mountedBooks = selected; saveData(); alert("挂载成功！"); closeWorldBookSelector();
-        }
-
-        // --- API & 模型选择 ---
-        function openApiConfig() {
-            document.getElementById('api-url').value = aiConfig.url;
-            document.getElementById('api-key').value = aiConfig.key;
-            document.getElementById('current-model-display').innerText = aiConfig.model || "未设置";
-            document.getElementById('api-config-page').classList.add('active');
-        }
-        function closeApiConfig() { document.getElementById('api-config-page').classList.remove('active'); }
-        function saveApiConfig() {
-            aiConfig.url = document.getElementById('api-url').value;
-            aiConfig.key = document.getElementById('api-key').value;
-            saveData(); alert("已保存"); closeApiConfig();
-        }
-
-        async function fetchModels() {
-            const url = document.getElementById('api-url').value.replace(/\/$/, "");
-            const key = document.getElementById('api-key').value;
-            if(!url || !key) return alert("请先填写地址和Key");
-            try {
-                const res = await fetch(`${url}/models`, { headers: { 'Authorization': `Bearer ${key}` }});
-                const data = await res.json();
-                if(data.data && Array.isArray(data.data)) { showModelSelector(data.data.map(m => m.id)); }
-                else { alert("获取列表失败"); }
-            } catch (e) {
-                const manual = prompt("拉取失败，请输入模型名:");
-                if(manual) { aiConfig.model = manual; document.getElementById('current-model-display').innerText = manual; }
-            }
-        }
-
-        function showModelSelector(modelIds) {
-            const container = document.getElementById('model-list-container');
-            container.innerHTML = '';
-            modelIds.forEach(id => {
-                const div = document.createElement('div'); div.className = 'list-item';
-                div.innerHTML = `<div class="info">${id}</div>${id === aiConfig.model ? '<span style="color:var(--wechat-green)">✔</span>' : ''}`;
-                div.onclick = () => { aiConfig.model = id; document.getElementById('current-model-display').innerText = id; saveData(); closeModelSelector(); };
                 container.appendChild(div);
             });
-            document.getElementById('model-selector-page').classList.add('active');
-        }
-        function closeModelSelector() { document.getElementById('model-selector-page').classList.remove('active'); }
-
-        // --- 朋友圈功能 ---
-        function openMomentsConfig() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            const freq = friend.freq || 0;
-            const radios = document.getElementsByName('freq');
-            radios.forEach(r => { if(parseInt(r.value) === freq) r.checked = true; });
-            document.getElementById('custom-freq').value = (freq !== 10 && freq !== 20 && freq !== 30 && freq !== 0) ? freq : "";
-            document.getElementById('moments-config-page').classList.add('active');
-        }
-        function closeMomentsConfig() { document.getElementById('moments-config-page').classList.remove('active'); }
-        function setFreq(v) { document.querySelector(`input[name="freq"][value="${v}"]`).checked = true; }
-        function saveMomentsConfig() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            const custom = document.getElementById('custom-freq').value;
-            if(custom) friend.freq = parseInt(custom);
-            else { const selected = document.querySelector('input[name="freq"]:checked'); friend.freq = selected ? parseInt(selected.value) : 0; }
-            friend.lastMoment = Date.now(); saveData(); closeMomentsConfig();
+            container.scrollTop = container.scrollHeight;
         }
 
-        async function forceTriggerMoment() {
-            const friend = friends.find(f => f.name === currentFriendName);
+        // --- 核心逻辑：AI回复 ---
+        async function getAiReply() {
             if(!aiConfig.key) return alert("配置错误");
-            await triggerAiMoment(friend);
-            alert("发布成功");
-        }
+            const friend = friends.find(f => f.name === currentFriendName);
+            const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
+            
+            let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
+            let worldBookPrompt = friend.mountedBooks ? "\n背景知识：\n" + wb.books.filter(b => friend.mountedBooks.includes(b.title)).map(b => `[${b.title}]: ${b.content}`).join("\n") : "";
 
-        async function triggerAiMoment(friend) {
-            if(!aiConfig.key) return;
+            let rechargeLogic = "";
+            const lastMsg = chatHistories[currentFriendName].slice(-1)[0];
+            if (lastMsg && lastMsg.text.includes("[充值申请]")) {
+                rechargeLogic = `\n【当前事件】：对方想让你帮他充值。根据人设决定。同意则回复必须包含“已转”或“好滴”。`;
+            }
+
+            const sys = `你是一个扮演大师，人设：${friend.persona}。要求：碎片化聊天，多换行。${rechargeLogic}${worldBookPrompt}`;
+            document.getElementById('chat-typing').style.display = 'block';
+
             try {
                 const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: aiConfig.model,
-                        messages: [{role: "system", content: `你的人设：${friend.persona}。写一条30字内的简短朋友圈。`}]
-                    })
+                    body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, ...history] })
                 });
                 const data = await res.json();
-                const content = data.choices[0].message.content.trim();
-                moments.push({ name: friend.name, text: content, time: '刚刚' });
-                saveData(); if(document.getElementById('moments-page').classList.contains('active')) renderMoments();
-            } catch (e) { console.error(e); }
+                const msgs = data.choices[0].message.content.split('\n').filter(t => t.trim() !== '');
+
+                for (let text of msgs) {
+                    await new Promise(r => setTimeout(r, 600 + Math.random() * 1000));
+                    chatHistories[currentFriendName].push({ type: 'friend', text: text.trim() });
+                    friend.lastMsg = text.trim();
+                    saveData(); renderMessages();
+                    
+                    if (text.includes("已转") || text.includes("好滴")) {
+                        const h = chatHistories[currentFriendName];
+                        for(let i = h.length - 1; i >= 0; i--) {
+                            if(h[i].isCard) {
+                                const amt = parseFloat(h[i].text.split('￥')[1]);
+                                walletData.balance += amt;
+                                walletData.history.push({ type: '收入', title: friend.name + '转账', amount: `+${amt.toFixed(2)}`, time: new Date().toLocaleString() });
+                                updateWalletUI(); break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) { alert("AI回复失败"); }
+            finally { document.getElementById('chat-typing').style.display = 'none'; }
         }
 
-        // --- 列表渲染 ---
+        // --- 消息操作 ---
+        function showContextMenu(x, y, index) {
+            if(isMultiSelecting) return;
+            menuTargetIndex = index;
+            const menu = document.getElementById('msg-context-menu');
+            menu.style.display = 'block';
+            menu.style.left = Math.min(x, window.innerWidth - 110) + 'px';
+            menu.style.top = y + 'px';
+            const close = () => { menu.style.display = 'none'; document.removeEventListener('click', close); };
+            setTimeout(() => document.addEventListener('click', close), 100);
+        }
+        function deleteSingleMsg() { chatHistories[currentFriendName].splice(menuTargetIndex, 1); saveData(); renderMessages(); }
+        function redoReply() {
+            const h = chatHistories[currentFriendName];
+            let i = h.length - 1;
+            while(i >= 0 && h[i].type === 'friend') { h.splice(i, 1); i--; }
+            saveData(); renderMessages(); getAiReply();
+        }
+        function quoteMsg() {
+            quotedText = chatHistories[currentFriendName][menuTargetIndex].text;
+            const pre = document.getElementById('quote-preview');
+            pre.innerHTML = `引用：${quotedText.substring(0,10)}... <span onclick="clearQuote()">×</span>`;
+            pre.style.display = 'block';
+        }
+        function clearQuote() { quotedText = ""; document.getElementById('quote-preview').style.display = 'none'; }
+        
+        function enterMultiSelect() { isMultiSelecting = true; document.getElementById('multi-select-bar').style.display = 'flex'; renderMessages(); }
+        function cancelMultiSelect() { isMultiSelecting = false; document.getElementById('multi-select-bar').style.display = 'none'; renderMessages(); }
+        function toggleSelect(i) { chatHistories[currentFriendName][i].selected = !chatHistories[currentFriendName][i].selected; }
+        function batchDelete() {
+            chatHistories[currentFriendName] = chatHistories[currentFriendName].filter(m => !m.selected);
+            saveData(); cancelMultiSelect();
+        }
+        function batchFavorite() {
+            chatHistories[currentFriendName].forEach(m => {
+                if(m.selected) favorites.push({ id: Date.now()+Math.random(), text: m.text, from: m.type==='self'?'我':currentFriendName, time: new Date().toLocaleString() });
+            });
+            saveData(); alert("已收藏"); cancelMultiSelect();
+        }
+
+        // --- 收藏页渲染 ---
+        function openFavorites() { document.getElementById('favorites-page').classList.add('active'); renderFavorites(); }
+        function renderFavorites() {
+            const list = document.getElementById('favorites-list');
+            const kw = document.getElementById('fav-search').value.toLowerCase();
+            list.innerHTML = '';
+            favorites.filter(f => f.text.toLowerCase().includes(kw)).reverse().forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'list-group'; div.style.padding = '15px';
+                div.innerHTML = `<div style="font-size:12px; color:#888;">${f.from} - ${f.time}</div><div>${f.text}</div><div style="color:red; text-align:right;" onclick="removeFavorite(${f.id})">删除</div>`;
+                list.appendChild(div);
+            });
+        }
+        function removeFavorite(id) { favorites = favorites.filter(f => f.id !== id); saveData(); renderFavorites(); }
+
+        // --- 钱包、设置与其他 ---
+        function openWallet() { document.getElementById('wallet-page').classList.add('active'); updateWalletUI(); }
+        function closeWallet() { document.getElementById('wallet-page').classList.remove('active'); }
+        function updateWalletUI() { document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`; saveData(); }
+        function openWalletHistory() {
+            const list = document.getElementById('wallet-history-list'); list.innerHTML = '';
+            walletData.history.slice().reverse().forEach(h => {
+                const div = document.createElement('div'); div.className = 'list-item';
+                div.innerHTML = `<div class="info"><div>${h.title}</div><div style="font-size:12px;">${h.time}</div></div><b>${h.amount}</b>`;
+                list.appendChild(div);
+            });
+            document.getElementById('wallet-history-page').classList.add('active');
+        }
+        function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
+        function selfRecharge() {
+            const amt = prompt("金额:");
+            if(amt && !isNaN(amt)) {
+                walletData.balance += parseFloat(amt);
+                walletData.history.push({ title: '手动充值', amount: '+'+parseFloat(amt).toFixed(2), time: new Date().toLocaleString() });
+                updateWalletUI(); document.getElementById('recharge-modal').style.display = 'none';
+            }
+        }
+        function askFriendRecharge() {
+            const amt = prompt("帮充金额:");
+            if(amt) { window.pendingRecharge = parseFloat(amt); document.getElementById('recharge-modal').style.display='none'; closeWallet(); switchTab('tab-chat', document.querySelector('.tab-item')); alert("请选择好友"); }
+        }
+
+        function sendMsg() {
+            const val = document.getElementById('msg-input').value.trim();
+            if(!val) return;
+            if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+            chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText });
+            friends.find(f => f.name === currentFriendName).lastMsg = val;
+            document.getElementById('msg-input').value = ''; clearQuote(); saveData(); renderMessages();
+        }
+
+        // 其余 UI 基础函数
+        function renderMePage() {
+            document.getElementById('my-name-display').innerText = myInfo.name;
+            document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid;
+            document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : 'ME';
+        }
         function renderChatList() {
             const list = document.getElementById('chat-session-list'); list.innerHTML = '';
             friends.filter(f => f.lastMsg).forEach(f => {
-                const item = document.createElement('div'); item.className = 'list-item';
-                item.onclick = () => openChat(f.name);
-                const avHtml = f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial;
-                item.innerHTML = `<div class="avatar">${avHtml}</div><div class="info"><div class="name">${f.name}</div><div style="font-size:13px;color:#999">${f.lastMsg}</div></div>`;
-                list.appendChild(item);
+                const div = document.createElement('div'); div.className = 'list-item'; div.onclick = () => openChat(f.name);
+                div.innerHTML = `<div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial}</div><div class="info"><div class="name">${f.name}</div><div style="font-size:12px;color:#999">${f.lastMsg}</div></div>`;
+                list.appendChild(div);
             });
         }
         function renderContactList() {
             const list = document.getElementById('contact-list'); list.innerHTML = '';
             friends.forEach(f => {
-                const item = document.createElement('div'); item.className = 'list-item';
-                item.onclick = () => openChat(f.name);
-                const avHtml = f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial;
-                item.innerHTML = `<div class="avatar">${avHtml}</div><div class="info"><div class="name">${f.name}</div></div>`;
-                list.appendChild(item);
-            });
-        }
-        function openChat(name) {
-    currentFriendName = name;
-    document.getElementById('chat-title').innerText = name;
-    document.getElementById('chat-page').classList.add('active');
-    
-    // 如果有待处理的充值申请
-    if (window.pendingRecharge) {
-        const amount = window.pendingRecharge;
-        if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-        chatHistories[currentFriendName].push({ 
-            type: 'self', 
-            isCard: true, 
-            text: `[充值申请] ￥${amount.toFixed(2)}` 
-        });
-        window.pendingRecharge = null; // 发送后清空标记
-        saveData();
-    }
-    renderMessages();
-}
-        function closeChat() { document.getElementById('chat-page').classList.remove('active'); renderChatList(); }
-        
-        function renderMessages() {
-    const container = document.getElementById('message-container');
-    container.innerHTML = '';
-    const friend = friends.find(f => f.name === currentFriendName);
-    
-    // 渲染聊天背景
-    if (friend.chatBg) {
-        container.style.backgroundImage = `url(${friend.chatBg})`;
-    } else {
-        container.style.backgroundImage = 'none';
-    }
-
-    const history = chatHistories[currentFriendName] || [];
-    history.forEach(m => {
-        const div = document.createElement('div');
-        div.className = `msg ${m.type}`;
-        
-        // 头像逻辑
-        let avHtml = m.type === 'self' ? 
-            (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : 
-            (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
-
-        // 内容逻辑（判断是普通话还是充值卡片）
-        let contentHtml = m.text;
-        if (m.isCard) {
-            contentHtml = `
-                <div class="recharge-card">
-                    <div class="card-header">帮我充值</div>
-                    <div class="card-body">${m.text.split(' ')[1]}</div>
-                    <div class="card-footer">点击查看详情</div>
-                </div>`;
-        }
-
-        div.innerHTML = `
-            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${m.type==='self'?'#07c160':'#ccc'}">
-                ${avHtml}
-            </div>
-            <div class="${m.isCard ? '' : 'bubble'}">
-                ${contentHtml}
-            </div>`;
-        container.appendChild(div);
-    });
-    container.scrollTop = container.scrollHeight;
-}
-
-        function sendMsg() {
-            const input = document.getElementById('msg-input'); if(!input.value.trim()) return;
-            const text = input.value.trim();
-            if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-            chatHistories[currentFriendName].push({ type: 'self', text });
-            friends.find(f => f.name === currentFriendName).lastMsg = text;
-            input.value = ''; saveData(); renderMessages();
-        }
-
-        // --- AI回复逻辑 (核心优化部分) ---
-        // --- AI回复逻辑 (已修复语法错误) ---
-async function getAiReply() {
-    if(!aiConfig.key) return alert("请在'我'中配置API");
-    const friend = friends.find(f => f.name === currentFriendName);
-    const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ 
-        role: m.type === 'self' ? 'user' : 'assistant', 
-        content: m.text 
-    }));
-    
-    let worldBookPrompt = "";
-    const wbData = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
-    if (friend.mountedBooks && friend.mountedBooks.length > 0) {
-        const matched = (wbData.books || []).filter(b => friend.mountedBooks.includes(b.title));
-        if (matched.length > 0) worldBookPrompt = "\n背景知识：\n" + matched.map(b => `[${b.title}]: ${b.content}`).join("\n");
-    }
-
-    // 检查最后一条消息是不是充值申请
-    let rechargeLogic = "";
-    const currentHistory = chatHistories[currentFriendName] || [];
-    const lastMsg = currentHistory[currentHistory.length - 1];
-    if (lastMsg && lastMsg.text.includes("[充值申请]")) {
-        rechargeLogic = `\n【重要事件】：对方现在向你发来了一个“帮我充值”的请求。请根据你的人设性格决定是否同意。如果同意，请在回复中包含“好滴”、“这就充”或“已转”等字眼。如果不愿意，请用符合性格的方式拒绝。`;
-    }
-
-    const systemPrompt = `你是一个扮演大师，深刻理解角色人设：${friend.persona}。
-    语言要求：使用碎片化、口语化语言，多用短句，模拟线上真实聊天。多用“啊、吧、啦”语气词，偶尔可有错别字。
-    情绪要求：由浅入深，具有时效性。
-    风格：不必全面回复，根据人设有侧重点。
-    【重要】：请使用换行符分隔不同的短句，我会将每行作为一个独立气泡发送。${rechargeLogic}${worldBookPrompt}`;
-
-    document.getElementById('chat-typing').style.display = 'block';
-
-    try {
-        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                model: aiConfig.model, 
-                messages: [{role: "system", content: systemPrompt}, ...history] 
-            })
-        });
-        const data = await res.json();
-        const fullReply = data.choices[0].message.content;
-
-        // 拆分并模拟多气泡发送
-        const messageArray = fullReply.split('\n').filter(t => t.trim() !== '');
-        for (let text of messageArray) {
-            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1500));
-            
-            if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-            chatHistories[currentFriendName].push({ type: 'friend', text: text.trim() });
-            friend.lastMsg = text.trim();
-            
-            saveData();
-            renderMessages();
-            
-            // --- 自动充值检查 ---
-            if (text.includes("已转") || text.includes("这就充") || text.includes("好滴")) {
-                const myHistory = chatHistories[currentFriendName];
-                if (myHistory) {
-                    for(let i = myHistory.length - 1; i >= 0; i--) {
-                        if(myHistory[i].isCard) {
-                            const amount = parseFloat(myHistory[i].text.split('￥')[1]);
-                            walletData.balance += amount;
-                            walletData.history.push({ 
-                                type: '收入', 
-                                title: friend.name + '转账', 
-                                amount: `+${amount.toFixed(2)}`, 
-                                time: new Date().toLocaleString() 
-                            });
-                            updateWalletUI();
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    } catch (e) { 
-        console.error(e);
-        alert("回复失败，请检查API配置"); 
-    } finally { 
-        document.getElementById('chat-typing').style.display = 'none'; 
-    }
-}
-
-        // --- 其余功能 ---
-        function openSettings() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            updateSettingsAvatarDisplay(friend);
-            document.getElementById('settings-name').innerText = friend.name;
-            document.getElementById('settings-nick-display').innerText = friend.name;
-            document.getElementById('settings-page').classList.add('active');
-        }
-        function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
-        function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
-        function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
-        function renderMoments() {
-            const list = document.getElementById('moments-list'); list.innerHTML = '';
-            moments.slice().reverse().forEach(m => {
-                const div = document.createElement('div'); div.className = 'moment-item';
-                div.innerHTML = `<div class="avatar" style="width:40px;height:40px;">${m.name[0]}</div><div class="info"><div class="name" style="color:var(--blue-link)">${m.name}</div><div style="margin:5px 0;">${m.text}</div><div style="font-size:12px;color:#999">${m.time}</div></div>`;
+                const div = document.createElement('div'); div.className = 'list-item'; div.onclick = () => openChat(f.name);
+                div.innerHTML = `<div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial}</div><div class="info">${f.name}</div>`;
                 list.appendChild(div);
             });
         }
-        function postMoment() {
-            const t = prompt("内容:");
-            if(t) { moments.push({ name: myInfo.name, text: t, time: '刚刚' }); saveData(); renderMoments(); }
+        function openChat(n) {
+            currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active');
+            if(window.pendingRecharge) {
+                chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` });
+                window.pendingRecharge = null; saveData();
+            }
+            renderMessages();
         }
-        function addFriend() {
-            const n = prompt("昵称:");
-            if(n) { friends.push({ name: n, initial: n[0].toUpperCase(), lastMsg: '', persona: '普通人', freq: 0, lastMoment: Date.now(), avatarUrl:'', mountedBooks:[] }); saveData(); renderContactList(); }
+        function closeChat() { document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); renderChatList(); }
+        function openSettings() { 
+            const f = friends.find(f => f.name === currentFriendName);
+            document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial;
+            document.getElementById('settings-name').innerText = f.name;
+            document.getElementById('settings-nick-display').innerText = f.name;
+            document.getElementById('settings-page').classList.add('active'); 
         }
-        function deleteFriend() { if(confirm("删除？")) { friends = friends.filter(f => f.name !== currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList(); } }
-        function renameCurrentFriend() { 
-            const n = prompt("新名字:", currentFriendName); 
-            if(n) { const f = friends.find(f => f.name === currentFriendName); chatHistories[n] = chatHistories[currentFriendName]; delete chatHistories[currentFriendName]; f.name = n; f.initial = n[0].toUpperCase(); currentFriendName = n; saveData(); openSettings(); }
-        }
-        function openPersonaEditor() { document.getElementById('persona-input').value = friends.find(f => f.name === currentFriendName).persona; document.getElementById('editor-page').classList.add('active'); }
+        function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
+        function renameCurrentFriend() { const n = prompt("名字:"); if(n){ const f = friends.find(f => f.name===currentFriendName); chatHistories[n]=chatHistories[currentFriendName]; delete chatHistories[currentFriendName]; f.name=n; f.initial=n[0]; currentFriendName=n; saveData(); openSettings(); } }
+        function openPersonaEditor() { document.getElementById('persona-input').value = friends.find(f => f.name===currentFriendName).persona; document.getElementById('editor-page').classList.add('active'); }
         function closePersonaEditor() { document.getElementById('editor-page').classList.remove('active'); }
-        function savePersona() { friends.find(f => f.name === currentFriendName).persona = document.getElementById('persona-input').value; saveData(); closePersonaEditor(); }
+        function savePersona() { friends.find(f => f.name===currentFriendName).persona = document.getElementById('persona-input').value; saveData(); closePersonaEditor(); }
+        function openApiConfig() { document.getElementById('api-url').value=aiConfig.url; document.getElementById('api-key').value=aiConfig.key; document.getElementById('current-model-display').innerText=aiConfig.model; document.getElementById('api-config-page').classList.add('active'); }
+        function closeApiConfig() { document.getElementById('api-config-page').classList.remove('active'); }
+        function saveApiConfig() { aiConfig.url=document.getElementById('api-url').value; aiConfig.key=document.getElementById('api-key').value; saveData(); closeApiConfig(); }
+        async function fetchModels() { const res = await fetch(aiConfig.url.replace(/\/$/,"")+"/models", {headers:{'Authorization':'Bearer '+aiConfig.key}}); const d = await res.json(); showModelSelector(d.data.map(m=>m.id)); }
+        function showModelSelector(ids) { const c = document.getElementById('model-list-container'); c.innerHTML=''; ids.forEach(id=>{ const d=document.createElement('div'); d.className='list-item'; d.innerText=id; d.onclick=()=>{aiConfig.model=id; saveData(); closeModelSelector();}; c.appendChild(d); }); document.getElementById('model-selector-page').classList.add('active'); }
+        function closeModelSelector() { document.getElementById('model-selector-page').classList.remove('active'); }
+        function changeMyName() { const n=prompt("名字:"); if(n){myInfo.name=n; saveData(); renderMePage();}}
+        function changeMyWxid() { const n=prompt("微信号:"); if(n){myInfo.wxid=n; saveData(); renderMePage();}}
+        function changeMyAvatar() { const u=prompt("URL:"); if(u){myInfo.avatar=u; saveData(); renderMePage();}else{document.getElementById('my-avatar-upload').click();}}
+        document.getElementById('my-avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{myInfo.avatar=e.target.result;saveData();renderMePage();}; r.readAsDataURL(this.files[0]);}}
+        function changeAvatar() { const u=prompt("URL:"); if(u){friends.find(f=>f.name===currentFriendName).avatarUrl=u;saveData();openSettings();}else{document.getElementById('avatar-upload').click();}}
+        document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
+        function changeChatBackground() { const u=prompt("URL:"); if(u){friends.find(f=>f.name===currentFriendName).chatBg=u;saveData();renderMessages();}}
+        function addFriend() { const n=prompt("昵称:"); if(n){ friends.push({name:n, initial:n[0], lastMsg:'', persona:'普通人', freq:0, lastMoment:Date.now(), avatarUrl:'', mountedBooks:[]}); saveData(); renderContactList(); }}
+        function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
+        function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
+        function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
+        function renderMoments() { const l=document.getElementById('moments-list'); l.innerHTML=''; moments.slice().reverse().forEach(m=>{ const d=document.createElement('div'); d.className='moment-item'; d.innerHTML=`<div class="avatar">${m.name[0]}</div><div class="info"><div style="color:#576b95">${m.name}</div><div>${m.text}</div></div>`; l.appendChild(d); }); }
+        function postMoment() { const t=prompt("内容:"); if(t){ moments.push({name:myInfo.name, text:t}); saveData(); renderMoments();}}
+        function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); const c=document.getElementById('worldbook-list-container'); c.innerHTML=''; wb.books.forEach(b=>{ const d=document.createElement('div'); d.className='list-item'; d.innerHTML=`${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}>`; c.appendChild(d); }); document.getElementById('worldbook-page').classList.add('active'); }
+        function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
+        function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
+        function openMomentsConfig() { document.getElementById('moments-config-page').classList.add('active'); }
+        function closeMomentsConfig() { document.getElementById('moments-config-page').classList.remove('active'); }
+        function saveMomentsConfig() { const f=friends.find(f=>f.name===currentFriendName); f.freq=parseInt(document.getElementById('custom-freq').value); f.lastMoment=Date.now(); saveData(); closeMomentsConfig(); }
+        async function forceTriggerMoment() { const f=friends.find(f=>f.name===currentFriendName); await triggerAiMoment(f); alert("发好了"); }
+        async function triggerAiMoment(f) { const res=await fetch(aiConfig.url.replace(/\/$/,"")+"/chat/completions",{method:'POST',headers:{'Authorization':'Bearer '+aiConfig.key,'Content-Type':'application/json'},body:JSON.stringify({model:aiConfig.model,messages:[{role:"system",content:`你的人设是${f.persona}，发一条30字内朋友圈`}]})}); const d=await res.json(); moments.push({name:f.name, text:d.choices[0].message.content}); saveData(); }
 
         window.onload = () => { renderChatList(); renderContactList(); renderMePage(); };
     </script>
-<!-- 零钱页面 -->
-<div id="wallet-page" class="page">
-    <div class="header" style="background: #f1f1f1; border:none;">
-        <span onclick="closeWallet()">〈 返回</span>
-        <span>零钱</span>
-        <span style="font-size: 14px;" onclick="openWalletHistory()">零钱明细</span>
-    </div>
-    <div class="content" style="background: #f1f1f1; display: flex; flex-direction: column; align-items: center; padding-top: 50px;">
-    <!-- 零钱图标（微信风格通常是这个图标） -->
-    <div style="font-size: 60px; margin-bottom: 10px;">🪙</div>
-    <div style="font-size: 16px; color: #000;">我的零钱</div>
-    <div style="font-size: 48px; font-weight: 500; color: #000; margin-top: 10px;" id="wallet-balance">￥0.00</div>
-    
-    <!-- 按钮容器 -->
-    <div class="wx-wallet-btn-container">
-        <button class="wx-btn wx-btn-recharge" onclick="showRechargeOptions()">充值</button>
-        <button class="wx-btn wx-btn-withdraw" onclick="alert('提现功能暂未开放')">提现</button>
-    </div>
-</div>
-</div>
-
-<!-- 零钱明细页 -->
-<div id="wallet-history-page" class="page">
-    <div class="header"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div>
-    <div class="content" id="wallet-history-list"></div>
-</div>
-
-<!-- 充值选项毛玻璃卡片 -->
-<div id="recharge-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000; background:rgba(0,0,0,0.3); align-items:center; justify-content:center;">
-    <div style="background: rgba(235, 220, 255, 0.7); backdrop-filter: blur(15px); width: 80%; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3);">
-        <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">选择充值方式</h3>
-        <div class="list-item" style="background:transparent; border-radius:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.4);" onclick="selfRecharge()">
-            <div class="info">🙋‍♂️ 自己充值</div>
-        </div>
-        <div class="list-item" style="background:transparent; border-radius:12px; border:1px solid rgba(255,255,255,0.4);" onclick="askFriendRecharge()">
-            <div class="info">💸 找朋友帮我充</div>
-        </div>
-        <div style="text-align:center; margin-top:20px; color:#888; font-size:14px;" onclick="document.getElementById('recharge-modal').style.display='none'">取消</div>
-    </div>
-</div>
 </body>
 </html>
