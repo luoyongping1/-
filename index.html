@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 小手机 - 增强版</title>
+    <style>
+        /* --- 手机全屏容器设置 --- */
+
+body {
+    margin: 0;
+    padding: 0;
+    display: block; 
+    min-height: 100vh;
+    background-color: #000; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text-color);
+    overflow: hidden; 
+}
+
+.phone-container {
+    width: 100%;        
+    height: 100vh;      
+    background: var(--bg-color);
+    border: none;       
+    border-radius: 0;   
+    position: relative;
+    overflow: hidden;
+    box-shadow: none;   
+    background-size: cover;
+    background-position: center;
+    background-image: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=1000');
+}
+
+.content {
+    position: relative;
+    z-index: 2;
+    padding: 40px 20px 20px 20px; 
+    height: calc(100% - 60px);   
+    display: flex;
+    flex-direction: column;
+}
+
+        :root {
+            --bg-color: #1a1a1a;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --text-color: #ffffff;
+            --accent-color: #ff6b6b;
+        }
+
+        /* 修改：去掉背景遮罩的暗色和模糊 */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0); /* 改为完全透明 */
+            backdrop-filter: none;      /* 去掉模糊 */
+            z-index: 1;
+        }
+
+        /* 时间组件 */
+        .time-widget { text-align: center; margin-top: 30px; margin-bottom: 30px; }
+        .date-str { font-size: 14px; opacity: 0.9; }
+        .clock-str { font-size: 56px; font-weight: bold; margin-top: 5px; }
+
+        /* 主栅格 */
+        .main-grid { display: flex; gap: 15px; flex: 1; }
+
+        /* 左侧透明小组件 */
+        .left-widget {
+            width: 140px;
+            height: 140px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 25px;
+            position: relative;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+        }
+        .heart-icon {
+            position: absolute;
+            top: 10px; left: 10px;
+            width: 20px; height: 20px;
+            fill: none; stroke: white; stroke-width: 1.5;
+            z-index: 3;
+        }
+        .battery-container {
+            position: absolute;
+            bottom: 10px; left: 10px; right: 10px;
+            height: 4px; background: rgba(255,255,255,0.3);
+            border-radius: 2px; z-index: 3;
+        }
+        #battery-fill { height: 100%; background: #4cd137; width: 50%; border-radius: 2px; transition: width 0.5s; }
+
+        /* 右侧图标布局 */
+        .right-area { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .app-icons { 
+            display: grid; 
+            grid-template-columns: 45px 45px; 
+            grid-gap: 10px; 
+            justify-content: end; 
+        }
+        .icon-btn {
+            width: 45px; height: 45px; background: var(--glass-bg);
+            border-radius: 12px; display: flex; justify-content: center;
+            align-items: center; font-size: 10px; backdrop-filter: blur(10px);
+            cursor: pointer; text-align: center; line-height: 1.2;
+        }
+
+        .progress-widgets { margin-top: auto; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+        .progress-item {
+            width: 110px; background: var(--glass-bg); padding: 8px;
+            border-radius: 10px; font-size: 11px; text-align: right;
+        }
+        .bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.2); margin-top: 5px; border-radius: 2px; }
+        .bar-fill { height: 100%; background: var(--accent-color); border-radius: 2px; }
+
+        /* 设置栏 */
+        .settings-bar { margin-top: 20px; display: flex; gap: 10px; }
+        .set-btn {
+            background: rgba(255,255,255,0.15); border: none; color: white;
+            padding: 8px 15px; border-radius: 15px; font-size: 12px; cursor: pointer;
+        }
+
+        /* 设置面板 */
+        #settings-panel {
+            position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%;
+            background: #222; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top-left-radius: 30px; border-top-right-radius: 30px;
+            padding: 20px; box-sizing: border-box; overflow-y: auto;
+        }
+        #settings-panel.active { bottom: 0; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .setting-group { margin-bottom: 15px; }
+        label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        input, select {
+            width: 100%; padding: 12px; background: #333; border: 1px solid #444;
+            color: white; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px;
+        }
+        .action-btn {
+            width: 100%; padding: 12px; background: var(--accent-color);
+            border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px;
+        }
+        .fetch-group { display: flex; gap: 10px; }
+        .fetch-group button { flex-shrink: 0; width: 100px; background: #555; }
+
+        /* App 启动层 */
+        #app-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 100; display: none;
+        }
+        .close-app-btn {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; color: white;
+            z-index: 101; cursor: pointer; border: 1px solid rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-container" id="phone-bg">
+        <!-- 遮罩层已改为全透明 -->
+        <div class="overlay"></div>
+        
+        <div class="content">
+            <!-- 时间 -->
+            <div class="time-widget">
+                <div id="date-display" class="date-str">正在加载日期...</div>
+                <div id="clock-display" class="clock-str">00:00</div>
+            </div>
+
+            <div class="main-grid">
+                <!-- 左侧小组件 -->
+                <div id="custom-widget" class="left-widget">
+                    <svg class="heart-icon" viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <div class="battery-container">
+                        <div id="battery-fill"></div>
+                    </div>
+                </div>
+
+                <!-- 右侧区域 -->
+                <div class="right-area">
+                    <div class="app-icons">
+                        <div class="icon-btn">世界书</div>
+                        <!-- 修改这一行，添加 onclick 事件 -->
+<div class="icon-btn" onclick="openQQ()">QQ</div>
+                        <div></div> 
+                        <div class="icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
+                    </div>
+                    
+                    <div class="progress-widgets">
+                        <div class="progress-item">
+                            今年剩余 <span id="year-days">0</span> 天
+                            <div class="bar-bg"><div id="year-bar" class="bar-fill"></div></div>
+                        </div>
+                        <div class="progress-item">
+                            今日剩余 <span id="day-percent">0</span>%
+                            <div class="bar-bg"><div id="day-bar" class="bar-fill"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-bar">
+                <button class="set-btn" onclick="openSettings('appearance')">外观设置</button>
+                <button class="set-btn" onclick="openSettings('api')">API设置</button>
+            </div>
+        </div>
+
+        <!-- App 启动层 -->
+        <div id="app-overlay">
+            <div class="close-app-btn" onclick="closeApp()">✕</div>
+            <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+
+        <!-- 设置面板 -->
+        <div id="settings-panel">
+            <div class="panel-header">
+                <h3 id="panel-title">设置</h3>
+                <span style="cursor:pointer" onclick="closeSettings()">✕</span>
+            </div>
+
+            <div id="api-inputs" style="display:none">
+                <div class="setting-group">
+                    <label>API URL (例如: https://api.openai.com/v1)</label>
+                    <input type="text" id="api-url" placeholder="请输入 API 地址">
+                </div>
+                <div class="setting-group">
+                    <label>API 密钥 (Secret Key)</label>
+                    <input type="password" id="api-key" placeholder="请输入 Key">
+                </div>
+                <div class="setting-group">
+                    <label>模型选择</label>
+                    <div class="fetch-group">
+                        <select id="model-select">
+                            <option value="">请先拉取模型</option>
+                        </select>
+                        <button class="set-btn" onclick="fetchModels()">拉取模型</button>
+                    </div>
+                </div>
+                <button class="action-btn" onclick="saveApiSettings()">保存配置</button>
+            </div>
+
+            <div id="appearance-inputs" style="display:none">
+                <div class="setting-group">
+                    <label>修改手机背景图</label>
+                    <input type="file" id="phone-bg-input" accept="image/*" onchange="previewImage(this, 'phone-bg')">
+                </div>
+                <div class="setting-group">
+                    <label>修改左侧组件背景图</label>
+                    <input type="file" id="widget-bg-input" accept="image/*" onchange="previewImage(this, 'custom-widget')">
+                </div>
+                <button class="action-btn" onclick="saveAppearance()">保存外观</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openQQ() {
+    // 确保这里的文字和你在第二步创建的文件名一模一样
+    document.getElementById('app-frame').src = "qq.html"; 
+    document.getElementById('app-overlay').style.display = "block";
+}
+        function openApp() {
+            document.getElementById('app-frame').src = "书书小红书.html"; 
+            document.getElementById('app-overlay').style.display = "block";
+        }
+
+        function closeApp() {
+            document.getElementById('app-overlay').style.display = "none";
+            document.getElementById('app-frame').src = ""; 
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const weeks = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            document.getElementById('date-display').innerText = `${now.getMonth()+1}月${now.getDate()}日 ${weeks[now.getDay()]}`;
+            document.getElementById('clock-display').innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            const start = new Date(now.getFullYear(), 0, 1);
+            const end = new Date(now.getFullYear() + 1, 0, 1);
+            const totalDays = (end - start) / 86400000;
+            const remainDays = Math.ceil((end - now) / 86400000);
+            document.getElementById('year-days').innerText = remainDays;
+            document.getElementById('year-bar').style.width = (remainDays / totalDays * 100) + "%";
+
+            const passedSecs = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
+            const dayPercent = Math.floor(((86400 - passedSecs) / 86400) * 100);
+            document.getElementById('day-percent').innerText = dayPercent;
+            document.getElementById('day-bar').style.width = dayPercent + "%";
+        }
+
+        function previewImage(input, targetId) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const target = document.getElementById(targetId);
+                    target.style.backgroundImage = `url(${e.target.result})`;
+                    target.dataset.tempBg = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveAppearance() {
+            const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
+            const widgetBg = document.getElementById('custom-widget').dataset.tempBg;
+            if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
+            if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
+            alert('外观已保存');
+            closeSettings();
+        }
+
+        async function fetchModels() {
+            const url = document.getElementById('api-url').value.replace(/\/$/, "");
+            const key = document.getElementById('api-key').value;
+            const modelSelect = document.getElementById('model-select');
+            if(!url || !key) { alert("请先填写 URL 和密钥"); return; }
+            modelSelect.innerHTML = '<option>拉取中...</option>';
+            try {
+                const response = await fetch(`${url}/models`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                modelSelect.innerHTML = '';
+                const models = data.data || data; 
+                models.forEach(model => {
+                    let opt = document.createElement('option');
+                    opt.value = model.id; opt.innerText = model.id;
+                    modelSelect.appendChild(opt);
+                });
+            } catch (err) { alert("拉取失败"); modelSelect.innerHTML = '<option value="">拉取失败</option>'; }
+        }
+
+        function saveApiSettings() {
+            const config = {
+                url: document.getElementById('api-url').value,
+                key: document.getElementById('api-key').value,
+                model: document.getElementById('model-select').value
+            };
+            localStorage.setItem('ai_config', JSON.stringify(config));
+            alert('API 配置已保存！');
+            closeSettings();
+        }
+
+        function openSettings(type) {
+            document.getElementById('settings-panel').classList.add('active');
+            if(type === 'api') {
+                document.getElementById('panel-title').innerText = "API 设置";
+                document.getElementById('api-inputs').style.display = "block";
+                document.getElementById('appearance-inputs').style.display = "none";
+            } else {
+                document.getElementById('panel-title').innerText = "外观设置";
+                document.getElementById('api-inputs').style.display = "none";
+                document.getElementById('appearance-inputs').style.display = "block";
+            }
+        }
+
+        function closeSettings() { document.getElementById('settings-panel').classList.remove('active'); }
+
+        window.onload = function() {
+            const savedPhoneBg = localStorage.getItem('phone_bg_data');
+            if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = `url(${savedPhoneBg})`;
+            const savedWidgetBg = localStorage.getItem('widget_bg_data');
+            if(savedWidgetBg) document.getElementById('custom-widget').style.backgroundImage = `url(${savedWidgetBg})`;
+            const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+            if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
+            if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;
+            if(savedConfig.model) {
+                const opt = document.createElement('option');
+                opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
+                document.getElementById('model-select').appendChild(opt);
+            }
+            setInterval(updateTime, 1000);
+            updateTime();
+            if (navigator.getBattery) {
+                navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
+            }
+        };
+    </script>
+</body>
+</html>
