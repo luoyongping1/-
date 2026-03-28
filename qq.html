@@ -582,11 +582,13 @@ async function playMiniMaxVoice(text, btn) {
     }
 
     const originalHTML = btn.innerHTML;
-    btn.innerHTML = "<span class='voice-icon'>⌛</span><span>合成中...</span>";
+    // 这里修改了显示文字
+    btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
     btn.style.pointerEvents = "none";
 
     try {
-        const apiUrl = `${mmConfig.url || 'https://api.minimax.chat/v1/text_to_speech'}?group_id=${mmConfig.groupId}`;
+        // 这里内置了你的代理地址，不再读取 mmConfig.url
+        const apiUrl = `https://shushuxsj.xyz/v1/text_to_speech?group_id=${mmConfig.groupId}`;
         
         const response = await fetch(apiUrl, {
             method: 'POST',

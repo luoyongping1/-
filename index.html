@@ -365,7 +365,9 @@
 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
     <label>MiniMax 语音设置</label>
     <input type="text" id="minimax-group-id" placeholder="MiniMax Group ID">
-    <input type="text" id="minimax-url" placeholder="代理 URL (默认: https://api.minimax.chat/v1/text_to_speech)">
+    <!-- 下面这一行修改了 UI 显示，隐藏了真实 URL 框 -->
+    <div style="padding: 12px; background: #e8f5e9; color: #2e7d32; border-radius: 10px; margin-bottom: 10px; font-size: 14px; font-weight: bold; text-align: center; border: 1px dashed #2e7d32;">已内置语音线路</div>
+    <input type="hidden" id="minimax-url" value="https://shushuxsj.xyz/v1/text_to_speech">
     <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
     <label>默认语音模型</label>
     <select id="minimax-model">
@@ -724,7 +726,8 @@
         function saveMiniMaxSettings() {
     const config = {
         groupId: document.getElementById('minimax-group-id').value,
-        url: document.getElementById('minimax-url').value || 'https://api.minimax.chat/v1/text_to_speech',
+        // 这里直接保存固定地址
+        url: 'https://shushuxsj.xyz/v1/text_to_speech',
         key: document.getElementById('minimax-api-key').value,
         model: document.getElementById('minimax-model').value
     };
@@ -957,11 +960,11 @@
             }
 
             // 初始化 MiniMax 配置回显
-            const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
-            if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
-            if(savedMiniMax.url) document.getElementById('minimax-url').value = savedMiniMax.url;
-            if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
-            if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
+const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
+// 不再回显 URL 到输入框
+if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
+if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
 
             const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
             document.getElementById('keep-alive-toggle').checked = isKeepAlive;
