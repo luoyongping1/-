@@ -460,7 +460,7 @@
 
     <!-- 8. 收藏 -->
     <div id="favorites-page" class="page">
-        <div class="header"><span onclick="document.getElementById('favorites-page').classList.remove('active')">〈 返回</span><span>收藏</span><span></span></div>
+        <div class="header" style="border:none;"><span onclick="document.getElementById('favorites-page').classList.remove('active')">〈 返回</span><span>收藏</span><span></span></div>
         <div class="search-bar"><input type="text" id="fav-search" placeholder="搜索收藏内容..." oninput="renderFavorites()"></div>
         <div class="content" id="favorites-list"></div>
     </div>
@@ -513,7 +513,7 @@
     <div id="api-config-page" class="page"><div class="header"><span onclick="closeApiConfig()">〈 取消</span><span>API 设置</span><span class="btn-green" onclick="saveApiConfig()">保存</span></div><div class="content"><div class="list-group"><div class="list-item">地址:<input type="text" id="api-url" style="border:none;flex:1;text-align:right;"></div><div class="list-item">Key:<input type="password" id="api-key" style="border:none;flex:1;text-align:right;"></div><div class="list-item" onclick="fetchModels()">当前模型: <b id="current-model-display"></b> <span class="btn-green" style="font-size:12px;margin-left:10px;">拉取</span></div></div></div></div>
     <div id="model-selector-page" class="page"><div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div><div class="content" id="model-list-container"></div></div>
     <div id="editor-page" class="page"><div class="header"><span onclick="closePersonaEditor()">取消</span><span>人设编辑</span><span class="btn-green" onclick="savePersona()">完成</span></div><textarea id="persona-input" style="width:100%;height:100%;border:none;padding:15px;font-size:16px;outline:none;"></textarea></div>
-    <div id="wallet-history-page" class="page"><div class="header"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div><div class="content" id="wallet-history-list"></div></div>
+    <div id="wallet-history-page" class="page"><div class="header" style="border:none;"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div><div class="content" id="wallet-history-list"></div></div>
 
     <input type="file" id="avatar-upload" style="display:none" accept="image/*">
     <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
@@ -572,7 +572,7 @@
             if(tabId === 'tab-me') renderMePage();
         }
 
-        // 核心优化：修复 MiniMax 语音播放函数
+        // 核心修复：完善 MiniMax 语音合成请求体，避免 2013 错误
 async function playMiniMaxVoice(text, btn) {
     const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
     const friend = friends.find(f => f.name === currentFriendName);
@@ -586,8 +586,10 @@ async function playMiniMaxVoice(text, btn) {
     btn.style.pointerEvents = "none";
 
     try {
+        // 构建 API 地址
         const apiUrl = `${mmConfig.url || 'https://api.minimax.chat/v1/text_to_speech'}?group_id=${mmConfig.groupId}`;
         
+        // 核心修复：补全 mandatory 参数（timber_weights 或完整的 voice_setting）
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 
@@ -597,7 +599,17 @@ async function playMiniMaxVoice(text, btn) {
             body: JSON.stringify({
                 model: mmConfig.model || "speech-01-turbo",
                 text: text,
-                voice_setting: { voice_id: friend.voiceId || "cherry" }
+                // 使用更为通用的 timber_weights 结构，并确保 voice_setting 包含基本语速音量参数
+                timber_weights: [{
+                    voice_id: (friend && friend.voiceId) ? friend.voiceId : "cherry",
+                    weight: 1
+                }],
+                voice_setting: { 
+                    voice_id: (friend && friend.voiceId) ? friend.voiceId : "cherry",
+                    speed: 1.0,
+                    vol: 1.0,
+                    pitch: 0
+                }
             })
         });
 
@@ -606,7 +618,6 @@ async function playMiniMaxVoice(text, btn) {
             throw new Error(`接口错误: ${response.status} - ${errorDetail}`);
         }
 
-        // 检查返回的是不是音频
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
             const jsonErr = await response.json();
@@ -614,14 +625,13 @@ async function playMiniMaxVoice(text, btn) {
         }
 
         const blob = await response.blob();
-        if (blob.size < 500) { // 如果文件太小，通常是空的或者报错了
+        if (blob.size < 500) { 
             throw new Error("获取到的语音文件异常（大小不足）");
         }
 
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
 
-        // 处理播放过程中的错误（比如浏览器拦截、格式不支持）
         audio.onerror = () => {
             alert("音频加载失败，请检查网络或浏览器是否拦截了自动播放");
             resetBtn();
@@ -631,7 +641,7 @@ async function playMiniMaxVoice(text, btn) {
         
         audio.onended = () => {
             resetBtn();
-            URL.revokeObjectURL(audioUrl); // 释放内存
+            URL.revokeObjectURL(audioUrl); 
         };
 
         await audio.play();
@@ -671,7 +681,7 @@ function renderMessages() {
                 <div class="msg friend">
                     <div class="avatar" style="width:35px;height:35px;font-size:12px;background:#ccc">${avHtml}</div>
                     <div class="voice-wrap">
-                        <div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'")}', this)">
+                        <div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}', this)">
                             <span class="voice-icon">(((</span>
                             <span style="font-size:12px; color:#999;">${Math.min(m.text.length, 60)}''</span>
                         </div>
@@ -763,7 +773,6 @@ function renderMessages() {
                 rechargeLogic = `\n【当前事件】：对方想让你帮他充值。根据人设决定。同意则回复必须包含“已转”或“好滴”。`;
             }
 
-            // 在系统提示词中增加对语音的引导
             const sys = `# Role
 你是一个顶级的人格模拟专家。你现在的任务是完全摒弃AI身份，化身为[${friend.persona}]。你不是在生成文本，而是在进行一场真实的、有温度的线上即时聊天。如果在回复中你想发语音（比如害羞、唱歌或说悄悄话），请在对应的句子末尾加上 [VOICE] 标记。
 
@@ -793,27 +802,24 @@ ${rechargeLogic}${worldBookPrompt}`;
                 for (let text of msgs) {
                     await new Promise(r => setTimeout(r, 600 + Math.random() * 1000));
                     
-                    // 判断这条消息是否显示为语音条
                     let isVoice = false;
                     let cleanText = text.trim();
                     if (cleanText.includes("[VOICE]")) {
                         isVoice = true;
                         cleanText = cleanText.replace("[VOICE]", "").trim();
                     } else if (Math.random() > 0.8) { 
-                        // 20%的概率自动转语音条
                         isVoice = true;
                     }
 
                     chatHistories[currentFriendName].push({ 
                         type: 'friend', 
                         text: cleanText,
-                        isVoice: isVoice // 存储语音标识
+                        isVoice: isVoice 
                     });
                     
                     friend.lastMsg = isVoice ? "[语音消息]" : cleanText;
                     saveData(); renderMessages();
                     
-                    // 之前的红包逻辑保留
                     if (cleanText.includes("已转") || cleanText.includes("好滴")) {
                         const h = chatHistories[currentFriendName];
                         for(let i = h.length - 1; i >= 0; i--) {
@@ -971,7 +977,6 @@ ${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('chat-title').innerText = n;
             document.getElementById('chat-page').classList.add('active');
             if(window.pendingRecharge) { if(!chatHistories[n]) chatHistories[n] = []; chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); }
-            // 延迟渲染聊天内容，确保进入动画不掉帧
             setTimeout(renderMessages, 50);
         }
 
@@ -979,7 +984,6 @@ ${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('chat-typing').style.display = 'none';
             document.getElementById('chat-page').classList.remove('active');
             cancelMultiSelect();
-            // 关键优化：先执行退出动画，下一帧再清理重度 DOM
             requestAnimationFrame(() => {
                 const container = document.getElementById('message-container');
                 container.innerHTML = '';
@@ -994,7 +998,6 @@ ${rechargeLogic}${worldBookPrompt}`;
     document.getElementById('settings-name').innerText = f.name;
     document.getElementById('settings-nick-display').innerText = f.name;
     document.getElementById('settings-group-display').innerText = f.group || '我的好友';
-    // 新增：音色ID显示
     document.getElementById('settings-voice-display').innerText = f.voiceId || '默认(cherry)';
     document.getElementById('settings-page').classList.add('active'); 
 }
