@@ -157,7 +157,7 @@
             position: absolute;
             transform: rotate(-45deg);
             top: 10px; left: 14px;
-            color: white; font-weight: bold; font-size: 16px;
+            color: white; font-bold: bold; font-size: 16px;
         }
 
         /* App 启动层 */
@@ -320,7 +320,7 @@
             <!-- 外观设置内容 -->
             <div id="appearance-inputs" style="display:none">
                 <div class="setting-group">
-                    <label>修改手机背景图</label>
+                    <label>修改手机背景图 (建议小于1MB)</label>
                     <input type="file" accept="image/*" onchange="previewImage(this, 'phone-bg')">
                 </div>
                 <div class="setting-group">
@@ -484,10 +484,14 @@
         function previewImage(input, targetId) {
             const file = input.files[0];
             if (file) {
+                // 限制体积提醒
+                if(file.size > 2 * 1024 * 1024) {
+                    alert("警告：图片过大可能会导致应用数据丢失（建议小于1MB）");
+                }
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const target = document.getElementById(targetId);
-                    target.style.backgroundImage = `url(${e.target.result})`;
+                    target.style.backgroundImage = 'url("' + e.target.result + '")';
                     target.dataset.tempBg = e.target.result;
                 }
                 reader.readAsDataURL(file);
@@ -495,12 +499,16 @@
         }
 
         function saveAppearance() {
-            const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
-            const widgetBg = document.getElementById('custom-widget').dataset.tempBg;
-            if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
-            if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
-            alert('外观已保存');
-            closeSettings();
+            try {
+                const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
+                const widgetBg = document.getElementById('custom-widget').dataset.tempBg;
+                if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
+                if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
+                alert('外观已保存');
+                closeSettings();
+            } catch (e) {
+                alert("保存失败：存储配额已满，请更换更小的图片。");
+            }
         }
 
         async function fetchModels() {
@@ -538,9 +546,9 @@
 
         window.onload = function() {
             const savedPhoneBg = localStorage.getItem('phone_bg_data');
-            if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = `url(${savedPhoneBg})`;
+            if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
             const savedWidgetBg = localStorage.getItem('widget_bg_data');
-            if(savedWidgetBg) document.getElementById('custom-widget').style.backgroundImage = `url(${savedWidgetBg})`;
+            if(savedWidgetBg) document.getElementById('custom-widget').style.backgroundImage = 'url("' + savedWidgetBg + '")';
             const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
             if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
             if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;

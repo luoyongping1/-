@@ -342,7 +342,7 @@
             <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">选择操作</h3>
             <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="addFriend()">添加好友</div>
             <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="addGroup()">添加分组</div>
-            <div style="text-align:center; margin-top:10px; color:#666; cursor:pointer;" onclick="document.getElementById('add-menu-modal').style.display='none'">取消</div>
+            <div style="text-align:center; margin-top:20px; color:#888; cursor:pointer;" onclick="document.getElementById('add-menu-modal').style.display='none'">取消</div>
         </div>
     </div>
 
@@ -516,15 +516,19 @@
         let quotedText = "";
 
         function saveData() {
-            localStorage.setItem('qq_friends', JSON.stringify(friends));
-            localStorage.setItem('qq_groups', JSON.stringify(groups));
-            localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
-            localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-            localStorage.setItem('qq_moments', JSON.stringify(moments));
-            localStorage.setItem('ai_config', JSON.stringify(aiConfig));
-            localStorage.setItem('my_info', JSON.stringify(myInfo));
-            localStorage.setItem('wallet_data', JSON.stringify(walletData));
-            localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+            try {
+                localStorage.setItem('qq_friends', JSON.stringify(friends));
+                localStorage.setItem('qq_groups', JSON.stringify(groups));
+                localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
+                localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+                localStorage.setItem('qq_moments', JSON.stringify(moments));
+                localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+                localStorage.setItem('my_info', JSON.stringify(myInfo));
+                localStorage.setItem('wallet_data', JSON.stringify(walletData));
+                localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+            } catch (e) {
+                console.error("保存失败，可能是存储配额已满", e);
+            }
         }
 
         // --- 核心逻辑：导航 ---
@@ -545,7 +549,8 @@
             const container = document.getElementById('message-container');
             container.innerHTML = '';
             const friend = friends.find(f => f.name === currentFriendName);
-            container.style.backgroundImage = friend.chatBg ? `url(${friend.chatBg})` : 'none';
+            // 修复 DataURL 引号问题
+            container.style.backgroundImage = friend.chatBg ? 'url("' + friend.chatBg + '")' : 'none';
 
             const history = chatHistories[currentFriendName] || [];
             history.forEach((m, index) => {
@@ -700,6 +705,7 @@ ${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             
             const momentsBg = localStorage.getItem('moments_bg_url');
+            // 修复背景图引用引号问题
             if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg + '")';
 
             const list = document.getElementById('moments-list');
