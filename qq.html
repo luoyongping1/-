@@ -237,6 +237,7 @@
     <div id="tab-chat" class="page active">
         <div class="header">微信</div>
         <div class="content" style="padding-bottom: 0;">
+            <!-- 新增微信搜索栏 -->
             <div class="chat-search-wrap">
                 <div class="chat-search-box">
                     <span style="color:#999; font-size:14px;">🔍</span>
@@ -516,15 +517,19 @@
         let quotedText = "";
 
         function saveData() {
-            localStorage.setItem('qq_friends', JSON.stringify(friends));
-            localStorage.setItem('qq_groups', JSON.stringify(groups));
-            localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
-            localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-            localStorage.setItem('qq_moments', JSON.stringify(moments));
-            localStorage.setItem('ai_config', JSON.stringify(aiConfig));
-            localStorage.setItem('my_info', JSON.stringify(myInfo));
-            localStorage.setItem('wallet_data', JSON.stringify(walletData));
-            localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+            try {
+                localStorage.setItem('qq_friends', JSON.stringify(friends));
+                localStorage.setItem('qq_groups', JSON.stringify(groups));
+                localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
+                localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+                localStorage.setItem('qq_moments', JSON.stringify(moments));
+                localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+                localStorage.setItem('my_info', JSON.stringify(myInfo));
+                localStorage.setItem('wallet_data', JSON.stringify(walletData));
+                localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+            } catch (e) {
+                console.error("保存失败，可能是存储配额已满", e);
+            }
         }
 
         // --- 核心逻辑：导航 ---
@@ -545,7 +550,8 @@
             const container = document.getElementById('message-container');
             container.innerHTML = '';
             const friend = friends.find(f => f.name === currentFriendName);
-            container.style.backgroundImage = friend.chatBg ? `url(${friend.chatBg})` : 'none';
+            // 修复 DataURL 引号问题
+            container.style.backgroundImage = friend.chatBg ? 'url("' + friend.chatBg + '")' : 'none';
 
             const history = chatHistories[currentFriendName] || [];
             history.forEach((m, index) => {
@@ -700,7 +706,8 @@ ${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             
             const momentsBg = localStorage.getItem('moments_bg_url');
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg + '")';
+            // 修复背景图引用引号问题
+            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg.replace(/(\r\n|\n|\r)/gm, "") + '")';
 
             const list = document.getElementById('moments-list');
             list.innerHTML = '';
@@ -1206,7 +1213,17 @@ ${currentCommentsText || "暂无评论"}
             if(document.getElementById('moments-page').classList.contains('active')) renderMoments();
         }
 
-        window.onload = () => { renderChatList(); renderContactList(); renderMePage(); };
+        window.onload = () => { 
+            renderChatList(); 
+            renderContactList(); 
+            renderMePage(); 
+            // 关键修复：页面加载时立即应用朋友圈背景，防止黑屏
+            const momentsBg = localStorage.getItem('moments_bg_url');
+            if(momentsBg) {
+                const bgEl = document.getElementById('moments-bg-display');
+                if(bgEl) bgEl.style.backgroundImage = 'url("' + momentsBg.replace(/(\r\n|\n|\r)/gm, "") + '")';
+            }
+        };
     </script>
 </body>
 </html>
