@@ -549,55 +549,55 @@
 
         // --- 核心逻辑：渲染消息 ---
         function renderMessages() {
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
-            const friend = friends.find(f => f.name === currentFriendName);
-            // 修复 DataURL 引号问题
-            container.style.backgroundImage = friend.chatBg ? 'url("' + friend.chatBg + '")' : 'none';
-
-            const history = chatHistories[currentFriendName] || [];
-            history.forEach((m, index) => {
-                const div = document.createElement('div');
-                div.className = `msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}`;
-                
-                let avHtml = m.type === 'self' ? (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
-                let contentHtml = m.text;
-
-                if (m.isCard) {
-                    contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
-                } else if (m.isRealImage) {
-                    contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;">`;
-                } else if (m.isDescribeCard) {
-                    contentHtml = `
-                        <div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${index})">
-                            <div class="describe-card-inner">
-                                ${m.expanded ? m.text : '✉️ [图片描述便签]'}
-                            </div>
-                        </div>`;
-                }
-
-                div.innerHTML = `
-                    <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${index})">
-                    <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${m.type==='self'?'#07c160':'#ccc'}">${avHtml}</div>
-                    <div class="${(m.isCard || m.isRealImage || m.isDescribeCard) ? '' : 'bubble'}">
-                        ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
-                        ${contentHtml}
-                    </div>`;
-
-                let timer;
-                const bubble = div.querySelector('.bubble') || div.querySelector('.recharge-card') || div.querySelector('.describe-card') || div.querySelector('img');
-                const start = (e) => { 
-                    const touch = e.touches ? e.touches[0] : e;
-                    timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, index), 700); 
-                };
-                const stop = () => clearTimeout(timer);
-                bubble.onmousedown = start; bubble.onmouseup = stop;
-                bubble.ontouchstart = start; bubble.ontouchend = stop;
-
-                container.appendChild(div);
-            });
-            container.scrollTop = container.scrollHeight;
+    const container = document.getElementById('message-container');
+    container.innerHTML = '';
+    const friend = friends.find(f => f.name === currentFriendName);
+    // 强制读取本地存储的好友数据，确保背景不丢失
+    const savedFriends = JSON.parse(localStorage.getItem('qq_friends')) || friends;
+    const savedFriend = savedFriends.find(f => f.name === currentFriendName) || friend;
+    // 修复背景图解析，优先用本地存储的chatBg
+    container.style.backgroundImage = savedFriend.chatBg ? 'url("' + savedFriend.chatBg + '")' : 'none';
+    
+    const history = chatHistories[currentFriendName] || [];
+    history.forEach((m, index) => {
+        const div = document.createElement('div');
+        div.className = `msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}`;
+        
+        let avHtml = m.type === 'self' ? (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : (savedFriend.avatarUrl ? `<img src="${savedFriend.avatarUrl}">` : savedFriend.initial);
+        let contentHtml = m.text;
+        if (m.isCard) {
+            contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
+        } else if (m.isRealImage) {
+            contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;">`;
+        } else if (m.isDescribeCard) {
+            contentHtml = `
+                <div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${index})">
+                    <div class="describe-card-inner">
+                        ${m.expanded ? m.text : '✉️ [图片描述便签]'}
+                    </div>
+                </div>`;
         }
+        div.innerHTML = `
+            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${index})">
+            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${m.type==='self'?'#07c160':'#ccc'}">${avHtml}</div>
+            <div class="${(m.isCard || m.isRealImage || m.isDescribeCard) ? '' : 'bubble'}">
+                ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
+                ${contentHtml}
+            </div>`;
+        let timer;
+        const bubble = div.querySelector('.bubble') || div.querySelector('.recharge-card') || div.querySelector('.describe-card') || div.querySelector('img');
+        const start = (e) => { 
+            const touch = e.touches ? e.touches[0] : e;
+            timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, index), 700); 
+        };
+        const stop = () => clearTimeout(timer);
+        bubble.onmousedown = start; bubble.onmouseup = stop;
+        bubble.ontouchstart = start; bubble.ontouchend = stop;
+        container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
+}
+
 
         // --- 图片/便签 ---
         function openImageChoiceModal() { document.getElementById('image-choice-modal').style.display = 'flex'; }
@@ -1141,10 +1141,13 @@ ${currentCommentsText || "暂无评论"}
             document.getElementById('my-avatar-display').innerHTML = myAvatarHtml;
         }
         function openChat(n) {
-            currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active');
-            if(window.pendingRecharge) { chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); }
-            renderMessages();
-        }
+    currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active');
+    // 补充：打开聊天时强制读取最新本地存储的好友数据
+    friends = JSON.parse(localStorage.getItem('qq_friends')) || friends;
+    if(window.pendingRecharge) { chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); }
+    renderMessages();
+}
+
         function closeChat() { document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); renderChatList(); }
         function openSettings() { 
             const f = friends.find(f => f.name === currentFriendName);
@@ -1188,25 +1191,36 @@ ${currentCommentsText || "暂无评论"}
   if (this.files[0]) { 
     const reader = new FileReader(); 
     reader.onload = e => { 
-      // 清除Base64换行符，保证解析正常
+      // 清除换行符+强制更新本地存储+立即渲染
       const cleanBase64 = e.target.result.replace(/(\r\n|\n|\r)/gm, "");
       const friend = friends.find(f => f.name === currentFriendName);
       friend.chatBg = cleanBase64;
-      saveData(); // 持久化保存到本地，退出不丢失
+      saveData(); // 强制保存到本地存储
+      // 额外刷新本地存储，确保数据同步
+      localStorage.setItem('qq_friends', JSON.stringify(friends));
       renderMessages(); 
     }; 
     reader.readAsDataURL(this.files[0]); 
   } 
 };
 
+
         function addFriend() { const n=prompt("昵称:"); if(n){ friends.push({name:n, initial:n[0], lastMsg:'', persona:'普通人', freq:0, lastMoment:Date.now(), avatarUrl:'', mountedBooks:[], group:'我的好友'}); saveData(); renderContactList(); document.getElementById('add-menu-modal').style.display='none'; }}
         function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
         function changeMomentsBackground() {
-            const choice = prompt("朋友圈背景：\n1. 上传本地图片\n2. 输入图片URL");
-            if (choice === "1") document.getElementById('moments-bg-upload').click();
-            else if (choice === "2") { const u = prompt("URL:"); if (u) { localStorage.setItem('moments_bg_url', u); renderMoments(); } }
-        }
+    const choice = prompt("朋友圈背景：\n1. 上传本地图片\n2. 输入图片URL");
+    if (choice === "1") document.getElementById('moments-bg-upload').click();
+    else if (choice === "2") { 
+        const u = prompt("URL:"); 
+        if (u) { 
+            const cleanUrl = u.replace(/(\r\n|\n|\r)/gm, ""); // 清除换行符，避免解析失败
+            localStorage.setItem('moments_bg_url', cleanUrl); 
+            renderMoments(); 
+        } 
+    }
+}
+
         document.getElementById('moments-bg-upload').onchange = function() { 
   if (this.files[0]) { 
     const reader = new FileReader(); 
