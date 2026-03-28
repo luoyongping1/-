@@ -22,6 +22,9 @@
             --z-model-sel: 600; 
             --z-modal: 2000;
         }
+        /* 页面切换动画平滑化 */
+        .page { will-change: transform, opacity; }
+        
         /* 聊天气泡容器支持背景图 */
         #message-container {
             background-size: cover;
@@ -515,21 +518,26 @@
         let menuTargetIndex = -1;
         let isMultiSelecting = false;
         let quotedText = "";
+        let saveTimeout = null;
 
+        // 优化点：防抖保存函数，避免高频写入 localStorage 导致主线程挂起
         function saveData() {
-            try {
-                localStorage.setItem('qq_friends', JSON.stringify(friends));
-                localStorage.setItem('qq_groups', JSON.stringify(groups));
-                localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
-                localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-                localStorage.setItem('qq_moments', JSON.stringify(moments));
-                localStorage.setItem('ai_config', JSON.stringify(aiConfig));
-                localStorage.setItem('my_info', JSON.stringify(myInfo));
-                localStorage.setItem('wallet_data', JSON.stringify(walletData));
-                localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
-            } catch (e) {
-                console.error("保存失败，可能是存储配额已满", e);
-            }
+            if(saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                try {
+                    localStorage.setItem('qq_friends', JSON.stringify(friends));
+                    localStorage.setItem('qq_groups', JSON.stringify(groups));
+                    localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
+                    localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+                    localStorage.setItem('qq_moments', JSON.stringify(moments));
+                    localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+                    localStorage.setItem('my_info', JSON.stringify(myInfo));
+                    localStorage.setItem('wallet_data', JSON.stringify(walletData));
+                    localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+                } catch (e) {
+                    console.error("保存失败，存储已满", e);
+                }
+            }, 300);
         }
 
         // --- 核心逻辑：导航 ---
@@ -545,20 +553,27 @@
             if(tabId === 'tab-me') renderMePage();
         }
 
-        // --- 核心逻辑：渲染消息 ---
+        // 优化点：使用 DocumentFragment 批量渲染，极大提升长聊天记录加载速度
         function renderMessages() {
             const container = document.getElementById('message-container');
-            container.innerHTML = '';
             const friend = friends.find(f => f.name === currentFriendName);
-            // 修复 DataURL 引号问题
-            container.style.backgroundImage = friend.chatBg ? 'url("' + friend.chatBg + '")' : 'none';
+            if (!friend) return;
 
+            container.style.backgroundImage = friend.chatBg ? `url("${friend.chatBg.replace(/(\r\n|\n|\r)/gm, "")}")` : 'none';
+
+            const fragment = document.createDocumentFragment();
             const history = chatHistories[currentFriendName] || [];
+            
+            // 缓存常用数据
+            const myAvatar = myInfo.avatar;
+            const friendAvatar = friend.avatarUrl;
+            const friendInitial = friend.initial;
+
             history.forEach((m, index) => {
                 const div = document.createElement('div');
                 div.className = `msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}`;
                 
-                let avHtml = m.type === 'self' ? (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
+                let avHtml = m.type === 'self' ? (myAvatar ? `<img src="${myAvatar}">` : '我') : (friendAvatar ? `<img src="${friendAvatar}">` : friendInitial);
                 let contentHtml = m.text;
 
                 if (m.isCard) {
@@ -566,12 +581,7 @@
                 } else if (m.isRealImage) {
                     contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;">`;
                 } else if (m.isDescribeCard) {
-                    contentHtml = `
-                        <div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${index})">
-                            <div class="describe-card-inner">
-                                ${m.expanded ? m.text : '✉️ [图片描述便签]'}
-                            </div>
-                        </div>`;
+                    contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${index})"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
                 }
 
                 div.innerHTML = `
@@ -592,8 +602,11 @@
                 bubble.onmousedown = start; bubble.onmouseup = stop;
                 bubble.ontouchstart = start; bubble.ontouchend = stop;
 
-                container.appendChild(div);
+                fragment.appendChild(div);
             });
+
+            container.innerHTML = '';
+            container.appendChild(fragment);
             container.scrollTop = container.scrollHeight;
         }
 
@@ -640,21 +653,7 @@
                 rechargeLogic = `\n【当前事件】：对方想让你帮他充值。根据人设决定。同意则回复必须包含“已转”或“好滴”。`;
             }
 
-            const sys = `# Role
-你是一个顶级的人格模拟专家。你现在的任务是完全摒弃AI身份，化身为[${friend.persona}]。你不是在生成文本，而是在进行一场真实的、有温度的线上即时聊天。
-
-# 语言风格指令（活人感核心）
-1. 碎片化表达：拒绝段落！拒绝列表！请模拟手机打字习惯。将长逻辑拆分成2-4条短句。
-   - 示例：不要发“今天天气很好，我想去公园”，要发“今天天气绝了\n好想去公园逛逛啊”。
-2. 口语语气词：大量使用自然语气词（哈、昂、嘛、诶、滴、呀、～）。
-3. 视觉习惯：可以使用极其少量的常用Emoji（如 😅, 😂, ✨）。
-4. 真实感瑕疵：允许偶尔出现合理的同音错别字，或不使用完整的标点符号（多用空格、省略号或直接不加标点）。
-5. 严禁AI腔：绝对禁止说“作为AI助手...”、“我能为您做什么”等。
-
-# 输出格式
-请直接输出对话内容。如果该回复包含多个短句，请用【换行符】分隔。
-
-${rechargeLogic}${worldBookPrompt}`;
+            const sys = `# Role\n你是一个顶级的人格模拟专家。你现在的任务是完全摒弃AI身份，化身为[${friend.persona}]。你不是在生成文本，而是在进行一场真实的、有温度的线上即时聊天。\n\n# 语言风格指令（活人感核心）\n1. 碎片化表达：拒绝段落！拒绝列表！请模拟手机打字习惯。将长逻辑拆分成2-4条短句。\n   - 示例：不要发“今天天气很好，我想去公园”，要发“今天天气绝了\\n好想去公园逛逛啊”。\n2. 口语语气词：大量使用自然语气词（哈、昂、嘛、诶、滴、呀、～）。\n3. 视觉习惯：可以使用极其少量的常用Emoji（如 😅, 😂, ✨）。\n4. 真实感瑕疵：允许偶尔出现合理的同音错别字，或不使用完整的标点符号（多用空格、省略号或直接不加标点）。\n5. 严禁AI腔：绝对禁止说“作为AI助手...”、“我能为您做什么”等。\n\n# 输出格式\n请直接输出对话内容。如果该回复包含多个短句，请用【换行符】分隔。\n\n${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('chat-typing').style.display = 'block';
 
             try {
@@ -666,13 +665,7 @@ ${rechargeLogic}${worldBookPrompt}`;
                 const data = await res.json();
                 
                 const msgs_all = data.choices[0].message.content.split('\n').filter(t => t.trim() !== '');
-                let msgs = [];
-                if (msgs_all.length <= 5) {
-                    msgs = msgs_all;
-                } else {
-                    msgs = msgs_all.slice(0, 4);
-                    msgs.push(msgs_all.slice(4).join(' '));
-                }
+                let msgs = msgs_all.length <= 5 ? msgs_all : [...msgs_all.slice(0, 4), msgs_all.slice(4).join(' ')];
 
                 for (let text of msgs) {
                     await new Promise(r => setTimeout(r, 600 + Math.random() * 1000));
@@ -696,7 +689,7 @@ ${rechargeLogic}${worldBookPrompt}`;
             finally { document.getElementById('chat-typing').style.display = 'none'; }
         }
 
-        // --- 仿微信朋友圈逻辑 ---
+        // --- 朋友圈逻辑 ---
         function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
         function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
         
@@ -706,12 +699,9 @@ ${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             
             const momentsBg = localStorage.getItem('moments_bg_url');
-            // 修复背景图引用引号问题
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg.replace(/(\r\n|\n|\r)/gm, "") + '")';
+            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`;
 
-            const list = document.getElementById('moments-list');
-            list.innerHTML = '';
-            
+            const fragment = document.createDocumentFragment();
             moments.slice().reverse().forEach((m, idx) => {
                 const realIdx = moments.length - 1 - idx;
                 const friend = friends.find(f => f.name === m.name);
@@ -721,11 +711,8 @@ ${rechargeLogic}${worldBookPrompt}`;
                 if(m.images && m.images.length > 0) {
                     imgsHtml = `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; margin-top:8px; width:240px;">`;
                     m.images.forEach(img => {
-                        if(img.type === 'real') {
-                            imgsHtml += `<img src="${img.data}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px;">`;
-                        } else {
-                            imgsHtml += `<div style="width:100%; aspect-ratio:1; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; padding:5px; box-sizing:border-box; color:#888; border:1px dashed #ccc;">[描述图:${img.data.substring(0,10)}...]</div>`;
-                        }
+                        if(img.type === 'real') imgsHtml += `<img src="${img.data}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px;">`;
+                        else imgsHtml += `<div style="width:100%; aspect-ratio:1; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; padding:5px; box-sizing:border-box; color:#888; border:1px dashed #ccc;">[描述图:${img.data.substring(0,10)}...]</div>`;
                     });
                     imgsHtml += `</div>`;
                 }
@@ -750,22 +737,19 @@ ${rechargeLogic}${worldBookPrompt}`;
                         </div>
                         <div id="feedback-${realIdx}" class="moment-feedback" style="display:${(m.likes && m.likes.length) || (m.comments && m.comments.length) ? 'block' : 'none'}">
                             ${m.likes && m.likes.length ? `<div class="like-section">❤ ${m.likes.join(', ')}</div>` : ''}
-                            ${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `
-                                <div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')">
-                                    <span class="comment-user">${c.name}</span>
-                                    ${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}
-                                </div>`).join('')}</div>` : ''}
+                            ${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `<div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')"><span class="comment-user">${c.name}</span>${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}</div>`).join('')}</div>` : ''}
                         </div>
-                    </div>
-                `;
-                list.appendChild(div);
+                    </div>`;
+                fragment.appendChild(div);
             });
+            const list = document.getElementById('moments-list');
+            list.innerHTML = '';
+            list.appendChild(fragment);
         }
 
         // --- 发布编辑器逻辑 ---
         function openMomentsEditor() {
-            tempMomentImages = [];
-            tempVisibleFriends = [];
+            tempMomentImages = []; tempVisibleFriends = [];
             document.getElementById('moment-edit-text').value = "";
             document.getElementById('visibility-display').innerText = "公开";
             renderEditorImages();
@@ -775,14 +759,10 @@ ${rechargeLogic}${worldBookPrompt}`;
 
         function addMomentImage() {
             const choice = prompt("选择配图方式：\n1. 上传本地图片\n2. 输入文字描述图");
-            if (choice === "1") {
-                document.getElementById('moment-image-upload').click();
-            } else if (choice === "2") {
+            if (choice === "1") document.getElementById('moment-image-upload').click();
+            else if (choice === "2") {
                 const desc = prompt("请输入图片描述内容：");
-                if (desc) {
-                    tempMomentImages.push({ type: 'desc', data: desc });
-                    renderEditorImages();
-                }
+                if (desc) { tempMomentImages.push({ type: 'desc', data: desc }); renderEditorImages(); }
             }
         }
 
@@ -790,10 +770,7 @@ ${rechargeLogic}${worldBookPrompt}`;
             const files = Array.from(this.files);
             files.forEach(file => {
                 const reader = new FileReader();
-                reader.onload = e => {
-                    tempMomentImages.push({ type: 'real', data: e.target.result });
-                    renderEditorImages();
-                };
+                reader.onload = e => { tempMomentImages.push({ type: 'real', data: e.target.result }); renderEditorImages(); };
                 reader.readAsDataURL(file);
             });
         };
@@ -804,20 +781,13 @@ ${rechargeLogic}${worldBookPrompt}`;
             tempMomentImages.forEach((img, idx) => {
                 const div = document.createElement('div');
                 div.className = 'moment-image-item';
-                if(img.type === 'real') {
-                    div.innerHTML = `<img src="${img.data}">`;
-                } else {
-                    div.innerHTML = `<div style="font-size:10px;padding:5px;text-align:center;color:#888;">[描述图]</div>`;
-                }
+                div.innerHTML = img.type === 'real' ? `<img src="${img.data}">` : `<div style="font-size:10px;padding:5px;text-align:center;color:#888;">[描述图]</div>`;
                 div.onclick = () => { if(confirm("删除这张图？")) { tempMomentImages.splice(idx, 1); renderEditorImages(); } };
                 grid.appendChild(div);
             });
             if(tempMomentImages.length < 9) {
                 const addBtn = document.createElement('div');
-                addBtn.className = 'moment-image-item';
-                addBtn.innerText = '+';
-                addBtn.onclick = addMomentImage;
-                grid.appendChild(addBtn);
+                addBtn.className = 'moment-image-item'; addBtn.innerText = '+'; addBtn.onclick = addMomentImage; grid.appendChild(addBtn);
             }
         }
 
@@ -825,24 +795,15 @@ ${rechargeLogic}${worldBookPrompt}`;
             const list = document.getElementById('visibility-list');
             list.innerHTML = '';
             friends.forEach(f => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                const isChecked = tempVisibleFriends.includes(f.name);
-                div.innerHTML = `
-                    <div class="avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial}</div>
-                    <div class="info">${f.name}</div>
-                    <input type="checkbox" style="transform:scale(1.3)" ${isChecked ? 'checked' : ''} onchange="toggleVisibleFriend('${f.name}')">
-                `;
+                const div = document.createElement('div'); div.className = 'list-item';
+                div.innerHTML = `<div class="avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial}</div><div class="info">${f.name}</div><input type="checkbox" style="transform:scale(1.3)" ${tempVisibleFriends.includes(f.name) ? 'checked' : ''} onchange="toggleVisibleFriend('${f.name}')">`;
                 list.appendChild(div);
             });
             document.getElementById('visibility-selector-page').classList.add('active');
         }
         function toggleVisibleFriend(name) {
-            if(tempVisibleFriends.includes(name)) {
-                tempVisibleFriends = tempVisibleFriends.filter(n => n !== name);
-            } else {
-                tempVisibleFriends.push(name);
-            }
+            if(tempVisibleFriends.includes(name)) tempVisibleFriends = tempVisibleFriends.filter(n => n !== name);
+            else tempVisibleFriends.push(name);
             document.getElementById('visibility-display').innerText = tempVisibleFriends.length > 0 ? `部分可见(${tempVisibleFriends.length})` : "公开";
         }
         function closeVisibilitySelector() { document.getElementById('visibility-selector-page').classList.remove('active'); }
@@ -850,110 +811,40 @@ ${rechargeLogic}${worldBookPrompt}`;
         function submitMoment() {
             const text = document.getElementById('moment-edit-text').value.trim();
             if(!text && tempMomentImages.length === 0) return;
-            
-            const newMoment = {
-                id: Date.now(),
-                name: myInfo.name,
-                text: text,
-                images: JSON.parse(JSON.stringify(tempMomentImages)),
-                visibleTo: JSON.parse(JSON.stringify(tempVisibleFriends)),
-                likes: [],
-                comments: [],
-                time: Date.now()
-            };
-            
-            moments.push(newMoment);
-            saveData();
-            renderMoments();
-            closeMomentsEditor();
-            
-            // 重要：改为循环所有 AI 好友进行回复
+            moments.push({ id: Date.now(), name: myInfo.name, text, images: JSON.parse(JSON.stringify(tempMomentImages)), visibleTo: JSON.parse(JSON.stringify(tempVisibleFriends)), likes: [], comments: [], time: Date.now() });
+            saveData(); renderMoments(); closeMomentsEditor();
             setTimeout(() => aiReactToMoment(moments.length - 1, 'new_post'), 2000);
         }
 
         async function aiReactToMoment(momentIdx, actionType, userCommentText = "", replyToName = null) {
             const m = moments[momentIdx];
-            if(!m) return;
-            if(!aiConfig.key) return;
+            if(!m || !aiConfig.key) return;
+            let interactionFriends = actionType === 'comment' ? (replyToName && replyToName !== myInfo.name ? [friends.find(f => f.name === replyToName)].filter(Boolean) : [friends.find(f => f.name === m.name)].filter(Boolean)) : friends.filter(f => f.name !== m.name && (!m.visibleTo || m.visibleTo.length === 0 || m.visibleTo.includes(f.name)));
+            if (actionType !== 'comment' && actionType !== 'new_post') interactionFriends = interactionFriends.sort(() => 0.5 - Math.random()).slice(0, 1);
 
-            let interactionFriends = [];
-
-            if (actionType === 'comment') {
-                if(replyToName && replyToName !== myInfo.name) {
-                    const target = friends.find(f => f.name === replyToName);
-                    if(target) interactionFriends = [target];
-                } else {
-                    const owner = friends.find(f => f.name === m.name);
-                    if (owner) {
-                        interactionFriends = [owner];
-                    } else {
-                        interactionFriends = friends.filter(f => !m.visibleTo || m.visibleTo.length === 0 || m.visibleTo.includes(f.name)).sort(() => 0.5 - Math.random()).slice(0, 2);
-                    }
-                }
-            } else if (actionType === 'new_post') {
-                // 核心逻辑：所有可见范围内的 AI 角色都要互动
-                interactionFriends = friends.filter(f => f.name !== m.name && (!m.visibleTo || m.visibleTo.length === 0 || m.visibleTo.includes(f.name)));
-            } else {
-                interactionFriends = friends.filter(f => f.name !== m.name && (!m.visibleTo || m.visibleTo.length === 0 || m.visibleTo.includes(f.name))).sort(() => 0.5 - Math.random()).slice(0, 1);
-            }
-
-            // 获取该朋友圈已有的所有评论内容，用于防重复
             const currentCommentsText = (m.comments || []).map(c => `[${c.name}]: ${c.text}`).join('\n');
-
             for(let f of interactionFriends) {
                 await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000));
-
-                const willLike = actionType !== 'comment' ? Math.random() > 0.3 : Math.random() > 0.1;
-                const willComment = (actionType === 'comment' || actionType === 'new_post') ? true : Math.random() > 0.4;
-
-                if(willLike && (!m.likes || !m.likes.includes(f.name))) {
-                    if(!m.likes) m.likes = [];
-                    m.likes.push(f.name);
-                    saveData(); renderMoments();
+                if((actionType !== 'comment' ? Math.random() > 0.3 : Math.random() > 0.1) && (!m.likes || !m.likes.includes(f.name))) {
+                    if(!m.likes) m.likes = []; m.likes.push(f.name); saveData(); renderMoments();
                 }
-
-                if(willComment) {
+                if(actionType === 'comment' || actionType === 'new_post' || Math.random() > 0.4) {
                     const history = (chatHistories[f.name] || []).slice(-5).map(msg => `${msg.type==='self'?'我':'你'}: ${msg.text}`).join('\n');
-                    let promptMsg = "";
-                    if(actionType === 'comment') {
-                        promptMsg = `好友 ${myInfo.name} 在朋友圈回复了你：“${userCommentText}”。请回复他。`;
-                    } else if (actionType === 'new_post') {
-                        promptMsg = `好友 ${myInfo.name} 发布了新动态：“${m.text}”。请根据你们的关系回复。`;
-                    } else {
-                        promptMsg = `动态内容：“${m.text}”。`;
-                    }
-
-                    const sys = `# Role
-你现在模拟身份：[${f.name}]，人设：${f.persona}。
-你们最近的聊天内容如下：
-${history || "暂无记录"}
-
-# 已有评论（请勿重复类似的内容或观点）:
-${currentCommentsText || "暂无评论"}
-
-# 任务
-请写一条朋友圈评论（15字以内）。要求：绝对原创，不要重复之前说过的话，语言要有新鲜感。直接输出内容，禁止AI腔。`;
-                    
+                    let promptMsg = actionType === 'comment' ? `好友 ${myInfo.name} 在朋友圈回复了你：“${userCommentText}”。请回复他。` : actionType === 'new_post' ? `好友 ${myInfo.name} 发布了新动态：“${m.text}”。请回复他。` : `动态内容：“${m.text}”。`;
+                    const sys = `# Role\n你现在模拟身份：[${f.name}]，人设：${f.persona}。\n最近聊天记录：\n${history || "暂无记录"}\n\n# 已有评论:\n${currentCommentsText || "暂无评论"}\n\n# 任务\n请写一条朋友圈评论（15字以内）。直接输出内容，禁止AI腔。`;
                     try {
-                        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, {role: "user", content: promptMsg}] })
-                        });
+                        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, { method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, {role: "user", content: promptMsg}] }) });
                         const data = await res.json();
                         const aiComment = data.choices[0].message.content.trim().replace(/^"|"$/g, '');
-                        if(!m.comments) m.comments = [];
-                        m.comments.push({ name: f.name, text: aiComment, replyTo: myInfo.name });
-                        saveData(); renderMoments();
-                    } catch (e) { console.error("AI朋友圈互动失败", e); }
+                        if(!m.comments) m.comments = []; m.comments.push({ name: f.name, text: aiComment, replyTo: myInfo.name }); saveData(); renderMoments();
+                    } catch (e) { console.error("互动失败", e); }
                 }
             }
         }
 
         function toggleMomentMenu(idx, e) {
             e.stopPropagation();
-            const allMenus = document.querySelectorAll('.moment-pop-menu');
-            allMenus.forEach(m => { if(m.id !== `moment-pop-${idx}`) m.classList.remove('active'); });
+            document.querySelectorAll('.moment-pop-menu').forEach(m => { if(m.id !== `moment-pop-${idx}`) m.classList.remove('active'); });
             const currentMenu = document.getElementById(`moment-pop-${idx}`);
             currentMenu.classList.toggle('active');
             const close = () => { currentMenu.classList.remove('active'); document.removeEventListener('click', close); };
@@ -963,102 +854,69 @@ ${currentCommentsText || "暂无评论"}
         function likeMoment(idx) {
             const m = moments[idx];
             if(!m.likes) m.likes = [];
-            if(!m.likes.includes(myInfo.name)) {
-                m.likes.push(myInfo.name);
-                saveData(); renderMoments();
-                aiReactToMoment(idx, 'like');
-            }
+            if(!m.likes.includes(myInfo.name)) { m.likes.push(myInfo.name); saveData(); renderMoments(); aiReactToMoment(idx, 'like'); }
         }
 
         function showCommentInput(idx, replyToName = null) {
-            const promptTitle = replyToName ? `回复 ${replyToName}:` : "输入评论内容:";
-            const txt = prompt(promptTitle);
+            const txt = prompt(replyToName ? `回复 ${replyToName}:` : "输入评论内容:");
             if(txt) {
-                const m = moments[idx];
-                if(!m.comments) m.comments = [];
-                m.comments.push({ name: myInfo.name, text: txt, replyTo: replyToName });
-                saveData(); renderMoments();
-                // 立即触发针对性回复，传入被回复人的名字
-                aiReactToMoment(idx, 'comment', txt, replyToName);
+                if(!moments[idx].comments) moments[idx].comments = [];
+                moments[idx].comments.push({ name: myInfo.name, text: txt, replyTo: replyToName });
+                saveData(); renderMoments(); aiReactToMoment(idx, 'comment', txt, replyToName);
             }
         }
 
         // --- 微信消息列表逻辑 ---
         function renderChatList() {
             const list = document.getElementById('chat-session-list');
-            const kw = document.getElementById('chat-search-input') ? document.getElementById('chat-search-input').value.toLowerCase() : '';
-            list.innerHTML = '';
+            const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
+            const fragment = document.createDocumentFragment();
             
             friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).forEach(f => {
-                const div = document.createElement('div');
-                div.className = 'wechat-chat-item';
+                const div = document.createElement('div'); div.className = 'wechat-chat-item';
                 div.onclick = () => openChat(f.name);
-                let avHtml = f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial;
-                div.innerHTML = `
-                    <div class="chat-avatar">${avHtml}</div>
-                    <div class="chat-body">
-                        <div class="chat-top">
-                            <div class="chat-nickname">${f.name}</div>
-                            <div class="chat-time">14:00</div>
-                        </div>
-                        <div class="chat-preview">${f.lastMsg}</div>
-                    </div>
-                `;
-                list.appendChild(div);
+                div.innerHTML = `<div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial}</div><div class="chat-body"><div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">刚刚</div></div><div class="chat-preview">${f.lastMsg}</div></div>`;
+                fragment.appendChild(div);
             });
+            list.innerHTML = ''; list.appendChild(fragment);
         }
 
         // --- 通讯录与分组逻辑 ---
         function renderContactList() {
             const list = document.getElementById('contact-list');
-            list.innerHTML = '';
+            const fragment = document.createDocumentFragment();
             groups.forEach(gName => {
                 const isCollapsed = collapsedGroups.includes(gName);
-                const gHeader = document.createElement('div');
-                gHeader.className = 'group-header';
+                const gHeader = document.createElement('div'); gHeader.className = 'group-header';
                 gHeader.innerHTML = `<span class="group-arrow ${isCollapsed?'collapsed':''}">▼</span>${gName}`;
                 gHeader.onclick = () => toggleGroup(gName);
-                list.appendChild(gHeader);
-
+                fragment.appendChild(gHeader);
                 if(!isCollapsed) {
                     friends.filter(f => (f.group || '我的好友') === gName).forEach(f => {
-                        const div = document.createElement('div');
-                        div.className = 'list-item';
-                        div.onclick = () => openChat(f.name);
+                        const div = document.createElement('div'); div.className = 'list-item'; div.onclick = () => openChat(f.name);
                         div.innerHTML = `<div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial}</div><div class="info">${f.name}</div>`;
-                        list.appendChild(div);
+                        fragment.appendChild(div);
                     });
                 }
             });
+            list.innerHTML = ''; list.appendChild(fragment);
         }
 
         function toggleGroup(gName) {
-            if(collapsedGroups.includes(gName)) {
-                collapsedGroups = collapsedGroups.filter(n => n !== gName);
-            } else {
-                collapsedGroups.push(gName);
-            }
+            if(collapsedGroups.includes(gName)) collapsedGroups = collapsedGroups.filter(n => n !== gName);
+            else collapsedGroups.push(gName);
             saveData(); renderContactList();
         }
 
         function openAddMenu() { document.getElementById('add-menu-modal').style.display = 'flex'; }
-        
         function addGroup() {
             const name = prompt("输入分组名称:");
-            if(name && !groups.includes(name)) {
-                groups.push(name); saveData(); renderContactList();
-                document.getElementById('add-menu-modal').style.display = 'none';
-            }
+            if(name && !groups.includes(name)) { groups.push(name); saveData(); renderContactList(); document.getElementById('add-menu-modal').style.display = 'none'; }
         }
-
         function changeFriendGroup() {
             let options = groups.map((g, i) => `${i+1}. ${g}`).join('\n');
             const choice = prompt(`选择分组 (输入数字):\n${options}`);
-            if(choice && groups[parseInt(choice)-1]) {
-                const f = friends.find(f => f.name === currentFriendName);
-                f.group = groups[parseInt(choice)-1];
-                saveData(); openSettings();
-            }
+            if(choice && groups[parseInt(choice)-1]) { friends.find(f => f.name === currentFriendName).group = groups[parseInt(choice)-1]; saveData(); openSettings(); }
         }
 
         // --- 基础工具逻辑 ---
@@ -1066,24 +924,20 @@ ${currentCommentsText || "暂无评论"}
             if(isMultiSelecting) return;
             menuTargetIndex = index;
             const menu = document.getElementById('msg-context-menu');
-            menu.style.display = 'block';
-            menu.style.left = Math.min(x, window.innerWidth - 110) + 'px';
-            menu.style.top = y + 'px';
+            menu.style.display = 'block'; menu.style.left = Math.min(x, window.innerWidth - 110) + 'px'; menu.style.top = y + 'px';
             const close = () => { menu.style.display = 'none'; document.removeEventListener('click', close); };
             setTimeout(() => document.addEventListener('click', close), 100);
         }
         function deleteSingleMsg() { chatHistories[currentFriendName].splice(menuTargetIndex, 1); saveData(); renderMessages(); }
         function redoReply() {
-            const h = chatHistories[currentFriendName];
-            let i = h.length - 1;
+            const h = chatHistories[currentFriendName]; let i = h.length - 1;
             while(i >= 0 && h[i].type === 'friend') { h.splice(i, 1); i--; }
             saveData(); renderMessages(); getAiReply();
         }
         function quoteMsg() {
             quotedText = chatHistories[currentFriendName][menuTargetIndex].text;
             const pre = document.getElementById('quote-preview');
-            pre.innerHTML = `引用：${quotedText.substring(0,10)}... <span onclick="clearQuote()">×</span>`;
-            pre.style.display = 'block';
+            pre.innerHTML = `引用：${quotedText.substring(0,10)}... <span onclick="clearQuote()">×</span>`; pre.style.display = 'block';
         }
         function clearQuote() { quotedText = ""; document.getElementById('quote-preview').style.display = 'none'; }
         function enterMultiSelect() { isMultiSelecting = true; document.getElementById('multi-select-bar').style.display = 'flex'; renderMessages(); }
@@ -1098,26 +952,27 @@ ${currentCommentsText || "暂无评论"}
         }
         function openFavorites() { document.getElementById('favorites-page').classList.add('active'); renderFavorites(); }
         function renderFavorites() {
-            const list = document.getElementById('favorites-list');
-            const kw = document.getElementById('fav-search').value.toLowerCase();
-            list.innerHTML = '';
+            const list = document.getElementById('favorites-list'); const kw = document.getElementById('fav-search').value.toLowerCase();
+            const fragment = document.createDocumentFragment();
             favorites.filter(f => f.text.toLowerCase().includes(kw)).reverse().forEach(f => {
                 const div = document.createElement('div'); div.className = 'list-group'; div.style.padding = '15px';
                 div.innerHTML = `<div style="font-size:12px; color:#888;">${f.from} - ${f.time}</div><div>${f.text}</div><div style="color:red; text-align:right;" onclick="removeFavorite(${f.id})">删除</div>`;
-                list.appendChild(div);
+                fragment.appendChild(div);
             });
+            list.innerHTML = ''; list.appendChild(fragment);
         }
         function removeFavorite(id) { favorites = favorites.filter(f => f.id !== id); saveData(); renderFavorites(); }
         function openWallet() { document.getElementById('wallet-page').classList.add('active'); updateWalletUI(); }
         function closeWallet() { document.getElementById('wallet-page').classList.remove('active'); }
         function updateWalletUI() { document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`; saveData(); }
         function openWalletHistory() {
-            const list = document.getElementById('wallet-history-list'); list.innerHTML = '';
+            const list = document.getElementById('wallet-history-list'); const fragment = document.createDocumentFragment();
             walletData.history.slice().reverse().forEach(h => {
                 const div = document.createElement('div'); div.className = 'list-item';
                 div.innerHTML = `<div class="info"><div>${h.title}</div><div style="font-size:12px;">${h.time}</div></div><b>${h.amount}</b>`;
-                list.appendChild(div);
+                fragment.appendChild(div);
             });
+            list.innerHTML = ''; list.appendChild(fragment);
             document.getElementById('wallet-history-page').classList.add('active');
         }
         function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
@@ -1134,15 +989,24 @@ ${currentCommentsText || "暂无评论"}
         function renderMePage() {
             document.getElementById('my-name-display').innerText = myInfo.name;
             document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid;
-            const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}">` : 'ME';
-            document.getElementById('my-avatar-display').innerHTML = myAvatarHtml;
+            document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : 'ME';
         }
+        
+        // 优化点：进入聊天窗口时，延迟渲染，确保页面切换流畅
         function openChat(n) {
-            currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active');
-            if(window.pendingRecharge) { chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); }
-            renderMessages();
+            currentFriendName = n;
+            document.getElementById('chat-title').innerText = n;
+            document.getElementById('chat-page').classList.add('active');
+            if(window.pendingRecharge) {
+                if(!chatHistories[n]) chatHistories[n] = [];
+                chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` });
+                window.pendingRecharge = null; saveData();
+            }
+            // 关键优化：使用 requestAnimationFrame 让切换更平滑
+            requestAnimationFrame(() => renderMessages());
         }
         function closeChat() { document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); renderChatList(); }
+        
         function openSettings() { 
             const f = friends.find(f => f.name === currentFriendName);
             document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial;
@@ -1217,11 +1081,10 @@ ${currentCommentsText || "暂无评论"}
             renderChatList(); 
             renderContactList(); 
             renderMePage(); 
-            // 关键修复：页面加载时立即应用朋友圈背景，防止黑屏
             const momentsBg = localStorage.getItem('moments_bg_url');
             if(momentsBg) {
                 const bgEl = document.getElementById('moments-bg-display');
-                if(bgEl) bgEl.style.backgroundImage = 'url("' + momentsBg.replace(/(\r\n|\n|\r)/gm, "") + '")';
+                if(bgEl) bgEl.style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`;
             }
         };
     </script>
