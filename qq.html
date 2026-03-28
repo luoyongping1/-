@@ -572,11 +572,14 @@
             if(tabId === 'tab-me') renderMePage();
         }
 
-        // 核心优化：新增 MiniMax 语音播放函数
+        // 核心优化：修复 MiniMax 语音播放函数
 async function playMiniMaxVoice(text, btn) {
     const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
     const friend = friends.find(f => f.name === currentFriendName);
-    if (!mmConfig.key || !mmConfig.groupId) return alert("请先在手机设置中配置 MiniMax Group ID 和 Key");
+    
+    if (!mmConfig.key || !mmConfig.groupId) {
+        return alert("请先在手机主屏幕的‘设置’中配置 MiniMax Group ID 和 Key");
+    }
 
     const originalHTML = btn.innerHTML;
     btn.innerHTML = "<span class='voice-icon'>⌛</span><span>合成中...</span>";
@@ -584,24 +587,64 @@ async function playMiniMaxVoice(text, btn) {
 
     try {
         const apiUrl = `${mmConfig.url || 'https://api.minimax.chat/v1/text_to_speech'}?group_id=${mmConfig.groupId}`;
+        
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${mmConfig.key}`, 'Content-Type': 'application/json' },
+            headers: { 
+                'Authorization': `Bearer ${mmConfig.key}`, 
+                'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({
                 model: mmConfig.model || "speech-01-turbo",
                 text: text,
                 voice_setting: { voice_id: friend.voiceId || "cherry" }
             })
         });
-        if (!response.ok) throw new Error("接口错误");
+
+        if (!response.ok) {
+            const errorDetail = await response.text();
+            throw new Error(`接口错误: ${response.status} - ${errorDetail}`);
+        }
+
+        // 检查返回的是不是音频
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const jsonErr = await response.json();
+            throw new Error(`API报错: ${JSON.stringify(jsonErr)}`);
+        }
+
         const blob = await response.blob();
-        const audio = new Audio(URL.createObjectURL(blob));
-        audio.play();
+        if (blob.size < 500) { // 如果文件太小，通常是空的或者报错了
+            throw new Error("获取到的语音文件异常（大小不足）");
+        }
+
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+
+        // 处理播放过程中的错误（比如浏览器拦截、格式不支持）
+        audio.onerror = () => {
+            alert("音频加载失败，请检查网络或浏览器是否拦截了自动播放");
+            resetBtn();
+        };
+
         btn.innerHTML = "<span class='voice-icon'>▶</span><span>正在播放</span>";
-        audio.onended = () => { btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto"; };
+        
+        audio.onended = () => {
+            resetBtn();
+            URL.revokeObjectURL(audioUrl); // 释放内存
+        };
+
+        await audio.play();
+
     } catch (e) {
-        alert("语音合成失败，请检查配置或跨域");
-        btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto";
+        console.error("MiniMax TTS Error:", e);
+        alert("语音合成失败: " + e.message);
+        resetBtn();
+    }
+
+    function resetBtn() {
+        btn.innerHTML = originalHTML;
+        btn.style.pointerEvents = "auto";
     }
 }
 
