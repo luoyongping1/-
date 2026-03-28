@@ -265,7 +265,7 @@
     <div id="worldbook-page" class="page"><div class="header"><span onclick="closeWorldBookSelector()">〈 返回</span><span>挂载世界书</span><span class="btn-green" onclick="saveWorldBookConfig()">完成</span></div><div class="content" id="worldbook-list-container"></div></div>
     <div id="moments-config-page" class="page">
         <div class="header"><span onclick="closeMomentsConfig()">〈 返回</span><span>朋友圈设置</span><span class="btn-green" onclick="saveMomentsConfig()">完成</span></div>
-        <div class="content"><div class="list-group"><div class="list-item">自定义(分):<input type="number" id="custom-freq" style="border:none;flex:1;text-align:right;"></div></div><div class="list-group"><div class="list-item" onclick="forceTriggerMoment()" style="justify-content:center; color:var(--blue-link);">✨ 强制让 AI 发一条朋友圈</div></div></div>
+        <div class="content"><div class="list-group"><div class="list-item">自定义(分):<input type="number" id="custom-freq" style="border:none;flex:1;text-align:right;"></div></div><div class="list-group"><div id="moment-status-btn" class="list-item" onclick="forceTriggerMoment()" style="justify-content:center; color:var(--blue-link);">✨ 强制让 AI 发一条朋友圈</div></div></div>
     </div>
     <div id="api-config-page" class="page"><div class="header"><span onclick="closeApiConfig()">〈 取消</span><span>API 设置</span><span class="btn-green" onclick="saveApiConfig()">保存</span></div><div class="content"><div class="list-group"><div class="list-item">地址:<input type="text" id="api-url" style="border:none;flex:1;text-align:right;"></div><div class="list-item">Key:<input type="password" id="api-key" style="border:none;flex:1;text-align:right;"></div><div class="list-item" onclick="fetchModels()">当前模型: <b id="current-model-display"></b> <span class="btn-green" style="font-size:12px;margin-left:10px;">拉取</span></div></div></div></div>
     <div id="model-selector-page" class="page"><div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div><div class="content" id="model-list-container"></div></div>
@@ -273,7 +273,9 @@
     <div id="wallet-history-page" class="page"><div class="header"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div><div class="content" id="wallet-history-list"></div></div>
 
     <input type="file" id="avatar-upload" style="display:none" accept="image/*">
-    <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
+<input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
+<!-- 新增下面这一行 -->
+<input type="file" id="chat-bg-upload" style="display:none" accept="image/*">
 
     <script>
         // --- 数据定义 ---
@@ -550,7 +552,32 @@
         document.getElementById('my-avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{myInfo.avatar=e.target.result;saveData();renderMePage();}; r.readAsDataURL(this.files[0]);}}
         function changeAvatar() { const u=prompt("URL:"); if(u){friends.find(f=>f.name===currentFriendName).avatarUrl=u;saveData();openSettings();}else{document.getElementById('avatar-upload').click();}}
         document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
-        function changeChatBackground() { const u=prompt("URL:"); if(u){friends.find(f=>f.name===currentFriendName).chatBg=u;saveData();renderMessages();}}
+        function changeChatBackground() {
+    const choice = prompt("请选择设置背景方式：\n1. 上传本地图片\n2. 输入图片URL\n(输入数字并确定)");
+    if (choice === "1") {
+        document.getElementById('chat-bg-upload').click();
+    } else if (choice === "2") {
+        const u = prompt("请输入图片URL地址:");
+        if (u) {
+            friends.find(f => f.name === currentFriendName).chatBg = u;
+            saveData();
+            renderMessages();
+        }
+    }
+}
+
+// 新增：处理本地背景图片上传的监听逻辑
+document.getElementById('chat-bg-upload').onchange = function() {
+    if (this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            friends.find(f => f.name === currentFriendName).chatBg = e.target.result;
+            saveData();
+            renderMessages();
+        };
+        reader.readAsDataURL(this.files[0]);
+    }
+};
         function addFriend() { const n=prompt("昵称:"); if(n){ friends.push({name:n, initial:n[0], lastMsg:'', persona:'普通人', freq:0, lastMoment:Date.now(), avatarUrl:'', mountedBooks:[]}); saveData(); renderContactList(); }}
         function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
         function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
@@ -563,7 +590,29 @@
         function openMomentsConfig() { document.getElementById('moments-config-page').classList.add('active'); }
         function closeMomentsConfig() { document.getElementById('moments-config-page').classList.remove('active'); }
         function saveMomentsConfig() { const f=friends.find(f=>f.name===currentFriendName); f.freq=parseInt(document.getElementById('custom-freq').value); f.lastMoment=Date.now(); saveData(); closeMomentsConfig(); }
-        async function forceTriggerMoment() { const f=friends.find(f=>f.name===currentFriendName); await triggerAiMoment(f); alert("发好了"); }
+        async function forceTriggerMoment() {
+    const btn = document.getElementById('moment-status-btn');
+    const originalText = "✨ 强制让 AI 发一条朋友圈";
+    
+    // 改变状态
+    btn.innerText = "⏳ 正在发布朋友圈...";
+    btn.style.pointerEvents = "none"; // 防止重复点击
+    btn.style.color = "#999"; 
+
+    const f = friends.find(f => f.name === currentFriendName);
+    
+    try {
+        await triggerAiMoment(f);
+        alert("发好了");
+    } catch (e) {
+        alert("发布失败，请检查 API 配置");
+    } finally {
+        // 恢复状态
+        btn.innerText = originalText;
+        btn.style.pointerEvents = "auto";
+        btn.style.color = "var(--blue-link)";
+    }
+}
         async function triggerAiMoment(f) { const res=await fetch(aiConfig.url.replace(/\/$/,"")+"/chat/completions",{method:'POST',headers:{'Authorization':'Bearer '+aiConfig.key,'Content-Type':'application/json'},body:JSON.stringify({model:aiConfig.model,messages:[{role:"system",content:`你的人设是${f.persona}，发一条30字内朋友圈`}]})}); const d=await res.json(); moments.push({name:f.name, text:d.choices[0].message.content}); saveData(); }
 
         window.onload = () => { renderChatList(); renderContactList(); renderMePage(); };
