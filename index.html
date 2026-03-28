@@ -155,7 +155,7 @@
         .bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.2); margin-top: 5px; border-radius: 2px; }
         .bar-fill { height: 100%; background: var(--accent-color); border-radius: 2px; }
 
-        /* --- 设置面板样式 (白色背景) --- */
+        /* --- 设置面板样式 --- */
         #settings-panel {
             position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%;
             background: #ffffff; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -279,7 +279,7 @@
             <div id="item-wb" class="grid-item icon-btn" onclick="openWorldBook()">世界书</div>
             <div id="item-qq" class="grid-item icon-btn" onclick="openQQ()">QQ</div>
             <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
-            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2);">外观</div>
+            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
             <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
             
             <!-- 进度条大组件 (ID: item-progress) -->
@@ -362,18 +362,18 @@
                 </div>
 
                 <!-- MiniMax 语音设置栏目 -->
-                <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-                    <label>MiniMax 语音设置</label>
-                    <input type="text" id="minimax-group-id" placeholder="MiniMax Group ID">
-                    <input type="text" id="minimax-url" placeholder="代理 URL (默认: https://api.minimax.chat/v1/text_to_speech)">
-                    <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
-                    <label>默认语音模型</label>
-                    <select id="minimax-model">
-                        <option value="speech-01-turbo">经济型 (speech-01-turbo)</option>
-                        <option value="speech-01">高音质型 (speech-01)</option>
-                    </select>
-                    <button class="action-btn" style="background: #e67e22;" onclick="saveMiniMaxSettings()">保存语音配置</button>
-                </div>
+<div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <label>MiniMax 语音设置</label>
+    <input type="text" id="minimax-group-id" placeholder="MiniMax Group ID">
+    <input type="text" id="minimax-url" placeholder="代理 URL (默认: https://api.minimax.chat/v1/text_to_speech)">
+    <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
+    <label>默认语音模型</label>
+    <select id="minimax-model">
+        <option value="speech-01-turbo">经济型 (speech-01-turbo)</option>
+        <option value="speech-01">高音质型 (speech-01)</option>
+    </select>
+    <button class="action-btn" style="background: #e67e22;" onclick="saveMiniMaxSettings()">保存语音配置</button>
+</div>
 
                 <!-- 后台保活功能栏目 -->
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
@@ -723,15 +723,15 @@
 
         // --- MiniMax 语音配置逻辑 ---
         function saveMiniMaxSettings() {
-            const config = {
-                groupId: document.getElementById('minimax-group-id').value,
-                url: document.getElementById('minimax-url').value || 'https://api.minimax.chat/v1/text_to_speech',
-                key: document.getElementById('minimax-api-key').value,
-                model: document.getElementById('minimax-model').value
-            };
-            localStorage.setItem('minimax_config', JSON.stringify(config));
-            alert('MiniMax 语音配置已保存！');
-        }
+    const config = {
+        groupId: document.getElementById('minimax-group-id').value,
+        url: document.getElementById('minimax-url').value || 'https://api.minimax.chat/v1/text_to_speech',
+        key: document.getElementById('minimax-api-key').value,
+        model: document.getElementById('minimax-model').value
+    };
+    localStorage.setItem('minimax_config', JSON.stringify(config));
+    alert('MiniMax 语音配置已保存！');
+}
 
         // --- API 预设功能逻辑 ---
         let apiPresets = JSON.parse(localStorage.getItem('api_presets') || '[]');
