@@ -279,7 +279,7 @@
             <div id="item-wb" class="grid-item icon-btn" onclick="openWorldBook()">世界书</div>
             <div id="item-qq" class="grid-item icon-btn" onclick="openQQ()">QQ</div>
             <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
-            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
+            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2);">外观</div>
             <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
             
             <!-- 进度条大组件 (ID: item-progress) -->
@@ -329,14 +329,14 @@
             </div>
         </div>
 
-        <!-- 设置面板 (白色背景) -->
+        <!-- 设置面板 -->
         <div id="settings-panel">
             <div class="panel-header">
                 <h3 id="panel-title">设置</h3>
                 <span style="cursor:pointer; font-size: 20px;" onclick="closeSettings()">✕</span>
             </div>
             
-            <!-- 设置 App 内容 (API 设置 + 数据管理 + 后台保活) -->
+            <!-- 设置 App 内容 (API 设置 + 数据管理 + 后台保活 + MiniMax) -->
             <div id="api-inputs" style="display:none">
                 <div class="setting-group">
                     <label>API URL</label>
@@ -359,6 +359,19 @@
                     <label>API 预设管理</label>
                     <button class="action-btn" style="background: #4cd137; margin-bottom: 10px;" onclick="showPresetNameModal()">保存当前为预设</button>
                     <button class="action-btn" style="background: #9c88ff;" onclick="showPresetListModal()">选择/管理预设</button>
+                </div>
+
+                <!-- MiniMax 语音设置栏目 -->
+                <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <label>MiniMax 语音设置</label>
+                    <input type="text" id="minimax-url" placeholder="代理 URL (默认: https://api.minimax.chat/v1/text_to_speech)">
+                    <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
+                    <label>默认语音模型</label>
+                    <select id="minimax-model">
+                        <option value="speech-01-turbo">经济型 (speech-01-turbo)</option>
+                        <option value="speech-01">高音质型 (speech-01)</option>
+                    </select>
+                    <button class="action-btn" style="background: #e67e22;" onclick="saveMiniMaxSettings()">保存语音配置</button>
                 </div>
 
                 <!-- 后台保活功能栏目 -->
@@ -465,7 +478,7 @@
     </div>
 
     <script>
-        // --- 悬浮球逻辑 (原封不动) ---
+        // --- 悬浮球逻辑 ---
         let ball = document.getElementById('floating-ball');
         let isDraggingBall = false;
         function startDrag(e) {
@@ -494,7 +507,7 @@
             };
         }
 
-        // --- 栅格图标拖拽排序逻辑 (保留) ---
+        // --- 栅格图标拖拽排序逻辑 ---
         function initGridSortable() {
             const container = document.getElementById('main-grid');
             let draggingItem = null;
@@ -707,6 +720,17 @@
             alert('配置已保存并应用！'); closeSettings();
         }
 
+        // --- MiniMax 语音配置逻辑 ---
+        function saveMiniMaxSettings() {
+            const config = {
+                url: document.getElementById('minimax-url').value || 'https://api.minimax.chat/v1/text_to_speech',
+                key: document.getElementById('minimax-api-key').value,
+                model: document.getElementById('minimax-model').value
+            };
+            localStorage.setItem('minimax_config', JSON.stringify(config));
+            alert('MiniMax 语音配置已保存！');
+        }
+
         // --- API 预设功能逻辑 ---
         let apiPresets = JSON.parse(localStorage.getItem('api_presets') || '[]');
         function showPresetNameModal() {
@@ -887,10 +911,9 @@
         function toggleKeepAlive(enabled) {
             if (enabled) {
                 if (!silentAudio) {
-                    // 创建一个极小的静音音频 (WAV格式)
                     silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
                     silentAudio.loop = true;
-                    silentAudio.volume = 0.1; // 保持微小音量但不静音(有些手机静音不保活)
+                    silentAudio.volume = 0.1;
                 }
                 silentAudio.play().then(() => {
                     localStorage.setItem('background_keep_alive', 'true');
@@ -932,10 +955,14 @@
                 document.getElementById('model-select').appendChild(opt);
             }
 
-            // 初始化保活开关状态
+            // 初始化 MiniMax 配置回显
+            const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+            if(savedMiniMax.url) document.getElementById('minimax-url').value = savedMiniMax.url;
+            if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
+            if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
+
             const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
             document.getElementById('keep-alive-toggle').checked = isKeepAlive;
-            // 注意：由于浏览器安全限制，autoplay通常被禁止，因此在onload时不自动播放，需用户手动再次触发
 
             setInterval(updateTime, 1000); updateTime();
             if (navigator.getBattery) {
