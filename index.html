@@ -364,6 +364,7 @@
                 <!-- MiniMax 语音设置栏目 -->
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
                     <label>MiniMax 语音设置</label>
+                    <input type="text" id="minimax-group-id" placeholder="MiniMax Group ID">
                     <input type="text" id="minimax-url" placeholder="代理 URL (默认: https://api.minimax.chat/v1/text_to_speech)">
                     <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
                     <label>默认语音模型</label>
@@ -723,6 +724,7 @@
         // --- MiniMax 语音配置逻辑 ---
         function saveMiniMaxSettings() {
             const config = {
+                groupId: document.getElementById('minimax-group-id').value,
                 url: document.getElementById('minimax-url').value || 'https://api.minimax.chat/v1/text_to_speech',
                 key: document.getElementById('minimax-api-key').value,
                 model: document.getElementById('minimax-model').value
@@ -957,6 +959,7 @@
 
             // 初始化 MiniMax 配置回显
             const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+            if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
             if(savedMiniMax.url) document.getElementById('minimax-url').value = savedMiniMax.url;
             if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
             if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;

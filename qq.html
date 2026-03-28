@@ -25,17 +25,6 @@
         .page { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; }
         #message-container { background-size: cover; background-position: center; background-repeat: no-repeat; contain: strict; }
         
-        .recharge-card { background: #fff; border-radius: 8px; padding: 12px; width: 200px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 4px solid var(--accent-color); }
-        .card-header { font-size: 12px; color: #999; margin-bottom: 5px; }
-        .card-body { font-size: 18px; font-weight: bold; color: #333; }
-        .card-footer { font-size: 11px; color: var(--blue-link); margin-top: 8px; border-top: 1px solid #eee; padding-top: 5px; }
-
-        .describe-card { width: 180px; min-height: 100px; padding: 15px; background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%); border-radius: 2px; box-shadow: 3px 3px 10px rgba(0,0,0,0.15); position: relative; cursor: pointer; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; }
-        .describe-card::before { content: ""; position: absolute; top: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 25px 25px 0; border-color: transparent transparent rgba(0,0,0,0.1) transparent; }
-        .describe-card-inner { font-family: "PingFang SC", "STHeiti", sans-serif; color: #5d4037; font-size: 14px; line-height: 1.6; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; }
-        .describe-card.expanded { width: 240px; background: #fff; }
-        .describe-card.expanded .describe-card-inner { display: block; text-align: left; word-break: break-all; }
-
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, system-ui, sans-serif; background: var(--bg-gray); color: var(--text-main); overflow: hidden; }
         .page { display: none; flex-direction: column; height: 100%; position: absolute; width: 100%; top: 0; left: 0; background: var(--bg-gray); }
         .page.active { display: flex; }
@@ -56,23 +45,15 @@
         .name { font-size: 16px; }
 
         .group-header { background: #fff; padding: 12px 16px; display: flex; align-items: center; font-size: 14px; color: #888; border-bottom: 0.5px solid var(--border-color); cursor: pointer; }
-        .group-header:active { background: #f2f2f2; }
         .group-arrow { margin-right: 10px; transition: transform 0.2s; font-size: 12px; }
         .group-arrow.collapsed { transform: rotate(-90deg); }
-
-        .chat-search-wrap { background: var(--bg-gray); padding: 10px 12px; border-bottom: 0.5px solid var(--border-color); position: sticky; top: 0; z-index: 10; }
-        .chat-search-box { background: white; border-radius: 4px; display: flex; align-items: center; padding: 6px 10px; gap: 8px; }
-        .chat-search-box input { border: none; outline: none; flex: 1; font-size: 14px; color: #191919; text-align: center; }
-        .chat-search-box input:focus { text-align: left; }
 
         .wechat-chat-item { display: flex; align-items: center; padding: 12px 16px; background: white; position: relative; border-bottom: 0.5px solid #f0f0f0; }
         .wechat-chat-item:active { background: #f2f2f2; }
         .wechat-chat-item .chat-avatar { width: 48px; height: 48px; border-radius: 4px; margin-right: 12px; flex-shrink: 0; background: #5c6bc0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; overflow: hidden; }
-        .wechat-chat-item .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .wechat-chat-item .chat-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
         .wechat-chat-item .chat-top { display: flex; justify-content: space-between; align-items: center; }
         .wechat-chat-item .chat-nickname { font-size: 16px; color: #000; font-weight: 500; }
-        .wechat-chat-item .chat-time { font-size: 11px; color: #b2b2b2; }
         .wechat-chat-item .chat-preview { font-size: 13.5px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .me-header { background: white; padding: 40px 20px; display: flex; align-items: center; gap: 15px; }
@@ -81,82 +62,51 @@
         .me-name { font-size: 20px; font-weight: bold; margin-bottom: 5px; cursor: pointer; }
         .me-wxid { font-size: 14px; color: var(--text-sub); cursor: pointer; }
 
-        .moments-header-container { position: relative; height: 260px; background: #333; margin-bottom: 30px; }
-        .moments-user { position: absolute; right: 15px; bottom: -15px; display: flex; align-items: center; }
-        .moments-user .main-avatar { width: 65px; height: 65px; border-radius: 8px; border: 2px solid white; background: #0099ff; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; overflow: hidden; }
-        
-        .moment-item { display: flex; padding: 15px; border-bottom: 0.5px solid #eee; align-items: flex-start; background: #ffffff !important; position: relative; }
-        .moment-avatar { width: 42px; height: 42px; border-radius: 4px; overflow: hidden; flex-shrink: 0; background: #5c6bc0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px; margin-right: 12px; }
-        .moment-content { flex: 1; position: relative; }
-        .moment-name { color: #576b95; font-weight: 500; font-size: 15px; margin-bottom: 4px; }
-        .moment-text { font-size: 15px; line-height: 1.5; color: #191919; margin-bottom: 10px; word-break: break-all; }
-        .moment-footer { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999; }
-        
-        .moment-menu-wrap { position: relative; }
-        .moment-menu-btn { background: #f7f7f7; color: #576b95; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .moment-pop-menu { display: none; position: absolute; right: 35px; top: -8px; background: #4c4c4c; border-radius: 4px; color: white; padding: 8px 15px; gap: 20px; white-space: nowrap; z-index: 1000; align-items: center; }
-        .moment-pop-menu.active { display: flex; }
-        .menu-action { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px; }
-
         #message-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-        .msg { display: flex; max-width: 85%; align-items: flex-start; }
+        .msg { display: flex; max-width: 85%; align-items: flex-start; position: relative; }
         .msg.self { align-self: flex-end; flex-direction: row-reverse; }
-        .msg .bubble { padding: 10px 12px; border-radius: 6px; font-size: 15px; line-height: 1.4; word-break: break-all; position: relative; }
-        .msg.friend .bubble { background: white; margin-left: 10px; }
-        .msg.self .bubble { background: #95ec69; margin-right: 10px; }
+        
+        /* 语音条基础样式 */
+        .voice-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+        .msg.self .voice-wrap { align-items: flex-end; }
 
-        /* 语音播放按钮样式 */
-        .voice-play-btn { position: absolute; bottom: -20px; right: 0; font-size: 11px; color: var(--blue-link); cursor: pointer; white-space: nowrap; }
-        .msg.friend .voice-play-btn { left: 0; right: auto; }
+        .voice-bar {
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            background: #fff; padding: 10px 15px; border-radius: 6px;
+            min-width: 100px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .msg.self .voice-bar { background: #95ec69; }
+        
+        .voice-icon { font-size: 16px; transform: rotate(180deg); }
+        .msg.self .voice-icon { transform: rotate(0deg); }
+        
+        .translate-trigger { font-size: 11px; color: var(--blue-link); cursor: pointer; padding: 2px 5px; }
+        .translated-content {
+            display: none; background: rgba(0,0,0,0.05); padding: 8px 12px;
+            border-radius: 6px; font-size: 14px; color: #333; margin-top: 5px;
+            max-width: 100%; word-break: break-all;
+        }
+        .translated-content.active { display: block; }
 
         .input-bar { background: #f7f7f7; padding: 10px; display: flex; align-items: center; gap: 8px; border-top: 0.5px solid #ccc; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
         .input-bar input { flex: 1; border: none; padding: 10px; border-radius: 4px; outline: none; }
         .btn-green { color: var(--wechat-green); font-weight: bold; cursor: pointer; border:none; background:none; }
         .typing-status { font-size: 11px; color: #555; font-weight: normal; display: none; }
-
-        .glass-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: var(--z-modal); background: rgba(0,0,0,0.3); align-items: center; justify-content: center; }
-        .glass-card { background: var(--glass-purple); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); width: 85%; border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        #msg-context-menu { display: none; position: fixed; z-index: 2000; background: #4c4c4c; border-radius: 8px; padding: 5px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.3); color: white; min-width: 100px; }
-        .menu-item { padding: 12px 20px; font-size: 14px; border-bottom: 0.5px solid #666; text-align: center; cursor: pointer; }
-        #quote-preview { display: none; background: #e9e9e9; padding: 8px 12px; font-size: 12px; color: #666; border-radius: 4px; margin: 5px 10px; position: relative; border-left: 4px solid #ccc; }
     </style>
 </head>
 <body>
 
-    <!-- 1. 微信列表页 -->
     <div id="tab-chat" class="page active">
         <div class="header">微信</div>
-        <div class="content" style="padding-bottom: 0;">
-            <div class="chat-search-wrap">
-                <div class="chat-search-box">
-                    <span style="color:#999; font-size:14px;">🔍</span>
-                    <input type="text" id="chat-search-input" placeholder="搜索" oninput="renderChatList()">
-                </div>
-            </div>
-            <div id="chat-session-list"></div>
-        </div>
+        <div class="content" id="chat-session-list"></div>
     </div>
 
-    <!-- 2. 通讯录页 -->
     <div id="tab-contacts" class="page">
-        <div class="header">
-            <span>通讯录</span>
-            <span style="font-size:24px; cursor:pointer;" onclick="openAddMenu()">⊕</span>
-        </div>
+        <div class="header">通讯录</div>
         <div class="content" id="contact-list"></div>
     </div>
 
-    <!-- 3. 发现页 -->
-    <div id="tab-discover" class="page">
-        <div class="header">发现</div>
-        <div class="content">
-            <div class="list-group">
-                <div class="list-item" onclick="openMoments()">🎡 朋友圈</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. 我（个人中心） -->
     <div id="tab-me" class="page">
         <div class="header"></div>
         <div class="content">
@@ -166,16 +116,9 @@
                     <div class="me-name" id="my-name-display" onclick="changeMyName()">我</div>
                     <div class="me-wxid" id="my-wxid-display" onclick="changeMyWxid()">微信号：wxid_001</div>
                 </div>
-                <div style="color:#ccc">></div>
             </div>
             <div class="list-group">
-                <div class="list-item" onclick="openWallet()"><span style="margin-right:15px;color:#07c160">💳</span>钱包</div>
-            </div>
-            <div class="list-group">
-                <div class="list-item" onclick="openFavorites()"><span style="margin-right:15px;color:#ff6b6b">📦</span>收藏</div>
-            </div>
-            <div class="list-group">
-                <div class="list-item" onclick="openApiConfig()"><div class="info"><span style="margin-right:15px;color:#4facfe">⚙️</span>API 与模型设置</div><span>></span></div>
+                <div class="list-item" onclick="openApiConfig()">API 与模型设置</div>
             </div>
         </div>
     </div>
@@ -183,262 +126,170 @@
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchTab('tab-chat', this)">💬<span>微信</span></div>
         <div class="tab-item" onclick="switchTab('tab-contacts', this)">👥<span>通讯录</span></div>
-        <div class="tab-item" onclick="switchTab('tab-discover', this)">🧭<span>发现</span></div>
         <div class="tab-item" onclick="switchTab('tab-me', this)">👤<span>我</span></div>
     </div>
 
-    <!-- 5. 聊天窗口 -->
     <div id="chat-page" class="page">
         <div class="header">
             <span onclick="closeChat()">〈 返回</span>
-            <div style="text-align: center; line-height: 1.2;">
-                <div id="chat-title"></div>
-                <div id="chat-typing" class="typing-status">正在输入中...</div>
-            </div>
-            <span style="font-size:24px;" onclick="openSettings()">···</span>
+            <div id="chat-title"></div>
+            <span onclick="openSettings()">···</span>
         </div>
         <div id="message-container"></div>
-        <div id="quote-preview">引用内容 <span onclick="clearQuote()">×</span></div>
         <div class="input-bar">
-            <div style="font-size: 24px; color: #333; cursor: pointer; padding: 0 5px;" onclick="toggleToolBox()">⊕</div>
             <input type="text" id="msg-input" placeholder="输入消息..." onkeydown="if(event.key==='Enter') sendMsg()">
-            <div style="font-size: 22px; cursor: pointer; padding: 0 5px;" onclick="getAiReply()">🎙️</div>
+            <div style="font-size: 22px; cursor: pointer;" onclick="getAiReply()">🎙️</div>
             <button class="btn-green" onclick="sendMsg()">发送</button>
         </div>
     </div>
 
-    <!-- 6. 聊天设置 -->
     <div id="settings-page" class="page">
         <div class="header"><span onclick="closeSettings()">〈 返回</span><span>聊天信息</span><span></span></div>
         <div class="content">
-            <div class="list-group" style="padding: 20px; display: flex; gap: 15px;">
-                <div style="text-align:center;">
-                    <div id="settings-avatar" class="avatar" style="margin-right:0; cursor:pointer;" onclick="changeAvatar()"></div>
-                    <div id="settings-name" style="font-size:12px;color:#888;margin-top:5px;"></div>
-                </div>
-            </div>
             <div class="list-group">
-                <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888"></div><span>></span></div>
-                <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" style="color:#888"></div><span>></span></div>
-                <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888"></div><span>></span></div>
-                <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
-                <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
-                <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
-                <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
+                <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (Voice ID)</div><div id="settings-voice-display" style="color:#888"></div><span>></span></div>
+                <div class="list-item" onclick="changeChatBackground()">聊天背景</div>
             </div>
-            <div class="list-group"><div class="list-item" onclick="deleteFriend()" style="color:#fa5151; justify-content:center; font-weight:bold;">删除好友</div></div>
         </div>
     </div>
 
-    <input type="file" id="avatar-upload" style="display:none" accept="image/*">
-    <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
-    <input type="file" id="chat-bg-upload" style="display:none" accept="image/*">
-
     <script>
-        // --- 数据定义 ---
         let currentFriendName = "";
-        let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', voiceId: '' }];
-        let groups = JSON.parse(localStorage.getItem('qq_groups')) || ['我的好友'];
-        let collapsedGroups = JSON.parse(localStorage.getItem('qq_collapsed_groups')) || [];
+        let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', voiceId: 'cherry' }];
         let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
-        let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
         let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
         let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
-        
-        // 性能优化：防抖存储
-        let savePending = false;
+
         function saveData() {
-            if(savePending) return;
-            savePending = true;
-            setTimeout(() => {
-                localStorage.setItem('qq_friends', JSON.stringify(friends));
-                localStorage.setItem('qq_groups', JSON.stringify(groups));
-                localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
-                localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-                localStorage.setItem('qq_moments', JSON.stringify(moments));
-                localStorage.setItem('ai_config', JSON.stringify(aiConfig));
-                localStorage.setItem('my_info', JSON.stringify(myInfo));
-                savePending = false;
-            }, 500);
+            localStorage.setItem('qq_friends', JSON.stringify(friends));
+            localStorage.setItem('qq_history', JSON.stringify(chatHistories));
         }
 
-        // --- MiniMax 语音播放功能 ---
-        async function playMiniMaxVoice(text, btn) {
-            const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+        // --- 核心：语音播放与转文字 ---
+        async function playVoice(text, btn) {
+            const mm = JSON.parse(localStorage.getItem('minimax_config') || '{}');
             const friend = friends.find(f => f.name === currentFriendName);
-            const voiceId = friend.voiceId || "cherry"; // 默认音色
+            if (!mm.key || !mm.groupId) return alert("请先在设置中配置 MiniMax GroupID 和 Key");
 
-            if (!mmConfig.key) return alert("请先在手机设置中配置 MiniMax API Key");
-
-            const originalText = btn.innerText;
-            btn.innerText = "⌛ 合成中...";
-            btn.style.pointerEvents = "none";
-
+            const original = btn.innerHTML;
+            btn.innerHTML = "⌛...";
+            
             try {
-                const response = await fetch(mmConfig.url || 'https://api.minimax.chat/v1/text_to_speech', {
+                const url = `${mm.url || 'https://api.minimax.chat/v1/text_to_speech'}?group_id=${mm.groupId}`;
+                const res = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${mmConfig.key}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `Bearer ${mm.key}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: mmConfig.model || "speech-01-turbo",
+                        model: mm.model || "speech-01-turbo",
                         text: text,
-                        voice_setting: {
-                            voice_id: voiceId,
-                            speed: 1.0,
-                            vol: 1.0,
-                            pitch: 0
-                        },
-                        audio_setting: {
-                            sample_rate: 32000,
-                            bitrate: 128000,
-                            format: "mp3"
-                        }
+                        voice_setting: { voice_id: friend.voiceId || "cherry" }
                     })
                 });
-
-                if (!response.ok) throw new Error("接口返回错误");
-
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
+                const blob = await res.blob();
+                const audio = new Audio(URL.createObjectURL(blob));
                 audio.play();
-                btn.innerText = "▶ 正在播放";
-                audio.onended = () => { btn.innerText = originalText; btn.style.pointerEvents = "auto"; };
+                btn.innerHTML = "▶ 正在播放";
+                audio.onended = () => btn.innerHTML = original;
             } catch (e) {
-                console.error(e);
-                alert("语音合成失败，请检查 MiniMax 配置或跨域问题");
-                btn.innerText = originalText;
-                btn.style.pointerEvents = "auto";
+                alert("语音生成失败");
+                btn.innerHTML = original;
             }
         }
 
-        // --- 核心渲染逻辑 ---
-        function renderMessages() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            if(!friend) return;
-            const container = document.getElementById('message-container');
-            container.style.backgroundImage = friend.chatBg ? `url("${friend.chatBg.replace(/(\r\n|\n|\r)/gm, "")}")` : 'none';
-            const history = chatHistories[currentFriendName] || [];
-            const displayHistory = history.slice(-20);
-            let htmlArr = [];
-            for(let i = 0; i < displayHistory.length; i++){
-                const m = displayHistory[i];
-                const realIdx = history.length - displayHistory.length + i;
-                const isSelf = m.type === 'self';
-                let avHtml = isSelf ? (myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我') : (friend.avatarUrl ? `<img src="${friend.avatarUrl}" decoding="async">` : friend.initial);
-                
-                // 只有角色的文本消息显示语音按钮
-                const voiceBtnHtml = (!isSelf && !m.isRealImage && !m.isCard) ? `<div class="voice-play-btn" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'")}', this)">🔊 播放</div>` : '';
+        function toggleTranslate(idx) {
+            const el = document.getElementById(`trans-${idx}`);
+            el.classList.toggle('active');
+        }
 
-                htmlArr.push(`
-                    <div class="msg ${m.type}">
-                        <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
-                        <div class="bubble">
-                            ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
-                            ${m.isRealImage ? `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">` : m.text}
-                            ${voiceBtnHtml}
+        function renderMessages() {
+            const container = document.getElementById('message-container');
+            const history = chatHistories[currentFriendName] || [];
+            container.innerHTML = history.map((m, i) => {
+                const isSelf = m.type === 'self';
+                const friend = friends.find(f => f.name === currentFriendName);
+                const av = isSelf ? (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
+                
+                // AI 回复展示为语音条
+                if (!isSelf) {
+                    return `
+                    <div class="msg friend">
+                        <div class="avatar">${av}</div>
+                        <div class="voice-wrap">
+                            <div class="voice-bar" onclick="playVoice('${m.text.replace(/'/g, "\\'")}', this)">
+                                <span class="voice-icon">(((</span>
+                                <span style="font-size:12px; color:#999;">${Math.min(m.text.length, 60)}''</span>
+                            </div>
+                            <div class="translate-trigger" onclick="toggleTranslate(${i})">转文字</div>
+                            <div id="trans-${i}" class="translated-content">${m.text}</div>
                         </div>
-                    </div>`);
-            }
-            container.innerHTML = htmlArr.join('');
+                    </div>`;
+                } else {
+                    return `
+                    <div class="msg self">
+                        <div class="avatar">${av}</div>
+                        <div style="background:#95ec69; padding:10px; border-radius:6px;">${m.text}</div>
+                    </div>`;
+                }
+            }).join('');
             container.scrollTop = container.scrollHeight;
         }
 
-        // --- 其余 UI 逻辑 ---
+        // --- 其余功能逻辑 ---
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-bar .tab-item').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             if(tabId === 'tab-chat') renderChatList();
-            if(tabId === 'tab-contacts') renderContactList();
-            if(tabId === 'tab-me') renderMePage();
         }
 
-        function openChat(n) {
-            currentFriendName = n;
-            document.getElementById('chat-title').innerText = n;
-            document.getElementById('chat-page').classList.add('active');
-            setTimeout(renderMessages, 50);
-        }
-
-        function closeChat() {
-            document.getElementById('chat-page').classList.remove('active');
-            const container = document.getElementById('message-container');
-            container.innerHTML = '';
-            setTimeout(renderChatList, 100);
-        }
-
+        function openChat(n) { currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active'); renderMessages(); }
+        function closeChat() { document.getElementById('chat-page').classList.remove('active'); }
         function openSettings() { 
             const f = friends.find(f => f.name === currentFriendName);
-            document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial;
-            document.getElementById('settings-name').innerText = f.name;
-            document.getElementById('settings-nick-display').innerText = f.name;
-            document.getElementById('settings-group-display').innerText = f.group || '我的好友';
-            document.getElementById('settings-voice-display').innerText = f.voiceId || '默认';
+            document.getElementById('settings-voice-display').innerText = f.voiceId || "cherry";
             document.getElementById('settings-page').classList.add('active'); 
         }
-
-        function editVoiceId() {
+        function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
+        function editVoiceId() { 
             const f = friends.find(f => f.name === currentFriendName);
-            const vid = prompt("请输入 MiniMax 音色 ID (Voice ID):", f.voiceId || "");
-            if(vid !== null) {
-                f.voiceId = vid;
-                saveData();
-                openSettings();
-            }
+            const id = prompt("输入音色 ID:", f.voiceId || "");
+            if(id) { f.voiceId = id; saveData(); openSettings(); }
         }
 
-        function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
-
-        // --- 微信基础功能 (保持不变) ---
         function renderChatList() {
             const list = document.getElementById('chat-session-list');
-            const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
-            list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => `
-                <div class="wechat-chat-item" onclick="openChat('${f.name}')">
-                    <div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial}</div>
-                    <div class="chat-body">
-                        <div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">14:00</div></div>
-                        <div class="chat-preview">${f.lastMsg}</div>
-                    </div>
-                </div>`).join('');
+            list.innerHTML = friends.map(f => `<div class="wechat-chat-item" onclick="openChat('${f.name}')"><div class="chat-avatar">${f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial}</div><div class="chat-body"><div class="chat-nickname">${f.name}</div><div class="chat-preview">${f.lastMsg}</div></div></div>`).join('');
         }
 
-        function renderContactList() {
-            const list = document.getElementById('contact-list');
-            list.innerHTML = groups.map(gName => {
-                const isC = collapsedGroups.includes(gName);
-                const fs = friends.filter(f => (f.group || '我的好友') === gName).map(f => `
-                    <div class="list-item" onclick="openChat('${f.name}')">
-                        <div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial}</div><div class="info">${f.name}</div>
-                    </div>`).join('');
-                return `<div class="group-header" onclick="toggleGroup('${gName}')"><span class="group-arrow ${isC?'collapsed':''}">▼</span>${gName}</div>${isC?'':fs}`;
-            }).join('');
+        function sendMsg() {
+            const val = document.getElementById('msg-input').value.trim();
+            if(!val) return;
+            if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+            chatHistories[currentFriendName].push({ type: 'self', text: val });
+            friends.find(f => f.name === currentFriendName).lastMsg = val;
+            document.getElementById('msg-input').value = ''; renderMessages(); saveData();
         }
 
-        function toggleGroup(n) { if(collapsedGroups.includes(n)) collapsedGroups = collapsedGroups.filter(x => x !== n); else collapsedGroups.push(n); saveData(); renderContactList(); }
-        function sendMsg() { const val = document.getElementById('msg-input').value.trim(); if(!val) return; if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; chatHistories[currentFriendName].push({ type: 'self', text: val }); friends.find(f => f.name === currentFriendName).lastMsg = val; document.getElementById('msg-input').value = ''; saveData(); renderMessages(); }
         async function getAiReply() {
-            if(!aiConfig.key) return alert("API配置错误");
+            if(!aiConfig.key) return alert("请在手机桌面设置 API");
             const friend = friends.find(f => f.name === currentFriendName);
             const history = (chatHistories[currentFriendName] || []).slice(-5).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
-            document.getElementById('chat-typing').style.display = 'block';
             try {
-                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, { method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: `你是${friend.persona}`}, ...history] }) });
+                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: `你是${friend.persona}`}, ...history] })
+                });
                 const data = await res.json();
-                const reply = data.choices[0].message.content.trim();
+                const reply = data.choices[0].message.content;
                 chatHistories[currentFriendName].push({ type: 'friend', text: reply });
-                friend.lastMsg = reply;
-                saveData(); renderMessages();
-            } catch (e) { alert("AI回复失败"); }
-            finally { document.getElementById('chat-typing').style.display = 'none'; }
+                friend.lastMsg = "[语音消息]";
+                renderMessages(); saveData();
+            } catch (e) { alert("AI 暂时休息了"); }
         }
 
-        window.onload = () => { renderChatList(); renderContactList(); renderMePage(); };
-        function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : 'ME'; }
+        window.onload = () => { renderChatList(); };
     </script>
 </body>
 </html>
