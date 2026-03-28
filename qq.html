@@ -22,6 +22,9 @@
             --z-model-sel: 600; 
             --z-modal: 2000;
         }
+        /* 性能优化：强制开启硬件加速 */
+        .page { will-change: opacity, transform; }
+        
         /* 聊天气泡容器支持背景图 */
         #message-container {
             background-size: cover;
@@ -120,7 +123,7 @@
         .chat-search-box input { border: none; outline: none; flex: 1; font-size: 14px; color: #191919; text-align: center; }
         .chat-search-box input:focus { text-align: left; }
 
-        .wechat-chat-item { display: flex; align-items: center; padding: 12px 16px; background: white; position: relative; border-bottom: 0.5px solid #f0f0f0; }
+        .wechat-chat-item { display: flex; align-items: center; padding: 12px 16px; background: white; position: relative; border-bottom: 0.5px solid #f0f0f0; will-change: background; }
         .wechat-chat-item:active { background: #f2f2f2; }
         .wechat-chat-item .chat-avatar { width: 48px; height: 48px; border-radius: 4px; margin-right: 12px; flex-shrink: 0; background: #5c6bc0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; overflow: hidden; }
         .wechat-chat-item .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -516,12 +519,11 @@
         let isMultiSelecting = false;
         let quotedText = "";
         
-        // 性能优化：异步保存逻辑
-        let savePending = false;
+        // 性能优化：异步保存逻辑，防抖时间增加到 500ms，减少返回时的磁盘 IO 竞争
+        let saveTimeout = null;
         function saveData() {
-            if(savePending) return;
-            savePending = true;
-            setTimeout(() => {
+            if(saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
                 try {
                     localStorage.setItem('qq_friends', JSON.stringify(friends));
                     localStorage.setItem('qq_groups', JSON.stringify(groups));
@@ -533,8 +535,7 @@
                     localStorage.setItem('wallet_data', JSON.stringify(walletData));
                     localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
                 } catch (e) { console.error("Save Error"); }
-                savePending = false;
-            }, 100);
+            }, 500);
         }
 
         function switchTab(tabId, el) {
@@ -603,7 +604,7 @@
             });
         }
 
-        // --- 功能函数保持逻辑一致 ---
+        // --- 功能函数 ---
         function openImageChoiceModal() { document.getElementById('image-choice-modal').style.display = 'flex'; }
         function closeImageChoiceModal() { document.getElementById('image-choice-modal').style.display = 'none'; }
         function triggerRealImageUpload() { closeImageChoiceModal(); document.getElementById('real-image-upload').click(); }
@@ -783,7 +784,7 @@
         function toggleGroup(n) { if(collapsedGroups.includes(n)) collapsedGroups = collapsedGroups.filter(x => x !== n); else collapsedGroups.push(n); saveData(); renderContactList(); }
         function openAddMenu() { document.getElementById('add-menu-modal').style.display = 'flex'; }
         function addGroup() { const n = prompt("名称:"); if(n && !groups.includes(n)) { groups.push(n); saveData(); renderContactList(); document.getElementById('add-menu-modal').style.display = 'none'; } }
-        function changeFriendGroup() { let options = groups.map((g, i) => `${i+1}. ${g}`).join('\n'); const c = prompt(`选择分组:\n${options}`); if(c && groups[parseInt(c)-1]) { friends.find(f => f.name === currentFriendName).group = groups[parseInt(c)-1]; saveData(); openSettings(); } }
+        function changeFriendGroup() { let options = groups.map((g, i) => `${i+1}. ${g}`).join('\n'); const c = prompt(`选择分组:\n${options}`); if(c && groups[parseInt(c)-1]) { friends.find(f => f.name === currentFriendName).group = groups[parseInt(choice)-1]; saveData(); openSettings(); } }
 
         function showContextMenu(x, y, i) { if(isMultiSelecting) return; menuTargetIndex = i; const m = document.getElementById('msg-context-menu'); m.style.display = 'block'; m.style.left = Math.min(x, window.innerWidth - 110) + 'px'; m.style.top = y + 'px'; setTimeout(() => document.addEventListener('click', function c(){ m.style.display = 'none'; document.removeEventListener('click', c); }), 100); }
         function deleteSingleMsg() { chatHistories[currentFriendName].splice(menuTargetIndex, 1); saveData(); renderMessages(); }
@@ -808,7 +809,6 @@
         function sendMsg() { const val = document.getElementById('msg-input').value.trim(); if(!val) return; if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); friends.find(f => f.name === currentFriendName).lastMsg = val; document.getElementById('msg-input').value = ''; clearQuote(); saveData(); renderMessages(); }
         function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : 'ME'; }
         
-        // 关键优化：进入聊天时延迟 10ms 渲染。这让浏览器有时间先完成页面切换的 CSS 动画，避免动画和渲染重叠导致卡死。
         function openChat(n) {
             currentFriendName = n;
             document.getElementById('chat-title').innerText = n;
@@ -816,7 +816,23 @@
             if(window.pendingRecharge) { if(!chatHistories[n]) chatHistories[n] = []; chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); }
             setTimeout(renderMessages, 10);
         }
-        function closeChat() { document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); renderChatList(); }
+
+        // 核心优化：退出聊天时，立即清理当前 DOM 负载，并在下一帧渲染列表，确保 CSS 动画不受重绘干扰
+        function closeChat() {
+            document.getElementById('chat-typing').style.display = 'none';
+            document.getElementById('chat-page').classList.remove('active');
+            cancelMultiSelect();
+            
+            // 内存释放：防止大型 Base64 图片残留在内存中导致卡顿
+            const container = document.getElementById('message-container');
+            container.innerHTML = '';
+            container.style.backgroundImage = 'none';
+            
+            // 延迟渲染：给浏览器时间完成退出动画
+            setTimeout(() => {
+                renderChatList();
+            }, 100);
+        }
 
         function openSettings() { const f = friends.find(f => f.name === currentFriendName); document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial; document.getElementById('settings-name').innerText = f.name; document.getElementById('settings-nick-display').innerText = f.name; document.getElementById('settings-group-display').innerText = f.group || '我的好友'; document.getElementById('settings-page').classList.add('active'); }
         function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
