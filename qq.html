@@ -658,7 +658,15 @@ ${rechargeLogic}${worldBookPrompt}`;
                     body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, ...history] })
                 });
                 const data = await res.json();
-                const msgs = data.choices[0].message.content.split('\n').filter(t => t.trim() !== '');
+                
+                const msgs_all = data.choices[0].message.content.split('\n').filter(t => t.trim() !== '');
+                let msgs = [];
+                if (msgs_all.length <= 5) {
+                    msgs = msgs_all;
+                } else {
+                    msgs = msgs_all.slice(0, 4);
+                    msgs.push(msgs_all.slice(4).join(' '));
+                }
 
                 for (let text of msgs) {
                     await new Promise(r => setTimeout(r, 600 + Math.random() * 1000));
@@ -692,7 +700,7 @@ ${rechargeLogic}${worldBookPrompt}`;
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             
             const momentsBg = localStorage.getItem('moments_bg_url');
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = `url(${momentsBg})`;
+            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg + '")';
 
             const list = document.getElementById('moments-list');
             list.innerHTML = '';
