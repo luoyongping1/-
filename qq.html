@@ -707,9 +707,10 @@ ${rechargeLogic}${worldBookPrompt}`;
             const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}">` : myInfo.name[0];
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             
-            const momentsBg = localStorage.getItem('moments_bg_url');
-            // 修复背景图引用引号问题
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg.replace(/(\r\n|\n|\r)/gm, "") + '")';
+            // 无自定义背景时用默认图，彻底解决黑屏
+const momentsBg = localStorage.getItem('moments_bg_url') || 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=1000';
+if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg + '")';
+
 
             const list = document.getElementById('moments-list');
             list.innerHTML = '';
@@ -1183,7 +1184,21 @@ ${currentCommentsText || "暂无评论"}
             if (choice === "1") document.getElementById('chat-bg-upload').click();
             else if (choice === "2") { const u = prompt("请输入URL:"); if (u) { friends.find(f => f.name === currentFriendName).chatBg = u; saveData(); renderMessages(); } }
         }
-        document.getElementById('chat-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { friends.find(f => f.name === currentFriendName).chatBg = e.target.result; saveData(); renderMessages(); }; reader.readAsDataURL(this.files[0]); } };
+        document.getElementById('chat-bg-upload').onchange = function() { 
+  if (this.files[0]) { 
+    const reader = new FileReader(); 
+    reader.onload = e => { 
+      // 清除Base64换行符，保证解析正常
+      const cleanBase64 = e.target.result.replace(/(\r\n|\n|\r)/gm, "");
+      const friend = friends.find(f => f.name === currentFriendName);
+      friend.chatBg = cleanBase64;
+      saveData(); // 持久化保存到本地，退出不丢失
+      renderMessages(); 
+    }; 
+    reader.readAsDataURL(this.files[0]); 
+  } 
+};
+
         function addFriend() { const n=prompt("昵称:"); if(n){ friends.push({name:n, initial:n[0], lastMsg:'', persona:'普通人', freq:0, lastMoment:Date.now(), avatarUrl:'', mountedBooks:[], group:'我的好友'}); saveData(); renderContactList(); document.getElementById('add-menu-modal').style.display='none'; }}
         function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
@@ -1192,7 +1207,18 @@ ${currentCommentsText || "暂无评论"}
             if (choice === "1") document.getElementById('moments-bg-upload').click();
             else if (choice === "2") { const u = prompt("URL:"); if (u) { localStorage.setItem('moments_bg_url', u); renderMoments(); } }
         }
-        document.getElementById('moments-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { localStorage.setItem('moments_bg_url', e.target.result); renderMoments(); }; reader.readAsDataURL(this.files[0]); } };
+        document.getElementById('moments-bg-upload').onchange = function() { 
+  if (this.files[0]) { 
+    const reader = new FileReader(); 
+    reader.onload = e => { 
+      // 清除Base64换行符，解决黑屏解析失败
+      const cleanBase64 = e.target.result.replace(/(\r\n|\n|\r)/gm, "");
+      localStorage.setItem('moments_bg_url', cleanBase64); 
+      renderMoments(); 
+    }; 
+    reader.readAsDataURL(this.files[0]); 
+  } 
+};
         function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); const c=document.getElementById('worldbook-list-container'); c.innerHTML=''; wb.books.forEach(b=>{ const d=document.createElement('div'); d.className='list-item'; d.innerHTML=`${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}>`; c.appendChild(d); }); document.getElementById('worldbook-page').classList.add('active'); }
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
         function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
