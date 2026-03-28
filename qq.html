@@ -468,7 +468,7 @@
     <div id="recharge-modal" class="glass-modal">
         <div class="glass-card">
             <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">选择充值方式</h3>
-            <div class="list-item" style="background:white; border-radius:12px; margin-bottom:10px;" onclick="selfRecharge()">自己充值</div>
+            <div class="list-item" style="backgroundwhite; border-radius:12px; margin-bottom:10px;" onclick="selfRecharge()">自己充值</div>
             <div class="list-item" style="background:white; border-radius:12px;" onclick="askFriendRecharge()">找朋友帮我充</div>
             <div style="text-align:center; margin-top:20px; color:#888; cursor:pointer;" onclick="document.getElementById('recharge-modal').style.display='none'">取消</div>
         </div>
@@ -572,7 +572,7 @@
             if(tabId === 'tab-me') renderMePage();
         }
 
-        // 核心修复：完善 MiniMax 语音合成请求体，避免 2013 错误
+        // 核心修复：更正模型名称为 speech-01，并确保请求结构正确
 async function playMiniMaxVoice(text, btn) {
     const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
     const friend = friends.find(f => f.name === currentFriendName);
@@ -586,10 +586,8 @@ async function playMiniMaxVoice(text, btn) {
     btn.style.pointerEvents = "none";
 
     try {
-        // 构建 API 地址
         const apiUrl = `${mmConfig.url || 'https://api.minimax.chat/v1/text_to_speech'}?group_id=${mmConfig.groupId}`;
         
-        // 核心修复：补全 mandatory 参数（timber_weights 或完整的 voice_setting）
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 
@@ -597,9 +595,8 @@ async function playMiniMaxVoice(text, btn) {
                 'Content-Type': 'application/json' 
             },
             body: JSON.stringify({
-                model: mmConfig.model || "speech-01-turbo",
+                model: mmConfig.model || "speech-01", // 关键修复：标准接口模型应为 speech-01
                 text: text,
-                // 使用更为通用的 timber_weights 结构，并确保 voice_setting 包含基本语速音量参数
                 timber_weights: [{
                     voice_id: (friend && friend.voiceId) ? friend.voiceId : "cherry",
                     weight: 1
