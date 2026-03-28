@@ -342,7 +342,7 @@
             <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">选择操作</h3>
             <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="addFriend()">添加好友</div>
             <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="addGroup()">添加分组</div>
-            <div style="text-align:center; margin-top:20px; color:#888; cursor:pointer;" onclick="document.getElementById('add-menu-modal').style.display='none'">取消</div>
+            <div style="text-align:center; margin-top:10px; color:#666; cursor:pointer;" onclick="document.getElementById('add-menu-modal').style.display='none'">取消</div>
         </div>
     </div>
 
@@ -526,6 +526,9 @@
                 localStorage.setItem('my_info', JSON.stringify(myInfo));
                 localStorage.setItem('wallet_data', JSON.stringify(walletData));
                 localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+                
+                // 给主页面发送更新后的 AI 配置
+                window.parent.postMessage({ type: 'ai_config_update', config: aiConfig }, '*');
             } catch (e) {
                 console.error("保存失败，可能是存储配额已满", e);
             }
@@ -706,7 +709,7 @@ ${rechargeLogic}${worldBookPrompt}`;
             
             const momentsBg = localStorage.getItem('moments_bg_url');
             // 修复背景图引用引号问题
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg + '")';
+            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = 'url("' + momentsBg.replace(/(\r\n|\n|\r)/gm, "") + '")';
 
             const list = document.getElementById('moments-list');
             list.innerHTML = '';

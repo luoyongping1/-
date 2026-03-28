@@ -157,7 +157,7 @@
             position: absolute;
             transform: rotate(-45deg);
             top: 10px; left: 14px;
-            color: white; font-bold: bold; font-size: 16px;
+            color: white; font-weight: bold; font-size: 16px;
         }
 
         /* App 启动层 */
@@ -490,9 +490,10 @@
                 }
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    const cleanBase64 = e.target.result.replace(/(\r\n|\n|\r)/gm, "");
                     const target = document.getElementById(targetId);
-                    target.style.backgroundImage = 'url("' + e.target.result + '")';
-                    target.dataset.tempBg = e.target.result;
+                    target.style.backgroundImage = 'url("' + cleanBase64 + '")';
+                    target.dataset.tempBg = cleanBase64;
                 }
                 reader.readAsDataURL(file);
             }
