@@ -934,7 +934,6 @@ function applyUrlBackground(inputId, targetId) {
 
         function saveAppearance() {
     try {
-        // 1. 提取所有输入框的值
         const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
         const widgetBg = document.getElementById('item-widget').dataset.tempBg;
         const ballCss = document.getElementById('custom-ball-css').value;
@@ -943,23 +942,19 @@ function applyUrlBackground(inputId, targetId) {
         const qqDisc = document.getElementById('qq-discover-css').value;
         const qqMe = document.getElementById('qq-me-css').value;
 
-        // 2. 存入本地存储
         if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
         if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
+        
         localStorage.setItem('custom_ball_css', ballCss);
         localStorage.setItem('qq_chatlist_css', qqChat);
         localStorage.setItem('qq_contacts_css', qqContact);
         localStorage.setItem('qq_discover_css', qqDisc);
         localStorage.setItem('qq_me_css', qqMe);
 
-        // 3. 立即应用悬浮球样式
         applyCustomBallCss(ballCss);
-
-        alert('外观配置已成功保存！');
+        alert('外观已成功保存！重新进入 App 即可看到效果。');
         closeSettings();
-    } catch (e) {
-        alert("保存失败，可能是存储空间已满");
-    }
+    } catch (e) { alert("保存失败：" + e); }
 }
 
 // 新增：应用悬浮球样式的辅助函数

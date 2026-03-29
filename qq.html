@@ -772,27 +772,17 @@
         // --- 数据定义 ---
         // 自动应用来自主页面的全局美化样式
 function applyGlobalStyles() {
-    const sections = [
-        { id: 'tab-chat', key: 'qq_chatlist_css' },
-        { id: 'tab-contacts', key: 'qq_contacts_css' },
-        { id: 'tab-discover', key: 'qq_discover_css' },
-        { id: 'tab-me', key: 'qq_me_css' }
-    ];
+    const keys = ['qq_chatlist_css', 'qq_contacts_css', 'qq_discover_css', 'qq_me_css'];
+    let combinedCss = "";
+    keys.forEach(key => { combinedCss += localStorage.getItem(key) || ""; });
 
-    sections.forEach(item => {
-        const cssText = localStorage.getItem(item.key);
-        if (cssText) {
-            let styleId = 'style-' + item.id;
-            let styleTag = document.getElementById(styleId);
-            if (!styleTag) {
-                styleTag = document.createElement('style');
-                styleTag.id = styleId;
-                document.head.appendChild(styleTag);
-            }
-            // 自动为每一行代码加上页面前缀，防止不同页面的样式打架
-            styleTag.innerHTML = cssText.replace(/([^\r\n,{}]+)(?=[^{}]*{)/g, `#${item.id} $1`);
-        }
-    });
+    let styleTag = document.getElementById('qq-custom-global-style');
+    if(!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'qq-custom-global-style';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = combinedCss;
 }
 applyGlobalStyles();
         let currentFriendName = "";
