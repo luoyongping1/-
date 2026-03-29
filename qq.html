@@ -879,6 +879,7 @@
 [EMOTION]当前的情绪状态（如：开心、委屈、傲娇）。
 [JEALOUSY]0-100的醋意数值。
 [STICKER]从可选列表中选择一个最符合心情的描述词。
+[REPLY]直接输出对话内容。如果要播放小剧场，请在这里直接输出完整的HTML代码。
 
 ${stickerTip} 
 ${worldBookPrompt} 
@@ -961,11 +962,26 @@ for (let text of msgs) {
                     renderMessages();
 
                     const curHist = chatHistories[currentFriendName] || [];
-                    if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
-                        triggerManualSummary();
-                    }
+                            if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
+            triggerManualSummary();
+        }
+
+        // --- 找回的丢失代码：转账判断逻辑 ---
+        if (cleanText.includes("已转") || cleanText.includes("好滴")) {
+            const h = chatHistories[currentFriendName];
+            for(let i = h.length - 1; i >= 0; i--) {
+                if(h[i].isCard) {
+                    const amt = parseFloat(h[i].text.split('￥')[1]);
+                    walletData.balance += amt;
+                    walletData.history.push({ type: '收入', title: friend.name + '转账', amount: `+${amt.toFixed(2)}`, time: new Date().toLocaleString() });
+                    updateWalletUI(); 
+                    break;
                 }
-            } catch (e) { 
+            }
+        }
+        // --- 找回结束 ---
+    }
+} catch (e) { 
                 alert("AI回复失败"); 
             } finally { 
                 document.getElementById('chat-typing').style.display = 'none'; 
@@ -1112,6 +1128,18 @@ for (let text of msgs) {
         function clearChatHistory() { if (confirm("确定要清空聊天记录吗？")) { chatHistories[currentFriendName] = []; const friend = friends.find(f => f.name === currentFriendName); if (friend) friend.lastMsg = ""; saveData(); renderMessages(); alert("已清空记录"); } }
         function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
+
+// --- 找回的丢失代码：朋友圈背景修改 ---
+function changeMomentsBackground() { 
+    const choice = prompt("1.上传本地图片\n2.输入图片URL"); 
+    if (choice === "1") {
+        document.getElementById('moments-bg-upload').click(); 
+    } else if (choice === "2") { 
+        const u = prompt("请输入图片URL:"); 
+        if (u) { localStorage.setItem('moments_bg_url', u); renderMoments(); } 
+    } 
+}
+// --- 找回结束 ---
         function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); document.getElementById('worldbook-page').classList.add('active'); }
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
         function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
@@ -1153,6 +1181,19 @@ for (let text of msgs) {
         document.getElementById('my-avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{myInfo.avatar=e.target.result;saveData();renderMePage();}; r.readAsDataURL(this.files[0]);}}
         function changeAvatar() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('avatar-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if(u){friends.find(f => f.name === currentFriendName).avatarUrl=u;saveData();openSettings();}} }
         document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
+
+// --- 找回的丢失代码：朋友圈背景上传监听 ---
+document.getElementById('moments-bg-upload').onchange = function() { 
+    if (this.files[0]) { 
+        const reader = new FileReader(); 
+        reader.onload = e => { 
+            localStorage.setItem('moments_bg_url', e.target.result); 
+            renderMoments(); 
+        }; 
+        reader.readAsDataURL(this.files[0]); 
+    } 
+};
+// --- 找回结束 ---
         function changeChatBackground() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('chat-bg-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if (u) { friends.find(f => f.name === currentFriendName).chatBg = u; saveData(); renderMessages(); } } }
         document.getElementById('chat-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { friends.find(f => f.name === currentFriendName).chatBg = e.target.result; saveData(); renderMessages(); }; reader.readAsDataURL(this.files[0]); } };
         function showContextMenu(x, y, i) {
