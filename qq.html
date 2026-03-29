@@ -837,13 +837,21 @@
             });
         }
 
-        async function getAiReply() {
+                async function getAiReply() {
             if(!aiConfig.key) return alert("配置错误");
             const friend = friends.find(f => f.name === currentFriendName);
             const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
             
             let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
-            let worldBookPrompt = friend.mountedBooks ? "\n背景知识：\n" + wb.books.filter(b => friend.mountedBooks.includes(b.title)).map(b => `[${b.title}]: ${b.content}`).join("\n") : "";
+            
+            // 核心修改：强化世界书小剧场的触发指令
+            let worldBookPrompt = "";
+            if (friend.mountedBooks && friend.mountedBooks.length > 0) {
+                const activeBooks = wb.books.filter(b => friend.mountedBooks.includes(b.title));
+                worldBookPrompt = "\n你现在拥有一些特殊的【HTML小剧场剧本】。如果用户提到了剧本对应的标题、关键词，或者你觉得当前剧情适合开启小剧场，请在[REPLY]标签内直接、完整地输出该剧本的HTML代码，禁止缩减代码！剧本列表如下：\n" + 
+                activeBooks.map(b => `剧本标题/触发词: ${b.title}\nHTML脚本内容: ${b.content}`).join("\n");
+            }
+            
             let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
 
             let rechargeLogic = "";
@@ -852,7 +860,22 @@
                 rechargeLogic = `\n【当前事件】：对方想让你帮他充值。`;
             }
 
-            const sys = `# Role\n化身为[${friend.persona}]。\n\n# 重要指令\n每次回复必须包含【回复内容】、【动作神态】和【内心独白】。\n\n# 输出格式\n[REPLY]回复内容\n[ACTION]动作描写\n[THOUGHTS]心里话\n\n${rechargeLogic}${worldBookPrompt}${longMemoryPrompt}`;
+            // 修复了语法错误，并将所有提示词合并到 sys 变量中
+            const sys = `# Role
+你是一个顶级的人格模拟专家。化身为[${friend.persona}]。
+你的任务是进行一场有温度的对话。
+
+# 重要指令
+1. 每次回复必须包含【回复内容】、【动作神态】和【内心独白】。
+2. 如果触发了小剧场，请直接将对应的HTML代码放在[REPLY]块中完整发出。
+
+# 输出格式
+请务必严格按照以下格式返回：
+[REPLY]对话回复或HTML剧本
+[ACTION]你此时的动作或神态描写（50字内）
+[THOUGHTS]你回复时心里真正想的话（100字内）
+
+${rechargeLogic} ${worldBookPrompt} ${longMemoryPrompt}`;
 
             document.getElementById('chat-typing').style.display = 'block';
 
@@ -865,8 +888,9 @@
                 const data = await res.json();
                 const rawContent = data.choices[0].message.content;
 
+                // 正确解析 AI 返回的三部分
                 let replyPart = rawContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|$)/)?.[1]?.trim() || rawContent;
-                let actionPart = rawContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在看着你。";
+                let actionPart = rawContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
                 let thoughtsPart = rawContent.match(/\[THOUGHTS\]([\s\S]*?)$/)?.[1]?.trim() || "（...）";
 
                 const msgs = replyPart.split('\n').filter(t => t.trim() !== '');
@@ -874,6 +898,8 @@
                 for (let text of msgs) {
                     await new Promise(r => setTimeout(r, 800));
                     let cleanText = text.trim();
+                    
+                    // 判断是否为剧场消息，剧场消息不发语音
                     let isTheaterMsg = cleanText.includes('<html') || cleanText.includes('<!DOCTYPE');
                     let isVoice = !isTheaterMsg && (Math.random() > 0.8);
 
@@ -889,9 +915,23 @@
                     saveData(); 
                     renderMessages();
 
+                    // 自动记忆总结逻辑
                     const curHist = chatHistories[currentFriendName] || [];
                     if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
                         triggerManualSummary();
+                    }
+
+                    // 充值判断逻辑
+                    if (cleanText.includes("已转") || cleanText.includes("好滴")) {
+                        const h = chatHistories[currentFriendName];
+                        for(let i = h.length - 1; i >= 0; i--) {
+                            if(h[i].isCard) {
+                                const amt = parseFloat(h[i].text.split('￥')[1]);
+                                walletData.balance += amt;
+                                walletData.history.push({ type: '收入', title: friend.name + '转账', amount: `+${amt.toFixed(2)}`, time: new Date().toLocaleString() });
+                                updateWalletUI(); break;
+                            }
+                        }
                     }
                 }
             } catch (e) { 
