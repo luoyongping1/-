@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<![CDATA[<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -398,7 +398,7 @@
             </div>
             <div class="list-group">
                 <div class="list-item" onclick="openFavorites()"><span style="margin-right:15px;color:#ff6b6b">📦</span>收藏</div>
-                <div class="list-item" onclick="alert('表情管理')"><span style="margin-right:15px;color:#ffbe00">😊</span>表情</div>
+                <div class="list-item" onclick="openStickers()"><span style="margin-right:15px;color:#ffbe00">😊</span>表情</div>
             </div>
             <div class="list-group">
                 <div class="list-item" onclick="openApiConfig()"><div class="info"><span style="margin-right:15px;color:#4facfe">⚙️</span>API 与模型设置</div><span>></span></div>
@@ -495,10 +495,24 @@
                 <div class="scrapbook-sticky-note">
                     <div id="hb-thoughts" class="scrapbook-thought-text">这里生成角色的心里话...</div>
                 </div>
-                <div style="flex:1; padding-top:20px;">
-                    <div style="font-size: 40px; color: rgba(87, 107, 149, 0.3); font-weight: bold;">Blue<br>Garden</div>
-                    <div style="font-size: 10px; color: #999; margin-top: 10px;">When the sun is shining...</div>
-                </div>
+                <div style="flex:1; padding-top:20px; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+        <div style="font-size: 40px; color: rgba(87, 107, 149, 0.3); font-weight: bold;">Blue<br>Garden</div>
+        <div style="font-size: 10px; color: #999; margin-top: 10px;">When the sun is shining...</div>
+    </div>
+    
+    <!-- 新增的右下角虚线框 -->
+    <div style="border: 1.5px dashed #576b95; border-radius: 12px; padding: 12px; margin-top: 20px; background: rgba(87, 107, 149, 0.05);">
+        <div style="font-size: 11px; color: #576b95; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px;">STATUS INFO</div>
+        <div style="font-size: 13px; color: #576b95; margin-bottom: 10px;">
+            当前情绪：<span id="hb-emotion" style="font-weight: bold;">--</span>
+        </div>
+        <div style="font-size: 12px; color: #576b95; margin-bottom: 5px;">醋意值：<span id="hb-jealousy-num">0</span>%</div>
+        <div style="width: 100%; height: 6px; background: rgba(87, 107, 149, 0.2); border-radius: 3px; overflow: hidden;">
+            <div id="hb-jealousy-bar" style="width: 0%; height: 100%; background: #576b95; transition: width 0.5s ease;"></div>
+        </div>
+    </div>
+</div>
             </div>
         </div>
     </div>
@@ -533,7 +547,8 @@
                 <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
                 <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
                 <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
-                <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
+<div class="list-item" onclick="showStickerToggleModal()"><div class="info">允许角色使用表情包</div><div id="settings-sticker-status" style="color:#888">不允许</div><span>></span></div>
+<div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
                 <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
             </div>
             <div class="list-group"><div class="list-item" onclick="deleteFriend()" style="color:#fa5151; justify-content:center; font-weight:bold;">删除好友</div></div>
@@ -661,14 +676,47 @@
     <div id="api-config-page" class="page"><div class="header"><span onclick="closeApiConfig()">〈 取消</span><span>API 设置</span><span class="btn-green" onclick="saveApiConfig()">保存</span></div><div class="content"><div class="list-group"><div class="list-item">地址:<input type="text" id="api-url" style="border:none;flex:1;text-align:right;"></div><div class="list-item">Key:<input type="password" id="api-key" style="border:none;flex:1;text-align:right;"></div><div class="list-item" onclick="fetchModels()">当前模型: <b id="current-model-display"></b> <span class="btn-green" style="font-size:12px;margin-left:10px;">拉取</span></div></div></div></div>
     <div id="model-selector-page" class="page"><div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div><div class="content" id="model-list-container"></div></div>
     <div id="editor-page" class="page"><div class="header"><span onclick="closePersonaEditor()">取消</span><span>人设编辑</span><span class="btn-green" onclick="savePersona()">完成</span></div><textarea id="persona-input" style="width:100%;height:100%;border:none;padding:15px;font-size:16px;outline:none;"></textarea></div>
-    <div id="wallet-history-page" class="page"><div class="header" style="border:none;"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div><div class="content" id="wallet-history-list"></div></div>
+    <!-- 表情管理页面 -->
+<div id="stickers-page" class="page">
+    <div class="header">
+    <span onclick="closeStickersPage()">〈 返回</span>
+    <span>表情</span>
+    <div style="display:flex; gap:10px;">
+        <span class="btn-green" id="sticker-batch-del-btn" onclick="toggleStickerSelectMode()">批量删除</span>
+        <span class="btn-green" onclick="showBatchStickerModal()">批量导入</span>
+    </div>
+</div>
+<!-- 批量删除的操作条 -->
+<div id="sticker-delete-bar" style="display:none; background:#fff; padding:10px; border-bottom:0.5px solid #eee; justify-content:space-around; align-items:center;">
+    <span style="color:#576b95;" onclick="stickerSelectAll()">全选</span>
+    <span style="color:#fa5151; font-weight:bold;" onclick="confirmBatchDeleteStickers()">确认删除 (<span id="sticker-select-count">0</span>)</span>
+    <span style="color:#999;" onclick="toggleStickerSelectMode()">取消</span>
+</div>
+    <div class="content" style="background:#fff;">
+        <div id="sticker-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; padding:15px;">
+            <!-- 表情包会显示在这里 -->
+        </div>
+    </div>
+</div>
 
-    <input type="file" id="avatar-upload" style="display:none" accept="image/*">
+<!-- 批量导入表情弹窗 -->
+<div id="sticker-batch-modal" class="glass-modal">
+    <div class="glass-card" style="width: 90%;">
+        <h3 style="text-align:center; margin-bottom:15px; color:#5e35b1;">批量导入表情</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:10px;">格式：表情描述:表情链接（每行一个）</p>
+        <textarea id="sticker-batch-input" style="width:100%; height:200px; border:none; border-radius:12px; padding:15px; font-size:14px; outline:none; box-sizing:border-box; margin-bottom:15px;" placeholder="搞笑:https://example.com/1.jpg&#10;可爱:https://example.com/2.jpg"></textarea>
+        <div style="display:flex; gap:10px;">
+            <button class="wx-btn wx-btn-recharge" style="flex:1; margin-bottom:0;" onclick="importStickersLogic()">开始导入</button>
+            <button class="wx-btn" style="flex:1; background:#fff; color:#666;" onclick="document.getElementById('sticker-batch-modal').style.display='none'">取消</button>
+        </div>
+    </div>
+</div>
     <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
     <input type="file" id="chat-bg-upload" style="display:none" accept="image/*">
     <input type="file" id="moments-bg-upload" style="display:none" accept="image/*">
     <input type="file" id="real-image-upload" style="display:none" accept="image/*">
     <input type="file" id="moment-image-upload" style="display:none" accept="image/*" multiple>
+    <input type="file" id="avatar-upload" style="display:none" accept="image/*">
 
     <script>
         // --- 数据定义 ---
@@ -682,7 +730,8 @@
         let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
         let walletData = JSON.parse(localStorage.getItem('wallet_data')) || { balance: 0.00, history: [] };
         let favorites = JSON.parse(localStorage.getItem('qq_favorites_list')) || [];
-        
+        let stickerList = JSON.parse(localStorage.getItem('qq_sticker_list')) || [];
+
         let tempMomentImages = [];
         let tempVisibleFriends = []; 
         let menuTargetIndex = -1;
@@ -707,12 +756,57 @@
             document.querySelectorAll('.tab-bar .tab-item').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             document.querySelectorAll('.page').forEach(p => { 
-                if(!['chat-page','settings-page','moments-page','moments-config-page','api-config-page','editor-page','model-selector-page','worldbook-page','wallet-page','wallet-history-page','favorites-page','memory-page','heartbeat-page','theater-overlay','visibility-selector-page','moments-editor-page'].includes(p.id)) p.classList.remove('active')
+                if(!['chat-page','settings-page','moments-page','moments-config-page','api-config-page','editor-page','model-selector-page','worldbook-page','wallet-page','wallet-history-page','favorites-page','memory-page','heartbeat-page','theater-overlay','visibility-selector-page','moments-editor-page','stickers-page'].includes(p.id)) p.classList.remove('active')
             });
             document.getElementById(tabId).classList.add('active');
             if(tabId === 'tab-chat') renderChatList();
             if(tabId === 'tab-contacts') renderContactList();
             if(tabId === 'tab-me') renderMePage();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('message-container');
+            const history = chatHistories[currentFriendName] || [];
+            const friend = friends.find(f => f.name === currentFriendName);
+            if(friend && friend.chatBg) container.style.backgroundImage = `url("${friend.chatBg}")`;
+            else container.style.backgroundImage = 'none';
+
+            container.innerHTML = history.map((m, i) => {
+    const isSelf = m.type === 'self';
+    const av = isSelf ? (myInfo.avatar ? `<img src="${myInfo.avatar}">` : myInfo.name[0]) : (friend && friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
+    
+    let finalContent = "";
+    let text = m.text;
+
+    // 判断消息类型并生成对应的 HTML
+    if (m.isCard) {
+        finalContent = `<div class="recharge-card"><div class="card-header">微信转账</div><div class="card-body">￥${text.split('￥')[1]}</div><div class="card-footer">已转账</div></div>`;
+    } else if (text.includes('<html') || text.includes('<!DOCTYPE')) {
+        const title = text.match(/<title>(.*?)<\/title>/i)?.[1] || "小剧场";
+        finalContent = `<div class="theater-card" onclick="openTheater(${i})"><div class="theater-card-header">✦ HTML THEATER ✦</div><div class="theater-card-body">${title}</div><div class="theater-card-footer"><span>点击播放</span><span>▶</span></div></div>`;
+    } else if (text.startsWith('<img')) {
+        // 如果是图片消息，直接显示图片，不带气泡
+        finalContent = `<div style="margin: 0 10px;">${text}</div>`;
+    } else if (m.isVoice) {
+        // 如果是语音消息，显示语音条
+        finalContent = `<div class="voice-wrap"><div class="voice-bar" onclick="playMiniMaxVoice('${text.replace(/'/g, "\\'")}', this)"><span class="voice-icon">(((</span><span>${Math.min(10, Math.ceil(text.length/2))}''</span></div><div class="translate-trigger" onclick="this.nextElementSibling.classList.toggle('active')">查看文字</div><div class="translated-content">${text}</div></div>`;
+    } else {
+        // 普通文字消息，显示气泡
+        finalContent = `<div class="bubble" oncontextmenu="event.preventDefault(); showContextMenu(event.clientX, event.clientY, ${i})">${m.quoted ? `<div style="font-size:12px; color:#888; border-left:2px solid #ccc; padding-left:5px; margin-bottom:5px;">${m.quoted}</div>` : ''}${text}</div>`;
+    }
+
+    const heartbeatIcon = !isSelf && !m.isCard && !text.includes('<html') && !text.startsWith('<img') ? `<div style="font-size:12px; color:var(--blue-link); margin-top:5px; cursor:pointer;" onclick="showHeartbeat(${i})">心声 >></div>` : '';
+
+    return `<div class="msg ${isSelf ? 'self' : 'friend'}">
+        ${isMultiSelecting ? `<input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${i})">` : ''}
+        <div class="avatar">${av}</div>
+        <div style="display:flex; flex-direction:column; ${isSelf ? 'align-items:flex-end' : ''}">
+            ${finalContent}
+            ${heartbeatIcon}
+        </div>
+    </div>`;
+}).join('');
+            container.scrollTop = container.scrollHeight;
         }
 
         async function playMiniMaxVoice(text, btn) {
@@ -744,100 +838,6 @@
             } catch (e) { alert("语音合成失败"); btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto"; }
         }
 
-        function renderMessages() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            if(!friend) return;
-            const container = document.getElementById('message-container');
-            container.style.backgroundImage = friend.chatBg ? `url("${friend.chatBg.replace(/(\r\n|\n|\r)/gm, "")}")` : 'none';
-
-            const history = chatHistories[currentFriendName] || [];
-            const displayHistory = history.slice(-20);
-            let htmlArr = [];
-            
-            for(let i = 0; i < displayHistory.length; i++){
-                const m = displayHistory[i];
-                const realIndex = history.length - displayHistory.length + i;
-                const isSelf = m.type === 'self';
-                
-                let avHtml = "";
-                if (isSelf) {
-                    avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我';
-                } else {
-                    if (friend.avatarUrl) {
-                        avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
-                    } else {
-                        avHtml = `<div onclick="showHeartbeat(${realIndex})">${friend.initial}</div>`;
-                    }
-                }
-
-                let contentHtml = m.text;
-// 优化后的判定：只要包含 html 标签、DOCTYPE 或者带有样式的 div，就视为剧场卡片
-let isTheater = /<html/i.test(m.text) || /<!DOCTYPE/i.test(m.text) || (m.text.includes('<div') && m.text.includes('style='));
-let useBubble = true; 
-
-if (m.isCard) {
-                    contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
-                    useBubble = false;
-                } else if (m.isRealImage) {
-                    contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">`;
-                    useBubble = false;
-                } else if (m.isDescribeCard) {
-                    contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${realIndex})"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
-                    useBubble = false;
-                } else if (isTheater) {
-                    let theaterTitle = "精彩小剧场";
-                    const match = m.text.match(/<title>(.*?)<\/title>/i) || m.text.match(/<h1>(.*?)<\/h1>/i);
-                    if (match) theaterTitle = match[1];
-                    contentHtml = `
-                        <div class="theater-card" onclick="openTheater(${realIndex})">
-                            <div class="theater-card-header">THANKS 🥕🥕🥕</div>
-                            <div class="theater-card-body">${theaterTitle}</div>
-                            <div class="theater-card-footer"><span>🎈🎈</span><span>🐰🎵</span></div>
-                        </div>`;
-                    useBubble = false;
-                }
-
-                if (!isSelf && m.isVoice && !isTheater) {
-                    htmlArr.push(`
-                        <div class="msg friend">
-                            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:#ccc">${avHtml}</div>
-                            <div class="voice-wrap">
-                                <div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}', this)">
-                                    <span class="voice-icon">(((</span>
-                                    <span style="font-size:12px; color:#999;">${Math.min(m.text.length, 60)}''</span>
-                                </div>
-                                <div class="translate-trigger" onclick="document.getElementById('trans-${realIndex}').classList.toggle('active')">转文字</div>
-                                <div id="trans-${realIndex}" class="translated-content">${m.text}</div>
-                            </div>
-                        </div>`);
-                } else {
-                    htmlArr.push(`
-                        <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
-                            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
-                            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
-                            <div class="${useBubble ? 'bubble' : ''}">
-                                ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
-                                ${contentHtml}
-                            </div>
-                        </div>`);
-                }
-            }
-            container.innerHTML = htmlArr.join('');
-            container.scrollTop = container.scrollHeight;
-            
-            const targets = container.querySelectorAll('.bubble, .recharge-card, .describe-card, .theater-card, img, .voice-bar');
-            targets.forEach((b, idx) => {
-                let timer;
-                const start = (e) => { 
-                    const touch = e.touches ? e.touches[0] : e; 
-                    timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, history.length - displayHistory.length + idx), 700); 
-                };
-                const stop = () => clearTimeout(timer);
-                b.onmousedown = start; b.onmouseup = stop;
-                b.ontouchstart = start; b.ontouchend = stop;
-            });
-        }
-
         async function getAiReply() {
             if(!aiConfig.key) return alert("配置错误");
             const friend = friends.find(f => f.name === currentFriendName);
@@ -845,7 +845,6 @@ if (m.isCard) {
             
             let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
             
-            // 核心修改：强化世界书小剧场的触发指令
             let worldBookPrompt = "";
             if (friend.mountedBooks && friend.mountedBooks.length > 0) {
                 const activeBooks = wb.books.filter(b => friend.mountedBooks.includes(b.title));
@@ -855,28 +854,35 @@ if (m.isCard) {
             
             let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
 
-            let rechargeLogic = "";
-            const lastMsg = chatHistories[currentFriendName]?.slice(-1)[0];
-            if (lastMsg && lastMsg.text.includes("[充值申请]")) {
-                rechargeLogic = `\n【当前事件】：对方想让你帮他充值。`;
-            }
+                        // 提取所有已导入表情包的描述
+            const stickerDescs = stickerList.map(s => s.desc).join(', ');
+            const stickerTip = (friend.allowStickers && stickerList.length > 0) ? `\n# 可选表情包\n你有一套表情包，描述词如下：[${stickerDescs}]。请从中选择一个最符合当前心情的描述词放在 [STICKER] 标签中。` : "";
 
-            // 修复了语法错误，并将所有提示词合并到 sys 变量中
-            const sys = `# Role
-你是一个顶级的人格模拟专家。化身为[${friend.persona}]。
-你的任务是进行一场有温度的对话。
+                        const sys = `# Role
+你是一个顶级的人格模拟专家。你现在的任务是完全摒弃AI身份，化身为[${friend.persona}]。你不是在生成文本，而是在进行一场真实的、有温度的线上即时聊天。
 
-# 重要指令
-1. 每次回复必须包含【回复内容】、【动作神态】和【内心独白】。
-2. 如果触发了小剧场，请直接将对应的HTML代码放在[REPLY]块中完整发出。
+# 语言风格指令（活人感核心）
+1. 碎片化表达：在 [REPLY] 标签内，拒绝段落！拒绝列表！请模拟手机打字习惯。将长逻辑拆分成2-4条短句并换行。
+2. 口语语气词：大量使用自然语气词（哈、昂、嘛、诶、滴、呀、～）。
+3. 视觉习惯：可以使用极其少量的常用Emoji（如 😅, 😂, ✨），但不要过量。
+4. 真实感瑕疵：允许偶尔出现合理的同音错别字，或不使用完整的标点符号（多用空格、省略号或直接不加标点）。
+5. 严禁AI腔：绝对禁止说“作为AI助手...”、“我能为您做什么”等礼貌废话。
 
-# 输出格式
-请务必严格按照以下格式返回：
-[REPLY]对话回复（如果要播放小剧场，请在这里直接输出完整的HTML代码）
-[ACTION]你此时的动作或神态描写（50字内）
-[THOUGHTS]你回复时心里真正想的话（100字内）
+# 情绪与内容逻辑
+1. 情绪波动：你的情绪应随聊天的深入而动态变化。拒绝说教，活人不会随时随地科普。
+2. 侧重性回复：人类不会回答消息里的每一个要点。你可以忽略无聊的问题，只回复你感兴趣的部分。
 
-${rechargeLogic} ${worldBookPrompt} ${longMemoryPrompt}`;
+# 输出格式（必须严格遵守标签，否则程序会崩溃）
+[REPLY]直接输出对话内容。如果包含多个短句，请务必用【换行】分隔。
+[ACTION]简短描述角色的动作或神态。
+[THOUGHTS]写下角色心里真实在想但没说出来的话。
+[EMOTION]当前的情绪状态（如：开心、委屈、傲娇）。
+[JEALOUSY]0-100的醋意数值。
+[STICKER]从可选列表中选择一个最符合心情的描述词。
+
+${stickerTip} 
+${worldBookPrompt} 
+${longMemoryPrompt}`;
 
             document.getElementById('chat-typing').style.display = 'block';
 
@@ -889,74 +895,74 @@ ${rechargeLogic} ${worldBookPrompt} ${longMemoryPrompt}`;
                 const data = await res.json();
                 const rawContent = data.choices[0].message.content;
 
-                // 1. 去除 AI 可能添加的 markdown 代码块标识，防止破坏 HTML 卡片识别
                 let processedContent = rawContent.replace(/```html\n?/g, '').replace(/```\n?/g, '');
 
-                // 2. 解析 AI 返回的三部分
-                let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|$)/)?.[1]?.trim() || processedContent;
-                let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
-                let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)$/)?.[1]?.trim() || "（...）";
+                // 解析 AI 返回的各个部分
+let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|$)/)?.[1]?.trim() || processedContent;
+let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
+let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|$)/)?.[1]?.trim() || "（...）";
+let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/)?.[1]?.trim() || "平静";
+let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)/)?.[1]?.trim() || "0";
+let stickerChoice = processedContent.match(/\[STICKER\](.*?)(\[|$)/)?.[1]?.trim() || "";
 
-                let msgs = [];
-// 3. 增强版解析：确保 HTML 代码块被完整提取，不被拆分
+let msgs = [];
+// 1. 处理 HTML 小剧场逻辑
 const htmlRegex = /<(html|!DOCTYPE)[\s\S]*?<\/html>/gi;
 let htmlMatch = htmlRegex.exec(replyPart);
 
 if (htmlMatch) {
-    // 提取 HTML 之前的文字
     let preText = replyPart.substring(0, htmlMatch.index).trim();
-    if (preText) {
-        msgs.push(...preText.split('\n').filter(t => t.trim() !== ''));
-    }
-    // 提取完整的 HTML 代码块
+    if (preText) msgs.push(...preText.split('\n').filter(t => t.trim() !== ''));
     msgs.push(htmlMatch[0]);
-    // 提取 HTML 之后的文字
     let postText = replyPart.substring(htmlMatch.index + htmlMatch[0].length).trim();
-    if (postText) {
-        msgs.push(...postText.split('\n').filter(t => t.trim() !== ''));
-    }
+    if (postText) msgs.push(...postText.split('\n').filter(t => t.trim() !== ''));
 } else {
-    // 如果没有 HTML，则按行拆分普通消息
     msgs = replyPart.split('\n').filter(t => t.trim() !== '');
 }
 
-                for (let text of msgs) {
-                    await new Promise(r => setTimeout(r, 800));
-                    let cleanText = text.trim();
-                    
-                    // 判断是否为剧场消息，剧场消息不发语音
-                    let isTheaterMsg = cleanText.includes('<html') || cleanText.includes('<!DOCTYPE');
-                    let isVoice = !isTheaterMsg && (Math.random() > 0.8);
+// 2. 表情包相关性匹配逻辑
+// 2. 表情包相关性匹配逻辑
+if (friend.allowStickers && stickerList.length > 0) {
+    let targetSticker = null;
+    if (stickerChoice) {
+        targetSticker = stickerList.find(s => s.desc.includes(stickerChoice) || stickerChoice.includes(s.desc));
+    }
+    if (!targetSticker) {
+        targetSticker = stickerList[Math.floor(Math.random() * stickerList.length)];
+    }
+    
+    if (targetSticker) {
+        // 注意：这里不再覆盖 msgs，而是用 push 添加到末尾，实现先发文字再发表情
+        const stickerHtml = `<img src="${targetSticker.url}" style="max-width:150px; display:block; border-radius:8px; margin:5px 0;">`;
+        msgs.push(stickerHtml);
+    }
+}
 
-                    chatHistories[currentFriendName].push({ 
-                        type: 'friend', 
-                        text: cleanText,
-                        isVoice: isVoice, 
-                        action: actionPart,
-                        thoughts: thoughtsPart
-                    });
+for (let text of msgs) {
+    await new Promise(r => setTimeout(r, 800));
+    let cleanText = text.trim();
+    let isTheaterMsg = cleanText.includes('<html') || cleanText.includes('<!DOCTYPE');
+    // 核心修改：如果是图片消息（以<img开头），强制不使用语音条
+    let isImage = cleanText.startsWith('<img');
+    let isVoice = !isTheaterMsg && !isImage && (Math.random() > 0.8);
+
+    chatHistories[currentFriendName].push({ 
+        type: 'friend', 
+        text: cleanText,
+        isVoice: isVoice, 
+        action: actionPart,
+        thoughts: thoughtsPart,
+        emotion: emotionPart,
+        jealousy: jealousyPart
+    });
                     
                     friend.lastMsg = isTheaterMsg ? "[小剧场]" : cleanText;
                     saveData(); 
                     renderMessages();
 
-                    // 自动记忆总结逻辑
                     const curHist = chatHistories[currentFriendName] || [];
                     if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
                         triggerManualSummary();
-                    }
-
-                    // 充值判断逻辑
-                    if (cleanText.includes("已转") || cleanText.includes("好滴")) {
-                        const h = chatHistories[currentFriendName];
-                        for(let i = h.length - 1; i >= 0; i--) {
-                            if(h[i].isCard) {
-                                const amt = parseFloat(h[i].text.split('￥')[1]);
-                                walletData.balance += amt;
-                                walletData.history.push({ type: '收入', title: friend.name + '转账', amount: `+${amt.toFixed(2)}`, time: new Date().toLocaleString() });
-                                updateWalletUI(); break;
-                            }
-                        }
                     }
                 }
             } catch (e) { 
@@ -971,6 +977,10 @@ if (htmlMatch) {
             if (!msg || msg.type === 'self') return;
             document.getElementById('hb-action').innerText = msg.action || "他只是静静地坐着。";
             document.getElementById('hb-thoughts').innerText = msg.thoughts || "（他现在什么都没想）";
+            document.getElementById('hb-emotion').innerText = msg.emotion || "平静";
+            const jVal = msg.jealousy || 0;
+            document.getElementById('hb-jealousy-num').innerText = jVal;
+            document.getElementById('hb-jealousy-bar').style.width = jVal + "%";
             document.getElementById('heartbeat-page').classList.add('active');
         }
 
@@ -995,11 +1005,7 @@ if (htmlMatch) {
             const history = chatHistories[currentFriendName] || [];
             const startIdx = f.lastSummaryIdx || 0;
             const newMsgs = history.slice(startIdx);
-            if (newMsgs.length < 2) return alert("新消息太少，不需要总结。");
-            const btn = event.currentTarget;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = "<div style='color:#999;'>⏳ 正在总结记忆...</div>";
-            btn.style.pointerEvents = "none";
+            if (newMsgs.length < 2) return;
             const msgContent = newMsgs.map(m => `${m.type === 'self' ? '用户' : 'AI'}: ${m.text}`).join('\n');
             const sysPrompt = "你是一个记忆总结专家。请简要总结以下对话中用户的喜好、重要特征或约定。只输出总结内容，不要带废话。";
             try {
@@ -1014,16 +1020,16 @@ if (htmlMatch) {
                     f.longMemory = (f.longMemory ? f.longMemory + "\n" : "") + `[${new Date().toLocaleString()}总结]: ${summary}`;
                     f.lastSummaryIdx = history.length;
                     document.getElementById('long-memory-text').value = f.longMemory;
-                    saveData(); alert("记忆总结成功！");
+                    saveData();
                 }
-            } catch (e) { alert("API 请求失败"); } finally { btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto"; }
+            } catch (e) {}
         }
 
         function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
         function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
         function renderMoments() {
             document.getElementById('moments-my-name').innerText = myInfo.name;
-            const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : myInfo.name[0];
+            const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}">` : myInfo.name[0];
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             const momentsBg = localStorage.getItem('moments_bg_url');
             if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`;
@@ -1031,12 +1037,12 @@ if (htmlMatch) {
             moments.slice().reverse().forEach((m, idx) => {
                 const realIdx = moments.length - 1 - idx;
                 const friend = friends.find(f => f.name === m.name);
-                const av = m.name === myInfo.name ? myAvatarHtml : (friend && friend.avatarUrl ? `<img src="${friend.avatarUrl}" decoding="async">` : m.name[0]);
+                const av = m.name === myInfo.name ? myAvatarHtml : (friend && friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : m.name[0]);
                 let imgsHtml = "";
                 if(m.images && m.images.length > 0) {
                     imgsHtml = `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; margin-top:8px; width:240px;">`;
                     m.images.forEach(img => {
-                        if(img.type === 'real') imgsHtml += `<img src="${img.data}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px;" decoding="async">`;
+                        if(img.type === 'real') imgsHtml += `<img src="${img.data}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px;">`;
                         else imgsHtml += `<div style="width:100%; aspect-ratio:1; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; padding:5px; box-sizing:border-box; color:#888; border:1px dashed #ccc;">[描述图]</div>`;
                     });
                     imgsHtml += `</div>`;
@@ -1066,7 +1072,7 @@ if (htmlMatch) {
                     let p = type === 'comment' ? `好友 ${myInfo.name} 朋友圈回复你：“${userText}”。回复他。` : type === 'new_post' ? `好友 ${myInfo.name} 发动态：“${m.text}”。回复他。` : `内容：“${m.text}”。`;
                     const sys = `# Role\n模拟[${f.name}]，人设：${f.persona}。\n聊天记录：\n${h || "无"}\n\n# 任务\n写一条朋友圈评论（15字内）。禁止AI腔。`;
                     try {
-                        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, { method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, {role: "user", content: p}] }) });
+                        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, { method: 'POST', headers: { 'Authorization':'Bearer '+aiConfig.key,'Content-Type':'application/json'}, body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, {role: "user", content: p}] }) });
                         const data = await res.json(); const aiC = data.choices[0].message.content.trim();
                         if(!m.comments) m.comments = []; m.comments.push({ name: f.name, text: aiC, replyTo: myInfo.name }); saveData(); renderMoments();
                     } catch (e) {}
@@ -1082,7 +1088,7 @@ if (htmlMatch) {
             const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
             list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => `
                 <div class="wechat-chat-item" onclick="openChat('${f.name}')">
-                    <div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial}</div>
+                    <div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial}</div>
                     <div class="chat-body">
                         <div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">刚刚</div></div>
                         <div class="chat-preview">${f.lastMsg}</div>
@@ -1095,7 +1101,7 @@ if (htmlMatch) {
                 const isC = collapsedGroups.includes(gName);
                 const fs = friends.filter(f => (f.group || '我的好友') === gName).map(f => `
                     <div class="list-item" onclick="openChat('${f.name}')">
-                        <div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial}</div><div class="info">${f.name}</div>
+                        <div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial}</div><div class="info">${f.name}</div>
                     </div>`).join('');
                 return `<div class="group-header" onclick="toggleGroup('${gName}')"><span class="group-arrow ${isC?'collapsed':''}">▼</span>${gName}</div>${isC?'':fs}`;
             }).join('');
@@ -1106,15 +1112,13 @@ if (htmlMatch) {
         function clearChatHistory() { if (confirm("确定要清空聊天记录吗？")) { chatHistories[currentFriendName] = []; const friend = friends.find(f => f.name === currentFriendName); if (friend) friend.lastMsg = ""; saveData(); renderMessages(); alert("已清空记录"); } }
         function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
-        function changeMomentsBackground() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('moments-bg-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if (u) { localStorage.setItem('moments_bg_url', u); renderMoments(); } } }
-        document.getElementById('moments-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { localStorage.setItem('moments_bg_url', e.target.result); renderMoments(); }; reader.readAsDataURL(this.files[0]); } };
         function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); document.getElementById('worldbook-page').classList.add('active'); }
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
         function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
         function openMomentsConfig() { document.getElementById('moments-config-page').classList.add('active'); }
         function closeMomentsConfig() { document.getElementById('moments-config-page').classList.remove('active'); }
         function saveMomentsConfig() { const f=friends.find(f=>f.name===currentFriendName); f.freq=parseInt(document.getElementById('custom-freq').value); f.lastMoment=Date.now(); saveData(); closeMomentsConfig(); }
-        async function forceTriggerMoment() { const btn = document.getElementById('moment-status-btn'); btn.innerText = "⏳..."; btn.style.pointerEvents = "none"; const f = friends.find(f => f.name === currentFriendName); try { await triggerAiMoment(f); alert("好了"); } catch (e) { alert("失败"); } finally { btn.innerText = "✨ 强制发圈"; btn.style.pointerEvents = "auto"; } }
+        async function forceTriggerMoment() { const f = friends.find(f => f.name === currentFriendName); await triggerAiMoment(f); alert("好了"); }
         async function triggerAiMoment(f) { const res=await fetch(aiConfig.url.replace(/\/$/,"")+"/chat/completions",{method:'POST',headers:{'Authorization':'Bearer '+aiConfig.key,'Content-Type':'application/json'},body:JSON.stringify({model:aiConfig.model,messages:[{role:"system",content:`你的人设是${f.persona}，发一条30字内朋友圈`}]})}); const d=await res.json(); moments.push({ id: Date.now(), name:f.name, text:d.choices[0].message.content, likes: [], comments: [], time: Date.now(), images: [], visibleTo: [] }); saveData(); if(document.getElementById('moments-page').classList.contains('active')) renderMoments(); }
 
         function openTheater(index) {
@@ -1129,13 +1133,10 @@ if (htmlMatch) {
             if (match) document.getElementById('theater-header-title').innerText = match[1];
         }
         function closeTheater() {
-            const overlay = document.getElementById('theater-overlay');
-            const frame = document.getElementById('theater-frame');
-            overlay.style.display = 'none';
-            frame.src = "about:blank";
+            document.getElementById('theater-overlay').style.display = 'none';
+            document.getElementById('theater-frame').src = "about:blank";
         }
 
-        // 基础功能
         function renameCurrentFriend() { const n = prompt("名字:"); if(n){ const f = friends.find(f => f.name===currentFriendName); chatHistories[n]=chatHistories[currentFriendName]; delete chatHistories[currentFriendName]; f.name=n; f.initial=n[0]; currentFriendName=n; saveData(); openSettings(); } }
         function openPersonaEditor() { document.getElementById('persona-input').value = friends.find(f => f.name===currentFriendName).persona; document.getElementById('editor-page').classList.add('active'); }
         function closePersonaEditor() { document.getElementById('editor-page').classList.remove('active'); }
@@ -1154,9 +1155,22 @@ if (htmlMatch) {
         document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
         function changeChatBackground() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('chat-bg-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if (u) { friends.find(f => f.name === currentFriendName).chatBg = u; saveData(); renderMessages(); } } }
         document.getElementById('chat-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { friends.find(f => f.name === currentFriendName).chatBg = e.target.result; saveData(); renderMessages(); }; reader.readAsDataURL(this.files[0]); } };
-        function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
-        function showContextMenu(x, y, i) { if(isMultiSelecting) return; menuTargetIndex = i; const m = document.getElementById('msg-context-menu'); m.style.display = 'block'; m.style.left = Math.min(x, window.innerWidth - 110) + 'px'; m.style.top = y + 'px'; setTimeout(() => document.addEventListener('click', function c(){ m.style.display = 'none'; document.removeEventListener('click', c); }), 100); }
-        function deleteSingleMsg() { chatHistories[currentFriendName].splice(menuTargetIndex, 1); saveData(); renderMessages(); }
+        function showContextMenu(x, y, i) {
+            if (isMultiSelecting) return;
+            menuTargetIndex = i;
+            const m = document.getElementById('msg-context-menu');
+            m.style.display = 'block';
+            m.style.left = Math.min(x, window.innerWidth - 110) + 'px';
+            m.style.top = y + 'px';
+            const closeMenu = () => { m.style.display = 'none'; document.removeEventListener('click', closeMenu); };
+            setTimeout(() => document.addEventListener('click', closeMenu), 100);
+        }
+        function deleteSingleMsg() {
+            const h = chatHistories[currentFriendName]; h.splice(menuTargetIndex, 1);
+            const f = friends.find(f => f.name === currentFriendName);
+            f.lastMsg = h.length ? (h[h.length-1].text.includes('<html')?'[小剧场]':h[h.length-1].text) : "";
+            saveData(); renderMessages(); renderChatList();
+        }
         function redoReply() { const h = chatHistories[currentFriendName]; let i = h.length - 1; while(i >= 0 && h[i].type === 'friend') { h.splice(i, 1); i--; } saveData(); renderMessages(); getAiReply(); }
         function quoteMsg() { quotedText = chatHistories[currentFriendName][menuTargetIndex].text; const p = document.getElementById('quote-preview'); p.innerHTML = `引用：${quotedText.substring(0,10)}... <span onclick="clearQuote()">×</span>`; p.style.display = 'block'; }
         function clearQuote() { quotedText = ""; document.getElementById('quote-preview').style.display = 'none'; }
@@ -1169,17 +1183,75 @@ if (htmlMatch) {
         function openWallet() { document.getElementById('wallet-page').classList.add('active'); updateWalletUI(); }
         function closeWallet() { document.getElementById('wallet-page').classList.remove('active'); }
         function updateWalletUI() { document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`; saveData(); }
-        function openWalletHistory() { document.getElementById('wallet-history-list').innerHTML = walletData.history.slice().reverse().map(h => `<div class="list-item"><div class="info"><div>${h.title}</div><div style="font-size:12px;">${h.time}</div></div><b>${h.amount}</b></div>`).join(''); document.getElementById('wallet-history-page').classList.add('active'); }
         function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
         function selfRecharge() { const amt = prompt("金额:"); if(amt && !isNaN(amt)) { walletData.balance += parseFloat(amt); walletData.history.push({ title: '手动充值', amount: '+'+parseFloat(amt).toFixed(2), time: new Date().toLocaleString() }); updateWalletUI(); document.getElementById('recharge-modal').style.display = 'none'; } }
         function askFriendRecharge() { const amt = prompt("金额:"); if(amt) { window.pendingRecharge = parseFloat(amt); document.getElementById('recharge-modal').style.display='none'; closeWallet(); switchTab('tab-chat', document.querySelector('.tab-item')); alert("选择好友"); } }
         function sendMsg() { const val = document.getElementById('msg-input').value.trim(); if(!val) return; if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); friends.find(f => f.name === currentFriendName).lastMsg = val; document.getElementById('msg-input').value = ''; clearQuote(); saveData(); renderMessages(); }
-        function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : 'ME'; }
+        function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : 'ME'; }
         function openChat(n) { currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active'); if(window.pendingRecharge) { if(!chatHistories[n]) chatHistories[n] = []; chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); } setTimeout(renderMessages, 50); }
         function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; setTimeout(renderChatList, 10); }
-        function openSettings() { const f = friends.find(f => f.name === currentFriendName); document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial; document.getElementById('settings-name').innerText = f.name; document.getElementById('settings-nick-display').innerText = f.name; document.getElementById('settings-group-display').innerText = f.group || '我的好友'; document.getElementById('settings-voice-display').innerText = f.voiceId || '默认(cherry)'; document.getElementById('settings-page').classList.add('active'); }
+        function openSettings() { 
+            const f = friends.find(f => f.name === currentFriendName); 
+            document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial; 
+            document.getElementById('settings-name').innerText = f.name; 
+            document.getElementById('settings-nick-display').innerText = f.name; 
+            document.getElementById('settings-group-display').innerText = f.group || '我的好友'; 
+            document.getElementById('settings-voice-display').innerText = f.voiceId || '默认(cherry)'; 
+            document.getElementById('settings-sticker-status').innerText = f.allowStickers ? "允许" : "不允许";
+            document.getElementById('settings-page').classList.add('active'); 
+        }
         function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
-        function toggleDescribeCard(index) { chatHistories[currentFriendName][index].expanded = !chatHistories[currentFriendName][index].expanded; renderMessages(); }
+
+        let isStickerSelectMode = false;
+        function openStickers() {
+            isStickerSelectMode = false; 
+            document.getElementById('stickers-page').classList.add('active');
+            renderStickers();
+        }
+        function closeStickersPage() {
+            isStickerSelectMode = false;
+            document.getElementById('sticker-delete-bar').style.display = 'none';
+            document.getElementById('sticker-batch-del-btn').innerText = "批量删除";
+            document.getElementById('stickers-page').classList.remove('active');
+        }
+        function renderStickers() {
+            const grid = document.getElementById('sticker-grid');
+            if (stickerList.length === 0) { grid.innerHTML = '<div style="grid-column: span 4; text-align:center; color:#999; margin-top:50px;">暂无表情</div>'; return; }
+            grid.innerHTML = stickerList.map((s, idx) => `
+                <div style="position:relative; width:100%; aspect-ratio:1; background:#f9f9f9; border-radius:4px; overflow:hidden; border:${s.selected ? '2px solid #5e35b1' : '1px solid #eee'}; display:flex; align-items:center; justify-content:center;" onclick="toggleStickerItemSelect(${idx})">
+                    <img src="${s.url}" style="width:100%; height:100%; object-fit:cover;">
+                    ${isStickerSelectMode ? `<div style="position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; border:1px solid #5e35b1; background:${s.selected ? '#5e35b1' : '#fff'}; display:flex; align-items:center; justify-content:center; color:white; font-size:12px;">${s.selected ? '✓' : ''}</div>` : `<div onclick="event.stopPropagation(); deleteSticker(${idx})" style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.3); color:white; width:20px; height:20px; text-align:center; line-height:18px; font-size:14px; border-bottom-left-radius:8px;">×</div>`}
+                </div>`).join('');
+        }
+        function showBatchStickerModal() { document.getElementById('sticker-batch-input').value = ''; document.getElementById('sticker-batch-modal').style.display = 'flex'; }
+        function importStickersLogic() {
+            const input = document.getElementById('sticker-batch-input').value.trim(); if (!input) return;
+            const lines = input.split('\n');
+            lines.forEach(line => {
+                const parts = line.split(/[:：]/);
+                if(parts.length >= 2) stickerList.push({ desc: parts[0].trim(), url: line.substring(line.indexOf(parts[1])).trim(), selected: false });
+            });
+            localStorage.setItem('qq_sticker_list', JSON.stringify(stickerList));
+            renderStickers(); document.getElementById('sticker-batch-modal').style.display = 'none';
+        }
+        function deleteSticker(idx) { if (confirm("删除?")) { stickerList.splice(idx, 1); localStorage.setItem('qq_sticker_list', JSON.stringify(stickerList)); renderStickers(); } }
+        function toggleStickerSelectMode() {
+            isStickerSelectMode = !isStickerSelectMode;
+            document.getElementById('sticker-delete-bar').style.display = isStickerSelectMode ? 'flex' : 'none';
+            document.getElementById('sticker-batch-del-btn').innerText = isStickerSelectMode ? "取消" : "批量删除";
+            if (!isStickerSelectMode) stickerList.forEach(s => s.selected = false);
+            renderStickers();
+        }
+        function toggleStickerItemSelect(idx) { if (!isStickerSelectMode) return; stickerList[idx].selected = !stickerList[idx].selected; document.getElementById('sticker-select-count').innerText = stickerList.filter(s => s.selected).length; renderStickers(); }
+        function stickerSelectAll() { const all = stickerList.every(s => s.selected); stickerList.forEach(s => s.selected = !all); document.getElementById('sticker-select-count').innerText = stickerList.filter(s => s.selected).length; renderStickers(); }
+        function confirmBatchDeleteStickers() {
+            if (confirm("确定删除?")) { stickerList = stickerList.filter(s => !s.selected); localStorage.setItem('qq_sticker_list', JSON.stringify(stickerList)); toggleStickerSelectMode(); }
+        }
+        function showStickerToggleModal() { document.getElementById('sticker-toggle-modal').style.display = 'flex'; }
+        function setStickerPermission(allowed) {
+            const f = friends.find(f => f.name === currentFriendName);
+            if (f) { f.allowStickers = allowed; saveData(); document.getElementById('settings-sticker-status').innerText = allowed ? "允许" : "不允许"; document.getElementById('sticker-toggle-modal').style.display = 'none'; }
+        }
 
         window.onload = () => { 
             renderChatList(); 
@@ -1189,5 +1261,14 @@ if (htmlMatch) {
             if(momentsBg) { const bgEl = document.getElementById('moments-bg-display'); if(bgEl) bgEl.style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`; }
         };
     </script>
+
+    <div id="sticker-toggle-modal" class="glass-modal">
+        <div class="glass-card">
+            <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">是否允许发送表情</h3>
+            <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="setStickerPermission(true)">允许</div>
+            <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #fa5151;" onclick="setStickerPermission(false)">不允许</div>
+            <div style="text-align:center; margin-top:10px; color:#666; cursor:pointer;" onclick="document.getElementById('sticker-toggle-modal').style.display='none'">取消</div>
+        </div>
+    </div>
 </body>
-</html>
+</html>]]>
