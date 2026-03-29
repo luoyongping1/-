@@ -772,39 +772,28 @@
         // --- 数据定义 ---
         // 自动应用来自主页面的全局美化样式
 function applyGlobalStyles() {
-    // 直接获取四个页面的 CSS
-    const chatCss = localStorage.getItem('qq_chatlist_css') || "";
-    const contactCss = localStorage.getItem('qq_contacts_css') || "";
-    const discoverCss = localStorage.getItem('qq_discover_css') || "";
-    const meCss = localStorage.getItem('qq_me_css') || "";
+    const sections = [
+        { id: 'tab-chat', key: 'qq_chatlist_css' },
+        { id: 'tab-contacts', key: 'qq_contacts_css' },
+        { id: 'tab-discover', key: 'qq_discover_css' },
+        { id: 'tab-me', key: 'qq_me_css' }
+    ];
 
-    let styleTag = document.getElementById('qq-global-custom-css');
-    if(!styleTag) {
-        styleTag = document.createElement('style');
-        styleTag.id = 'qq-global-custom-css';
-        document.head.appendChild(styleTag);
-    }
-    
-    // 将四个页面的 CSS 组合在一起，并手动加上页面 ID 限制，防止样式乱窜
-    styleTag.innerHTML = `
-        /* 消息列表美化 */
-        #tab-chat { ${chatCss} }
-        ${chatCss.includes('{') ? chatCss : ''} 
-        
-        /* 通讯录美化 */
-        #tab-contacts { ${contactCss} }
-        ${contactCss.includes('{') ? contactCss : ''}
-        
-        /* 发现页美化 */
-        #tab-discover { ${discoverCss} }
-        ${discoverCss.includes('{') ? discoverCss : ''}
-        
-        /* 我 页面美化 */
-        #tab-me { ${meCss} }
-        ${meCss.includes('{') ? meCss : ''}
-    `;
+    sections.forEach(item => {
+        const cssText = localStorage.getItem(item.key);
+        if (cssText) {
+            let styleId = 'style-' + item.id;
+            let styleTag = document.getElementById(styleId);
+            if (!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = styleId;
+                document.head.appendChild(styleTag);
+            }
+            // 自动为每一行代码加上页面前缀，防止不同页面的样式打架
+            styleTag.innerHTML = cssText.replace(/([^\r\n,{}]+)(?=[^{}]*{)/g, `#${item.id} $1`);
+        }
+    });
 }
-// 确保页面加载时和切换标签时都运行一次
 applyGlobalStyles();
         let currentFriendName = "";
         let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '' }];
