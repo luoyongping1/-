@@ -15,7 +15,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: var(--text-color);
             overflow: hidden; 
-            /* 禁用移动端长按弹出菜单 */
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
@@ -47,9 +46,7 @@
             padding: 60px 20px 20px 20px; 
             height: 100%;
             display: grid;
-            /* 4列布局 */
             grid-template-columns: repeat(4, 1fr);
-            /* 每行高度约为 85px */
             grid-auto-rows: 85px;
             gap: 15px;
             box-sizing: border-box;
@@ -63,24 +60,21 @@
             z-index: 1;
         }
 
-        /* 统一的拖拽项样式 */
         .grid-item {
             position: relative;
             transition: transform 0.2s, box-shadow 0.2s;
-            touch-action: none; /* 关键：交给JS处理 */
+            touch-action: none;
         }
 
-        /* 拖拽中样式 */
         .grid-item.dragging {
             z-index: 999;
             opacity: 0.8;
             transform: scale(1.05);
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: fixed !important; /* 拖动时脱离文档流 */
+            position: fixed !important; 
             pointer-events: none;
         }
 
-        /* 时间组件：占4列 */
         .time-widget { 
             grid-column: span 4; 
             text-align: center; 
@@ -91,7 +85,6 @@
         .date-str { font-size: 14px; opacity: 0.9; }
         .clock-str { font-size: 56px; font-weight: bold; }
 
-        /* 左侧小组件：占2x2 */
         .left-widget {
             grid-column: span 2;
             grid-row: span 2;
@@ -119,7 +112,6 @@
         }
         #battery-fill { height: 100%; background: #4cd137; width: 50%; border-radius: 2px; transition: width 0.5s; }
 
-        /* App 图标：占1x1 */
         .icon-btn {
             grid-column: span 1;
             grid-row: span 1;
@@ -130,14 +122,12 @@
             align-items: center; font-size: 11px; backdrop-filter: blur(10px);
             cursor: pointer; text-align: center; line-height: 1.2;
             color: white; font-weight: 500;
-            /* 确保图片自动裁剪填充且不缩放变形 */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
         }
         .icon-btn:active { transform: scale(0.9); }
 
-        /* 进度条：占2x2 */
         .progress-widgets { 
             grid-column: span 2; 
             grid-row: span 2;
@@ -155,7 +145,6 @@
         .bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.2); margin-top: 5px; border-radius: 2px; }
         .bar-fill { height: 100%; background: var(--accent-color); border-radius: 2px; }
 
-        /* --- 设置面板样式 --- */
         #settings-panel {
             position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%;
             background: #ffffff; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -168,7 +157,6 @@
         .setting-group { margin-bottom: 15px; }
         label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
         
-        /* 设置面板内的输入框样式 */
         #settings-panel input, #settings-panel select, #settings-panel textarea {
             width: 100%; padding: 12px; background: #f2f2f7; border: 1px solid #ddd;
             color: #000; border-radius: 10px; box-sizing: border-box; margin-bottom: 10px;
@@ -178,7 +166,6 @@
             border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 5px;
         }
 
-        /* 白色毛玻璃弹窗 */
         .glass-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.4); backdrop-filter: blur(20px);
@@ -191,7 +178,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); color: #333;
         }
 
-        /* 悬浮球 */
         #floating-ball {
             position: absolute;
             width: 45px; height: 45px;
@@ -212,13 +198,11 @@
             color: white; font-weight: bold; font-size: 16px;
         }
 
-        /* App 启动层 */
         #app-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 100; display: none;
         }
 
-        /* 世界书页面 */
         #worldbook-app {
             width: 100%; height: 100%; background: #1a1a1a;
             display: flex; flex-direction: column; color: white;
@@ -247,7 +231,26 @@
         #wb-modal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 150; display: none;
-            padding: 40px 20px; box-sizing: border-box;
+            padding: 40px 20px; box-sizing: border-box; overflow-y: auto;
+        }
+
+        /* 效果选择器毛玻璃样式 */
+        .effect-selector {
+            display: flex; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            padding: 5px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .effect-option {
+            flex: 1; text-align: center; padding: 10px; border-radius: 8px; font-size: 14px;
+            cursor: pointer; transition: 0.3s; color: #888;
+        }
+        .effect-option.active {
+            background: white; color: black; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* HTML 预览全屏容器 */
+        #html-preview-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 300; display: none;
         }
     </style>
 </head>
@@ -255,18 +258,12 @@
 
     <div class="phone-container" id="phone-bg">
         <div class="overlay"></div>
-        
-        <!-- 主网格容器 -->
         <div class="content" id="main-grid" oncontextmenu="return false;">
-            
-            <!-- 时间组件 (ID: item-time) -->
             <div id="item-time" class="grid-item time-widget">
                 <div id="date-display" class="date-str">正在加载日期...</div>
                 <div id="clock-display" class="clock-str">00:00</div>
             </div>
-
-            <!-- 左侧大组件 (ID: item-widget) -->
-            <div id="item-widget" class="grid-item left-widget" id="custom-widget">
+            <div id="item-widget" class="grid-item left-widget">
                 <svg class="heart-icon" viewBox="0 0 24 24">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
@@ -274,15 +271,11 @@
                     <div id="battery-fill"></div>
                 </div>
             </div>
-
-            <!-- 图标们 (各自独立ID) -->
             <div id="item-wb" class="grid-item icon-btn" onclick="openWorldBook()">世界书</div>
             <div id="item-qq" class="grid-item icon-btn" onclick="openQQ()">QQ</div>
             <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
             <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
             <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
-            
-            <!-- 进度条大组件 (ID: item-progress) -->
             <div id="item-progress" class="grid-item progress-widgets">
                 <div class="progress-item">
                     今年剩余 <span id="year-days">0</span> 天
@@ -293,13 +286,10 @@
                     <div class="bar-bg"><div id="day-bar" class="bar-fill"></div></div>
                 </div>
             </div>
-
         </div>
 
-        <!-- 悬浮球 -->
         <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
 
-        <!-- App 启动层 -->
         <div id="app-overlay">
             <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
             <div id="worldbook-app" style="display: none;">
@@ -311,14 +301,29 @@
             </div>
         </div>
 
-        <!-- 世界书添加弹窗 -->
+        <!-- 修改后的世界书添加弹窗 -->
         <div id="wb-modal">
-            <h3 style="margin-top:0">添加新书籍</h3>
-            <label>书籍名称</label>
+            <h3 style="margin-top:0; color:white;">添加小剧场/书籍</h3>
+            <label style="color:#aaa;">书籍/剧场名称</label>
             <input type="text" id="new-wb-title" placeholder="输入名称">
-            <label>内容</label>
-            <textarea id="new-wb-content" rows="4" placeholder="输入内容"></textarea>
-            <label>选择/新增分组</label>
+            
+            <label style="color:#aaa;">生效模式</label>
+            <div class="effect-selector">
+                <div class="effect-option active" id="mode-global" onclick="switchWbMode('global')">全局生效</div>
+                <div class="effect-option" id="mode-keyword" onclick="switchWbMode('keyword')">关键词触发</div>
+            </div>
+
+            <div id="keyword-input-wrap" style="display:none;">
+                <label style="color:#aaa;">触发关键词</label>
+                <input type="text" id="new-wb-keyword" placeholder="例如：去约会">
+            </div>
+
+            <label style="color:#aaa;">内容 (支持 HTML 小剧场代码)</label>
+            <textarea id="new-wb-content" rows="6" placeholder="输入文字或 HTML 代码"></textarea>
+            
+            <button class="action-btn" style="background:#4facfe; margin-bottom: 10px;" onclick="previewHtmlContent()">预览 HTML 效果</button>
+
+            <label style="color:#aaa;">选择/新增分组</label>
             <div style="display:flex; gap:10px;">
                 <select id="wb-group-select" style="flex:1"></select>
                 <button style="padding: 8px; border-radius: 8px; border:none; background:#444; color:white;" onclick="addNewGroup()">+</button>
@@ -329,14 +334,19 @@
             </div>
         </div>
 
-        <!-- 设置面板 -->
+        <div id="html-preview-container">
+            <div style="height:50px; background:#f7f7f7; display:flex; align-items:center; justify-content:space-between; padding:0 15px; border-bottom:1px solid #ddd;">
+                <span style="color:#333; font-weight:bold;">小剧场预览</span>
+                <span style="color:#4facfe; cursor:pointer;" onclick="closeHtmlPreview()">关闭</span>
+            </div>
+            <iframe id="html-preview-frame" style="width:100%; height:calc(100% - 50px); border:none;"></iframe>
+        </div>
+
         <div id="settings-panel">
             <div class="panel-header">
                 <h3 id="panel-title">设置</h3>
                 <span style="cursor:pointer; font-size: 20px;" onclick="closeSettings()">✕</span>
             </div>
-            
-            <!-- 设置 App 内容 (API 设置 + 数据管理 + 后台保活 + MiniMax) -->
             <div id="api-inputs" style="display:none">
                 <div class="setting-group">
                     <label>API URL</label>
@@ -353,51 +363,37 @@
                         <button style="padding: 8px; border-radius: 8px; border:none; background:#4facfe; color:white; font-size: 12px;" onclick="fetchModels()">拉取</button>
                     </div>
                 </div>
-
-                <!-- API 预设功能栏目 -->
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
                     <label>API 预设管理</label>
                     <button class="action-btn" style="background: #4cd137; margin-bottom: 10px;" onclick="showPresetNameModal()">保存当前为预设</button>
                     <button class="action-btn" style="background: #9c88ff;" onclick="showPresetListModal()">选择/管理预设</button>
                 </div>
-
-                <!-- MiniMax 语音设置栏目 -->
-<div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-    <label>MiniMax 语音设置</label>
-    <input type="text" id="minimax-group-id" placeholder="MiniMax Group ID">
-    <!-- 下面这一行修改了 UI 显示，隐藏了真实 URL 框 -->
-    <div style="padding: 12px; background: #e8f5e9; color: #2e7d32; border-radius: 10px; margin-bottom: 10px; font-size: 14px; font-weight: bold; text-align: center; border: 1px dashed #2e7d32;">已内置语音线路</div>
-    <input type="hidden" id="minimax-url" value="https://shushuxsj.xyz/v1/text_to_speech">
-    <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
-    <label>默认语音模型</label>
-    <select id="minimax-model">
-        <option value="speech-01">通用模型 (speech-01)</option>
-    </select>
-    <button class="action-btn" style="background: #e67e22;" onclick="saveMiniMaxSettings()">保存语音配置</button>
-</div>
-
-                <!-- 后台保活功能栏目 -->
+                <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <label>MiniMax 语音设置</label>
+                    <input type="text" id="minimax-group-id" placeholder="MiniMax Group ID">
+                    <div style="padding: 12px; background: #e8f5e9; color: #2e7d32; border-radius: 10px; margin-bottom: 10px; font-size: 14px; font-weight: bold; text-align: center; border: 1px dashed #2e7d32;">已内置语音线路</div>
+                    <input type="hidden" id="minimax-url" value="https://shushuxsj.xyz/v1/text_to_speech">
+                    <input type="password" id="minimax-api-key" placeholder="MiniMax API Key">
+                    <label>默认语音模型</label>
+                    <select id="minimax-model"><option value="speech-01">通用模型 (speech-01)</option></select>
+                    <button class="action-btn" style="background: #e67e22;" onclick="saveMiniMaxSettings()">保存语音配置</button>
+                </div>
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
                     <label>后台保活 (防止系统杀死浏览器)</label>
                     <div style="display:flex; align-items:center; justify-content:space-between; background:#f2f2f7; padding:10px; border-radius:10px;">
                         <span style="font-size:14px;">启用静音音频保活</span>
                         <input type="checkbox" id="keep-alive-toggle" style="width:40px; margin:0;" onchange="toggleKeepAlive(this.checked)">
                     </div>
-                    <p style="font-size:10px; color:#999; margin-top:5px;">开启后将循环播放静音音频，确保在后台时仍能处理 AI 消息。</p>
+                    <p style="font-size:10px; color:#999; margin-top:5px;">开启后将循环播放静音音频。</p>
                 </div>
-
-                <!-- 数据导入导出栏目 -->
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
                     <label>数据管理</label>
                     <button class="action-btn" style="background: #341f97; margin-bottom: 10px;" onclick="exportFullData()">数据导出 (备份)</button>
                     <button class="action-btn" style="background: #ee5253;" onclick="document.getElementById('import-file-input').click()">数据导入 (恢复)</button>
                     <input type="file" id="import-file-input" style="display:none" accept=".json" onchange="importFullData(this)">
                 </div>
-
                 <button class="action-btn" style="margin-top:20px;" onclick="saveApiSettings()">保存当前配置并应用</button>
             </div>
-
-            <!-- 外观 App 内容 (背景修改 + 图标美化) -->
             <div id="appearance-inputs" style="display:none">
                 <div class="setting-group">
                     <label>修改手机背景图</label>
@@ -407,18 +403,14 @@
                     <label>修改左侧组件背景图</label>
                     <input type="file" accept="image/*" onchange="previewImage(this, 'item-widget')">
                 </div>
-
-                <!-- 更换图标功能栏目 -->
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
                     <label>图标美化</label>
                     <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
                 </div>
-
                 <button class="action-btn" onclick="saveAppearance()">保存外观</button>
             </div>
         </div>
 
-        <!-- 命名预设的毛玻璃弹窗 -->
         <div id="preset-name-modal" class="glass-modal">
             <div class="glass-modal-content">
                 <h3 style="margin-top:0">保存预设</h3>
@@ -431,29 +423,22 @@
             </div>
         </div>
 
-        <!-- 选择预设的毛玻璃弹窗 -->
         <div id="preset-list-modal" class="glass-modal">
             <div class="glass-modal-content" style="max-height:70%; overflow-y:auto;">
                 <h3 style="margin-top:0">选择预设</h3>
-                <div id="preset-items-container">
-                    <!-- 预设列表将在这里生成 -->
-                </div>
+                <div id="preset-items-container"></div>
                 <button class="action-btn" style="background:#ccc; color:#333; margin-top:15px;" onclick="closePresetListModal()">关闭</button>
             </div>
         </div>
 
-        <!-- 更换图标：App 列表弹窗 -->
         <div id="app-list-modal" class="glass-modal">
             <div class="glass-modal-content">
                 <h3 style="margin-top:0">选择要修改的 App</h3>
-                <div id="app-items-container">
-                    <!-- App 列表将在这里生成 -->
-                </div>
+                <div id="app-items-container"></div>
                 <button class="action-btn" style="background:#ccc; color:#333; margin-top:15px;" onclick="closeAppListModal()">取消</button>
             </div>
         </div>
 
-        <!-- 更换图标：选择上传方式弹窗 -->
         <div id="icon-choice-modal" class="glass-modal">
             <div class="glass-modal-content">
                 <h3 id="choice-app-title" style="margin-top:0">修改图标</h3>
@@ -465,7 +450,6 @@
             </div>
         </div>
 
-        <!-- 更换图标：输入 URL 弹窗 -->
         <div id="icon-url-modal" class="glass-modal">
             <div class="glass-modal-content">
                 <h3 style="margin-top:0">输入图片 URL</h3>
@@ -597,6 +581,8 @@
         }
 
         let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
+        let currentWbMode = 'global';
+
         function renderWorldBook() {
             const container = document.getElementById('wb-list-container');
             const searchTerm = document.getElementById('wb-search-input').value.toLowerCase();
@@ -610,27 +596,63 @@
                         <span>📁 ${group}</span><span>${filteredBooks.length}</span>
                     </div>
                     <div class="wb-group-content">
-                        ${filteredBooks.map(b => `<div class="wb-item"><div class="wb-item-name">${b.title}</div><div class="wb-item-text">${b.content}</div></div>`).join('')}
+                        ${filteredBooks.map(b => `<div class="wb-item"><div class="wb-item-name">${b.title} ${b.mode==='keyword'?`<small style='color:#ff6b6b; font-size:10px;'>[关键词: ${b.keyword}]</small>`:''}</div><div class="wb-item-text">${b.content.substring(0,50)}...</div></div>`).join('')}
                     </div>`;
                 container.appendChild(groupDiv);
             });
         }
+
         function toggleGroup(el) { el.nextElementSibling.classList.toggle('collapsed'); }
+        
         function showWbModal() {
             document.getElementById('wb-modal').style.display = "block";
             document.getElementById('wb-group-select').innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+            switchWbMode('global');
         }
+
         function closeWbModal() { document.getElementById('wb-modal').style.display = "none"; }
+
+        function switchWbMode(mode) {
+            currentWbMode = mode;
+            document.getElementById('mode-global').classList.toggle('active', mode === 'global');
+            document.getElementById('mode-keyword').classList.toggle('active', mode === 'keyword');
+            document.getElementById('keyword-input-wrap').style.display = mode === 'keyword' ? 'block' : 'none';
+        }
+
+        function previewHtmlContent() {
+            const content = document.getElementById('new-wb-content').value;
+            if(!content) return alert("内容为空");
+            document.getElementById('html-preview-container').style.display = "block";
+            const frame = document.getElementById('html-preview-frame');
+            const doc = frame.contentDocument || frame.contentWindow.document;
+            doc.open();
+            doc.write(content);
+            doc.close();
+        }
+
+        function closeHtmlPreview() {
+            document.getElementById('html-preview-container').style.display = "none";
+        }
+
         function addNewGroup() {
             const name = prompt("请输入新分组名称:");
             if(name && !wbData.groups.includes(name)) { wbData.groups.push(name); showWbModal(); }
         }
+
         function saveNewBook() {
             const title = document.getElementById('new-wb-title').value;
             const content = document.getElementById('new-wb-content').value;
             const group = document.getElementById('wb-group-select').value;
+            const keyword = document.getElementById('new-wb-keyword').value;
             if(!title) return alert("请输入标题");
-            wbData.books.push({ title, content, group });
+            if(currentWbMode === 'keyword' && !keyword) return alert("请填写触发关键词");
+            wbData.books.push({ 
+                title, 
+                content, 
+                group, 
+                mode: currentWbMode, 
+                keyword: currentWbMode === 'keyword' ? keyword : null 
+            });
             localStorage.setItem('wb_data', JSON.stringify(wbData));
             closeWbModal(); renderWorldBook();
         }
@@ -722,20 +744,17 @@
             alert('配置已保存并应用！'); closeSettings();
         }
 
-        // --- MiniMax 语音配置逻辑 ---
         function saveMiniMaxSettings() {
-    const config = {
-        groupId: document.getElementById('minimax-group-id').value,
-        // 这里直接保存固定地址
-        url: 'https://shushuxsj.xyz/v1/text_to_speech',
-        key: document.getElementById('minimax-api-key').value,
-        model: document.getElementById('minimax-model').value
-    };
-    localStorage.setItem('minimax_config', JSON.stringify(config));
-    alert('MiniMax 语音配置已保存！');
-}
+            const config = {
+                groupId: document.getElementById('minimax-group-id').value,
+                url: 'https://shushuxsj.xyz/v1/text_to_speech',
+                key: document.getElementById('minimax-api-key').value,
+                model: document.getElementById('minimax-model').value
+            };
+            localStorage.setItem('minimax_config', JSON.stringify(config));
+            alert('MiniMax 语音配置已保存！');
+        }
 
-        // --- API 预设功能逻辑 ---
         let apiPresets = JSON.parse(localStorage.getItem('api_presets') || '[]');
         function showPresetNameModal() {
             const url = document.getElementById('api-url').value;
@@ -795,7 +814,7 @@
             } else {
                 modelSelect.innerHTML = '<option value="">请先拉取</option>';
             }
-            alert(`已切换到预设：${p.name}，请点击下方“保存并应用”生效`);
+            alert(`已切换到预设：${p.name}`);
             closePresetListModal();
         }
         function deletePreset(index) {
@@ -806,7 +825,6 @@
             }
         }
 
-        // --- 更换 App 图标功能逻辑 ---
         let currentEditingAppId = null;
         const appNames = {
             'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
@@ -871,7 +889,6 @@
             closeIconChoiceModal(); showAppListModal();
         }
 
-        // --- 数据导出导入功能逻辑 ---
         function exportFullData() {
             const data = {};
             for (let i = 0; i < localStorage.length; i++) {
@@ -895,61 +912,44 @@
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    if(confirm("导入将覆盖当前所有数据（世界书、背景、布局等），确定吗？")) {
+                    if(confirm("导入将覆盖当前所有数据，确定吗？")) {
                         localStorage.clear();
                         Object.keys(data).forEach(key => {
                             localStorage.setItem(key, data[key]);
                         });
-                        alert("数据导入成功！页面即将刷新。");
                         location.reload();
                     }
-                } catch (err) {
-                    alert("导入失败：文件格式不正确");
-                }
+                } catch (err) { alert("导入失败"); }
             };
             reader.readAsText(file);
         }
 
-        // --- 后台保活功能逻辑 ---
         let silentAudio = null;
         function toggleKeepAlive(enabled) {
             if (enabled) {
                 if (!silentAudio) {
                     silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
                     silentAudio.loop = true;
-                    silentAudio.volume = 0.1;
                 }
-                silentAudio.play().then(() => {
-                    localStorage.setItem('background_keep_alive', 'true');
-                    console.log("保活音频已启动");
-                }).catch(err => {
-                    localStorage.setItem('background_keep_alive', 'false');
-                    document.getElementById('keep-alive-toggle').checked = false;
-                    alert("开启失败：浏览器限制自动播放。请在页面任意位置点击一下后再开启。");
-                });
+                silentAudio.play().then(() => { localStorage.setItem('background_keep_alive', 'true'); });
             } else {
                 if (silentAudio) silentAudio.pause();
                 localStorage.setItem('background_keep_alive', 'false');
-                console.log("保活音频已停止");
             }
         }
 
-        // --- 页面初始化 ---
         window.onload = function() {
             loadGridOrder(); 
             initGridSortable(); 
-
             const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
             Object.keys(customIcons).forEach(id => {
                 const el = document.getElementById(id);
                 if(el) el.style.backgroundImage = `url("${customIcons[id]}")`;
             });
-
             const savedPhoneBg = localStorage.getItem('phone_bg_data');
             if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
             const savedWidgetBg = localStorage.getItem('widget_bg_data');
             if(savedWidgetBg) document.getElementById('item-widget').style.backgroundImage = 'url("' + savedWidgetBg + '")';
-            
             const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
             if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
             if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;
@@ -958,17 +958,12 @@
                 opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
                 document.getElementById('model-select').appendChild(opt);
             }
-
-            // 初始化 MiniMax 配置回显
-const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
-if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
-// 不再回显 URL 到输入框
-if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
-if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
-
+            const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+            if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
+            if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
+            if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
             const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
             document.getElementById('keep-alive-toggle').checked = isKeepAlive;
-
             setInterval(updateTime, 1000); updateTime();
             if (navigator.getBattery) {
                 navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
