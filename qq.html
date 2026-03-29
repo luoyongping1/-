@@ -377,14 +377,29 @@
             align-items: center;
             justify-content: center;
         }
-        .theater-card-footer {
-            margin-top: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-        }
-    </style>
+            .theater-card-footer {
+        margin-top: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+    }
+    /* 新增：背景图设置弹窗样式 */
+    #bg-setting-modal {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        z-index: 7000; background: rgba(0,0,0,0.4); align-items: center; justify-content: center;
+    }
+    .bg-modal-card {
+        background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        width: 85%; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .bg-tabs-header { display: flex; background: rgba(0,0,0,0.05); border-radius: 10px; padding: 4px; margin-bottom: 15px; }
+    .bg-tab-btn { flex: 1; text-align: center; padding: 8px; font-size: 13px; cursor: pointer; border-radius: 8px; color: #666; }
+    .bg-tab-btn.active { background: white; color: #333; font-weight: bold; }
+    .bg-tab-content { display: none; }
+    .bg-tab-content.active { display: block; }
+    .bg-page-sel { margin-bottom: 10px; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #ddd; outline: none; }
+</style>
 </head>
 <body>
 
@@ -1525,6 +1540,129 @@ function saveAppBeautify() {
     alert("美化配置已保存并生效");
     closeAppBeautify();
 }
+
+// 新增：背景图设置逻辑
+function openBgSettingModal() {
+    document.getElementById('bg-setting-modal').style.display = 'flex';
+}
+function closeBgSettingModal() {
+    document.getElementById('bg-setting-modal').style.display = 'none';
+}
+function switchBgSettingTab(type) {
+    document.getElementById('btn-bg-local').classList.toggle('active', type === 'local');
+    document.getElementById('btn-bg-url').classList.toggle('active', type === 'url');
+    document.getElementById('content-bg-local').classList.toggle('active', type === 'local');
+    document.getElementById('content-bg-url').classList.toggle('active', type === 'url');
+}
+
+let tempLocalBgData = ""; // 用于临时存储选择的图片数据
+
+// 新函数 1：读取图片并显示确认按钮
+function previewLocalBg(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            tempLocalBgData = e.target.result; // 保存到临时变量
+            document.getElementById('bg-local-status').style.display = 'block';
+            document.getElementById('bg-local-confirm').style.display = 'block';
+            document.getElementById('bg-pick-btn').innerText = "已选择（点此重新选）";
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// 新函数 2：点击确认后正式保存
+function saveBgLocalSetting() {
+    if (!tempLocalBgData) return alert("请先选择图片");
+    const targetPage = document.getElementById('bg-target-page').value;
+    try {
+        localStorage.setItem('qq_' + targetPage + '_bg', tempLocalBgData);
+        applyAllBackgrounds(); // 立即刷新界面
+        alert("背景图应用成功！");
+        
+        // 成功后关闭弹窗并重置按钮状态
+        closeBgSettingModal();
+        tempLocalBgData = "";
+        document.getElementById('bg-local-status').style.display = 'none';
+        document.getElementById('bg-local-confirm').style.display = 'none';
+        document.getElementById('bg-pick-btn').innerText = "① 从相册选择图片";
+    } catch (e) {
+        alert("保存失败：图片文件太大（超过5MB），请压缩图片后上传或使用URL链接。");
+    }
+}
+
+// 处理 URL 设置
+function saveBgUrlSetting() {
+    const url = document.getElementById('bg-url-input').value.trim();
+    if (!url) return alert("请输入有效的 URL");
+    const targetPage = document.getElementById('bg-target-page').value;
+    localStorage.setItem('qq_' + targetPage + '_bg', url);
+    applyAllBackgrounds();
+    alert("URL 背景图已设置");
+    document.getElementById('bg-url-input').value = "";
+    closeBgSettingModal();
+}
+
+// 应用所有页面的背景图（包含标题栏和搜索栏透明逻辑）
+function applyAllBackgrounds() {
+    const pages = [
+        { id: 'tab-chat', key: 'qq_chatlist_bg' },
+        { id: 'tab-contacts', key: 'qq_contacts_bg' },
+        { id: 'tab-discover', key: 'qq_discover_bg' },
+        { id: 'tab-me', key: 'qq_me_bg' }
+    ];
+    pages.forEach(p => {
+        const bgData = localStorage.getItem(p.key);
+        const el = document.getElementById(p.id);
+        if (el) {
+            const header = el.querySelector('.header');
+            const searchWrap = el.querySelector('.chat-search-wrap'); // 搜索栏外部容器
+            if (bgData) {
+                el.style.backgroundImage = `url("${bgData}")`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+                el.style.backgroundRepeat = 'no-repeat';
+                if (header) {
+                    header.style.background = 'transparent';
+                    header.style.borderBottom = 'none';
+                }
+                // 处理搜索栏：变成全透明，只留下里面的白色输入框
+                if (searchWrap) {
+                    searchWrap.style.background = 'transparent';
+                    searchWrap.style.borderBottom = 'none';
+                }
+            } else {
+                el.style.backgroundImage = '';
+                if (header) {
+                    header.style.background = 'var(--bg-gray)';
+                    header.style.borderBottom = '0.5px solid var(--border-color)';
+                }
+                if (searchWrap) {
+                    searchWrap.style.background = 'var(--bg-gray)';
+                    searchWrap.style.borderBottom = '0.5px solid var(--border-color)';
+                }
+            }
+        }
+    });
+}
+
+// 新增：重置背景功能的 JS 逻辑
+function resetAppBackgrounds() {
+    if(confirm("确定要还原所有页面的背景图吗？")) {
+        const keys = ['qq_chatlist_bg', 'qq_contacts_bg', 'qq_discover_bg', 'qq_me_bg'];
+        keys.forEach(k => localStorage.removeItem(k));
+        applyAllBackgrounds();
+        alert("背景已还原为默认");
+    }
+}
+
+// 补齐：在原来的 applyGlobalStyles 里也调用一下 applyAllBackgrounds，确保加载
+const oldApplyGlobalStyles = applyGlobalStyles;
+applyGlobalStyles = function() {
+    oldApplyGlobalStyles();
+    applyAllBackgrounds();
+};
+applyAllBackgrounds(); // 初始化执行一次
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -1551,8 +1689,18 @@ function saveAppBeautify() {
         <span class="btn-green" onclick="saveAppBeautify()">保存</span>
     </div>
     <div class="content" style="padding: 10px;">
-        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-            <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">消息列表 CSS</label>
+    <!-- 背景图设置与还原按钮 -->
+<div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;" onclick="openBgSettingModal()">
+        <span style="font-size:15px; font-weight: bold;">背景图设置</span>
+        <span style="color:#888;">上传/链接 ></span>
+    </div>
+    <!-- 这里的充值按钮功能为：重置背景图为默认 -->
+    <button class="wx-btn" style="width:100%; height:35px; font-size:13px; background:#f2f2f2; color:#07c160; margin-bottom:0;" onclick="resetAppBackgrounds()">还原微信默认背景 (重置按钮)</button>
+</div>
+
+    <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+        <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">消息列表 CSS</label>
             <textarea id="edit-qq-chatlist-css" style="width:100%; height:80px; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; outline:none; box-sizing:border-box; resize:none;"></textarea>
         </div>
         <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
@@ -1570,5 +1718,42 @@ function saveAppBeautify() {
         <p style="font-size:11px; color:#999; padding: 0 10px;">提示：粘贴 CSS 代码后点击保存，效果将立即应用。记得在属性后加 !important。</p>
     </div>
 </div>
+    <!-- 新增：背景图设置弹窗 -->
+    <div id="bg-setting-modal">
+        <div class="bg-modal-card">
+            <h3 style="text-align:center; margin-top:0; margin-bottom:15px; font-size:16px;">设置页面背景图</h3>
+            
+            <label style="font-size:12px; color:#888;">选择要修改的页面：</label>
+            <select id="bg-target-page" class="bg-page-sel">
+                <option value="chatlist">消息列表</option>
+                <option value="contacts">通讯录</option>
+                <option value="discover">发现</option>
+                <option value="me">我</option>
+            </select>
+
+            <div class="bg-tabs-header">
+                <div class="bg-tab-btn active" id="btn-bg-local" onclick="switchBgSettingTab('local')">本地上传</div>
+                <div class="bg-tab-btn" id="btn-bg-url" onclick="switchBgSettingTab('url')">图片 URL</div>
+            </div>
+
+            <div id="content-bg-local" class="bg-tab-content active">
+    <!-- 增加了提示和两个阶段的按钮 -->
+    <button id="bg-pick-btn" class="wx-btn" style="width:100%; height:40px; font-size:14px; background:#fff; color:#333; border:1px solid #ddd; margin-bottom:10px;" onclick="document.getElementById('bg-file-input').click()">① 从相册选择图片</button>
+    
+    <div id="bg-local-status" style="font-size:12px; color:#07c160; text-align:center; margin-bottom:10px; display:none;">✅ 图片已就绪，请点击下方确认</div>
+    
+    <input type="file" id="bg-file-input" style="display:none" accept="image/*" onchange="previewLocalBg(this)">
+    
+    <button id="bg-local-confirm" class="wx-btn wx-btn-recharge" style="width:100%; height:40px; font-size:14px; display:none;" onclick="saveBgLocalSetting()">② 确认并应用背景</button>
+</div>
+
+            <div id="content-bg-url" class="bg-tab-content">
+                <input type="text" id="bg-url-input" class="bg-page-sel" style="margin-bottom:15px" placeholder="粘贴图片直链 URL">
+                <button class="wx-btn wx-btn-recharge" style="width:100%; height:40px; font-size:14px;" onclick="saveBgUrlSetting()">确定应用</button>
+            </div>
+
+            <div style="text-align:center; margin-top:15px; color:#666; cursor:pointer; font-size:14px;" onclick="closeBgSettingModal()">取消</div>
+        </div>
+    </div>
 </body>
 </html>
