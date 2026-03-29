@@ -582,6 +582,7 @@
                 <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888"></div><span>></span></div>
                 <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
                 <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
+                <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
                 <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
                 <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
                 <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
@@ -769,6 +770,28 @@
 
     <script>
         // --- 数据定义 ---
+        // 自动应用来自主页面的全局美化样式
+function applyGlobalStyles() {
+    const styles = [
+        { id: 'tab-chat', css: localStorage.getItem('qq_chatlist_css') },
+        { id: 'tab-contacts', css: localStorage.getItem('qq_contacts_css') },
+        { id: 'tab-discover', css: localStorage.getItem('qq_discover_css') },
+        { id: 'tab-me', css: localStorage.getItem('qq_me_css') }
+    ];
+    styles.forEach(s => {
+        if(s.css) {
+            let styleTag = document.getElementById('custom-style-' + s.id);
+            if(!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = 'custom-style-' + s.id;
+                document.head.appendChild(styleTag);
+            }
+            // 增加前缀，确保样式只作用于对应的页面
+            styleTag.innerHTML = s.css.replace(/([^\r\n,{}]+)(?=[^{}]*{)/g, `#${s.id} $1`);
+        }
+    });
+}
+applyGlobalStyles();
         let currentFriendName = "";
         let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '' }];
         let groups = JSON.parse(localStorage.getItem('qq_groups')) || ['我的好友'];
@@ -1450,6 +1473,59 @@ ${rechargeLogic}${longMemoryPrompt}`;
             const momentsBg = localStorage.getItem('moments_bg_url');
             if(momentsBg) { const bgEl = document.getElementById('moments-bg-display'); if(bgEl) bgEl.style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`; }
         };
+        function openBubbleEditor() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    document.getElementById('bubble-css-input').value = friend.bubbleCss || "";
+    document.getElementById('bubble-editor-page').classList.add('active');
+}
+function closeBubbleEditor() {
+    document.getElementById('bubble-editor-page').classList.remove('active');
+}
+function saveBubbleCss() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    friend.bubbleCss = document.getElementById('bubble-css-input').value;
+    saveData();
+    applyFriendBubbleStyle(); // 立即应用
+    alert("气泡样式已保存");
+    closeBubbleEditor();
+    renderMessages();
+}
+
+// 应用当前好友的专属气泡样式
+function applyFriendBubbleStyle() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    let styleTag = document.getElementById('friend-bubble-style');
+    if(!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'friend-bubble-style';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = friend ? (friend.bubbleCss || "") : "";
+}
+
+// 在打开聊天窗时应用样式
+const originalOpenChat = openChat;
+openChat = function(n) {
+    originalOpenChat(n);
+    applyFriendBubbleStyle();
+};
     </script>
+    <!-- 气泡 CSS 编辑器页面 -->
+<div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
+    <div class="header">
+        <span onclick="closeBubbleEditor()">取消</span>
+        <span>气泡 CSS 美化</span>
+        <span class="btn-green" onclick="saveBubbleCss()">保存</span>
+    </div>
+    <div class="content">
+        <div style="padding:15px; color:#888; font-size:12px;">你可以为每个好友设置独特的气泡样式。</div>
+        <textarea id="bubble-css-input" style="width:100%; height:300px; border:none; padding:15px; font-size:14px; outline:none; box-sizing:border-box; resize:none;" placeholder="在此粘贴 AI 生成的气泡 CSS 代码..."></textarea>
+        <div style="padding:15px; color:#999; font-size:11px;">
+            提示：<br>
+            1. .msg.friend .bubble 代表对方的气泡<br>
+            2. .msg.self .bubble 代表自己的气泡
+        </div>
+    </div>
+</div>
 </body>
 </html>

@@ -178,25 +178,29 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); color: #333;
         }
 
-        #floating-ball {
-            position: absolute;
-            width: 45px; height: 45px;
-            background: var(--blue-gradient);
-            z-index: 200;
-            display: none; 
-            cursor: move;
-            transform: rotate(45deg); 
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.5);
-            border: 2px solid rgba(255,255,255,0.3);
-            touch-action: none;
-        }
-        #floating-ball::after {
-            content: "✕";
-            position: absolute;
-            transform: rotate(-45deg);
-            top: 10px; left: 14px;
-            color: white; font-weight: bold; font-size: 16px;
-        }
+        /* 悬浮球基础设置：这里保留了保底样式，保证不美化时也能看见 */
+#floating-ball {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); /* 默认蓝色 */
+    z-index: 999;
+    display: none; 
+    cursor: move;
+    transform: rotate(45deg); /* 菱形造型 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.4);
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 彻底移除叉号：强制清空所有图标内容 */
+#floating-ball::after {
+    content: none !important; 
+    display: none !important;
+}
 
         #app-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -503,6 +507,24 @@
 
     <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
         <label>图标美化</label>
+        <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <label>悬浮球 CSS 美化 (代码粘贴区)</label>
+    <textarea id="custom-ball-css" rows="6" placeholder="请在这里粘贴 AI 生成的悬浮球 CSS 代码..."></textarea>
+    <p style="font-size:10px; color:#999; margin-top:5px;">粘贴代码后点击下方保存外观即可生效。</p>
+</div>
+        <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <label>QQ [消息列表] CSS 美化</label>
+    <textarea id="qq-chatlist-css" rows="4" placeholder="粘贴消息列表页样式..."></textarea>
+    
+    <label>QQ [通讯录] CSS 美化</label>
+    <textarea id="qq-contacts-css" rows="4" placeholder="粘贴通讯录页样式..."></textarea>
+    
+    <label>QQ [发现] CSS 美化</label>
+    <textarea id="qq-discover-css" rows="4" placeholder="粘贴发现页样式..."></textarea>
+    
+    <label>QQ [我] CSS 美化</label>
+    <textarea id="qq-me-css" rows="4" placeholder="粘贴‘我’界面样式..."></textarea>
+</div>
         <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
     </div>
     <button class="action-btn" onclick="saveAppearance()">保存外观</button>
@@ -911,15 +933,49 @@ function applyUrlBackground(inputId, targetId) {
 }
 
         function saveAppearance() {
-            try {
-                const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
-                const widgetBg = document.getElementById('item-widget').dataset.tempBg;
-                if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
-                if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
-                alert('外观已保存');
-                closeSettings();
-            } catch (e) { alert("保存失败：存储配额已满"); }
-        }
+    try {
+        // 1. 获取背景图数据
+        const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
+        const widgetBg = document.getElementById('item-widget').dataset.tempBg;
+        
+        // 2. 获取美化 CSS 代码
+        const customBallCss = document.getElementById('custom-ball-css').value;
+        const chatlistCss = document.getElementById('qq-chatlist-css').value;
+        const contactsCss = document.getElementById('qq-contacts-css').value;
+        const discoverCss = document.getElementById('qq-discover-css').value;
+        const meCss = document.getElementById('qq-me-css').value;
+        
+        // 3. 保存到本地存储
+        if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
+        if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
+        if(customBallCss !== undefined) localStorage.setItem('custom_ball_css', customBallCss);
+        
+        localStorage.setItem('qq_chatlist_css', chatlistCss);
+        localStorage.setItem('qq_contacts_css', contactsCss);
+        localStorage.setItem('qq_discover_css', discoverCss);
+        localStorage.setItem('qq_me_css', meCss);
+        
+        // 4. 立即应用悬浮球样式
+        applyCustomBallCss(customBallCss);
+        
+        alert('外观已保存！QQ 的美化效果将在下次打开 QQ 时生效。');
+        closeSettings();
+    } catch (e) { 
+        console.error(e);
+        alert("保存失败：存储配额已满或代码有误"); 
+    }
+}
+
+// 新增：应用悬浮球样式的辅助函数
+function applyCustomBallCss(cssText) {
+    let styleTag = document.getElementById('dynamic-ball-style');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'dynamic-ball-style';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = cssText;
+}
 
         async function fetchModels() {
             const url = document.getElementById('api-url').value.replace(/\/$/, "");
@@ -1173,6 +1229,17 @@ function applyUrlBackground(inputId, targetId) {
             const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
             document.getElementById('keep-alive-toggle').checked = isKeepAlive;
             setInterval(updateTime, 1000); updateTime();
+            // 加载自定义悬浮球样式
+const savedBallCss = localStorage.getItem('custom_ball_css');
+if(savedBallCss) {
+    document.getElementById('custom-ball-css').value = savedBallCss;
+    applyCustomBallCss(savedBallCss);
+}
+            // 加载 QQ 美化输入框的内容
+document.getElementById('qq-chatlist-css').value = localStorage.getItem('qq_chatlist_css') || "";
+document.getElementById('qq-contacts-css').value = localStorage.getItem('qq_contacts_css') || "";
+document.getElementById('qq-discover-css').value = localStorage.getItem('qq_discover_css') || "";
+document.getElementById('qq-me-css').value = localStorage.getItem('qq_me_css') || "";
             if (navigator.getBattery) {
                 navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
             }
