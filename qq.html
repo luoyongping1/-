@@ -771,10 +771,11 @@
                 }
 
                 let contentHtml = m.text;
-                let isTheater = m.text.includes('<html') || m.text.includes('<!DOCTYPE');
-                let useBubble = true; 
+// 优化后的判定：只要包含 html 标签、DOCTYPE 或者带有样式的 div，就视为剧场卡片
+let isTheater = /<html/i.test(m.text) || /<!DOCTYPE/i.test(m.text) || (m.text.includes('<div') && m.text.includes('style='));
+let useBubble = true; 
 
-                if (m.isCard) {
+if (m.isCard) {
                     contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
                     useBubble = false;
                 } else if (m.isRealImage) {
@@ -837,7 +838,7 @@
             });
         }
 
-                async function getAiReply() {
+        async function getAiReply() {
             if(!aiConfig.key) return alert("配置错误");
             const friend = friends.find(f => f.name === currentFriendName);
             const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
@@ -848,8 +849,8 @@
             let worldBookPrompt = "";
             if (friend.mountedBooks && friend.mountedBooks.length > 0) {
                 const activeBooks = wb.books.filter(b => friend.mountedBooks.includes(b.title));
-                worldBookPrompt = "\n你现在拥有一些特殊的【HTML小剧场剧本】。如果用户提到了剧本对应的标题、关键词，或者你觉得当前剧情适合开启小剧场，请在[REPLY]标签内直接、完整地输出该剧本的HTML代码，禁止缩减代码！剧本列表如下：\n" + 
-                activeBooks.map(b => `剧本标题/触发词: ${b.title}\nHTML脚本内容: ${b.content}`).join("\n");
+                worldBookPrompt = "\n【重要提示】：你现在挂载了特殊的【世界书/小剧场】剧本。当用户提到剧本标题或相关关键词（如“剧场”、“世界书”、“播放”）时，你必须：\n1. 挑选最契合当前氛围的剧本。\n2. 在[REPLY]中先说一两句开场白，然后紧接着输出该剧本的【完整HTML代码】。\n3. 禁止对代码进行任何删减，必须从 <!DOCTYPE html> 或 <html 开始完整输出到结束标签。\n4. 不要使用 markdown 的代码块（即不要用 ```html 包裹）。\n当前可用剧本如下：\n" + 
+                activeBooks.map(b => `剧本标题: ${b.title}\n剧本HTML内容: ${b.content}`).join("\n");
             }
             
             let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
@@ -871,7 +872,7 @@
 
 # 输出格式
 请务必严格按照以下格式返回：
-[REPLY]对话回复或HTML剧本
+[REPLY]对话回复（如果要播放小剧场，请在这里直接输出完整的HTML代码）
 [ACTION]你此时的动作或神态描写（50字内）
 [THOUGHTS]你回复时心里真正想的话（100字内）
 
@@ -888,12 +889,36 @@ ${rechargeLogic} ${worldBookPrompt} ${longMemoryPrompt}`;
                 const data = await res.json();
                 const rawContent = data.choices[0].message.content;
 
-                // 正确解析 AI 返回的三部分
-                let replyPart = rawContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|$)/)?.[1]?.trim() || rawContent;
-                let actionPart = rawContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
-                let thoughtsPart = rawContent.match(/\[THOUGHTS\]([\s\S]*?)$/)?.[1]?.trim() || "（...）";
+                // 1. 去除 AI 可能添加的 markdown 代码块标识，防止破坏 HTML 卡片识别
+                let processedContent = rawContent.replace(/```html\n?/g, '').replace(/```\n?/g, '');
 
-                const msgs = replyPart.split('\n').filter(t => t.trim() !== '');
+                // 2. 解析 AI 返回的三部分
+                let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|$)/)?.[1]?.trim() || processedContent;
+                let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
+                let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)$/)?.[1]?.trim() || "（...）";
+
+                let msgs = [];
+// 3. 增强版解析：确保 HTML 代码块被完整提取，不被拆分
+const htmlRegex = /<(html|!DOCTYPE)[\s\S]*?<\/html>/gi;
+let htmlMatch = htmlRegex.exec(replyPart);
+
+if (htmlMatch) {
+    // 提取 HTML 之前的文字
+    let preText = replyPart.substring(0, htmlMatch.index).trim();
+    if (preText) {
+        msgs.push(...preText.split('\n').filter(t => t.trim() !== ''));
+    }
+    // 提取完整的 HTML 代码块
+    msgs.push(htmlMatch[0]);
+    // 提取 HTML 之后的文字
+    let postText = replyPart.substring(htmlMatch.index + htmlMatch[0].length).trim();
+    if (postText) {
+        msgs.push(...postText.split('\n').filter(t => t.trim() !== ''));
+    }
+} else {
+    // 如果没有 HTML，则按行拆分普通消息
+    msgs = replyPart.split('\n').filter(t => t.trim() !== '');
+}
 
                 for (let text of msgs) {
                     await new Promise(r => setTimeout(r, 800));
