@@ -1270,29 +1270,30 @@ ${rechargeLogic}${longMemoryPrompt}`;
         async function triggerAiMoment(f) { const res=await fetch(aiConfig.url.replace(/\/$/,"")+"/chat/completions",{method:'POST',headers:{'Authorization':'Bearer '+aiConfig.key,'Content-Type':'application/json'},body:JSON.stringify({model:aiConfig.model,messages:[{role:"system",content:`你的人设是${f.persona}，发一条30字内朋友圈`}]})}); const d=await res.json(); moments.push({ id: Date.now(), name:f.name, text:d.choices[0].message.content, likes: [], comments: [], time: Date.now(), images: [], visibleTo: [] }); saveData(); if(document.getElementById('moments-page').classList.contains('active')) renderMoments(); }
 
         function openTheater(index) {
-            const msg = chatHistories[currentFriendName][index];
-            if (!msg || !msg.text) return;
-            const frame = document.getElementById('theater-frame');
-            const overlay = document.getElementById('theater-overlay');
-            
-            // 确保全屏显示
-            overlay.classList.add('active');
-            overlay.style.display = 'flex'; 
-            
-            const doc = frame.contentDocument || frame.contentWindow.document;
-            doc.open();
-            doc.write(msg.text);
-            doc.close();
-            
-            const match = msg.text.match(/<title>(.*?)<\/title>/i) || msg.text.match(/<h1>(.*?)<\/h1>/i);
-            document.getElementById('theater-header-title').innerText = match ? match[1] : "小剧场播放中";
-        }
+    const msg = chatHistories[currentFriendName][index];
+    if (!msg || !msg.text) return;
+    const frame = document.getElementById('theater-frame');
+    const overlay = document.getElementById('theater-overlay');
+    
+    // 确保全屏显示
+    overlay.classList.add('active');
+    overlay.style.display = 'flex'; // 这里强制开启了显示
+    
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open();
+    doc.write(msg.text);
+    doc.close();
+    
+    const match = msg.text.match(/<title>(.*?)<\/title>/i) || msg.text.match(/<h1>(.*?)<\/h1>/i);
+    document.getElementById('theater-header-title').innerText = match ? match[1] : "小剧场播放中";
+}
         function closeTheater() {
-            const overlay = document.getElementById('theater-overlay');
-            const frame = document.getElementById('theater-frame');
-            overlay.classList.remove('active'); // 统一使用 class 切换
-            frame.src = "about:blank";
-        }
+    const overlay = document.getElementById('theater-overlay');
+    const frame = document.getElementById('theater-frame');
+    overlay.classList.remove('active'); 
+    overlay.style.display = 'none'; // 新增这一行：强制隐藏剧场界面，这样才能看到下面的聊天框
+    frame.src = "about:blank";
+}
 
         // 基础功能
         function renameCurrentFriend() { const n = prompt("名字:"); if(n){ const f = friends.find(f => f.name===currentFriendName); chatHistories[n]=chatHistories[currentFriendName]; delete chatHistories[currentFriendName]; f.name=n; f.initial=n[0]; currentFriendName=n; saveData(); openSettings(); } }
