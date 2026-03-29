@@ -512,19 +512,7 @@
     <textarea id="custom-ball-css" rows="6" placeholder="请在这里粘贴 AI 生成的悬浮球 CSS 代码..."></textarea>
     <p style="font-size:10px; color:#999; margin-top:5px;">粘贴代码后点击下方保存外观即可生效。</p>
 </div>
-        <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-    <label>QQ [消息列表] CSS 美化</label>
-    <textarea id="qq-chatlist-css" rows="4" placeholder="粘贴消息列表页样式..."></textarea>
-    
-    <label>QQ [通讯录] CSS 美化</label>
-    <textarea id="qq-contacts-css" rows="4" placeholder="粘贴通讯录页样式..."></textarea>
-    
-    <label>QQ [发现] CSS 美化</label>
-    <textarea id="qq-discover-css" rows="4" placeholder="粘贴发现页样式..."></textarea>
-    
-    <label>QQ [我] CSS 美化</label>
-    <textarea id="qq-me-css" rows="4" placeholder="粘贴‘我’界面样式..."></textarea>
-</div>
+        
         <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
     </div>
     <button class="action-btn" onclick="saveAppearance()">保存外观</button>
@@ -937,24 +925,17 @@ function applyUrlBackground(inputId, targetId) {
         const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
         const widgetBg = document.getElementById('item-widget').dataset.tempBg;
         const ballCss = document.getElementById('custom-ball-css').value;
-        const qqChat = document.getElementById('qq-chatlist-css').value;
-        const qqContact = document.getElementById('qq-contacts-css').value;
-        const qqDisc = document.getElementById('qq-discover-css').value;
-        const qqMe = document.getElementById('qq-me-css').value;
 
         if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
         if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
-        
         localStorage.setItem('custom_ball_css', ballCss);
-        localStorage.setItem('qq_chatlist_css', qqChat);
-        localStorage.setItem('qq_contacts_css', qqContact);
-        localStorage.setItem('qq_discover_css', qqDisc);
-        localStorage.setItem('qq_me_css', qqMe);
 
         applyCustomBallCss(ballCss);
-        alert('外观已成功保存！重新进入 App 即可看到效果。');
+        alert('外观已成功保存！');
         closeSettings();
-    } catch (e) { alert("保存失败：" + e); }
+    } catch (e) { 
+        alert("保存失败，可能是存储空间已满"); 
+    }
 }
 
 // 新增：应用悬浮球样式的辅助函数
@@ -1227,10 +1208,7 @@ if(savedBallCss) {
     applyCustomBallCss(savedBallCss);
 }
             // 加载 QQ 美化输入框的内容
-document.getElementById('qq-chatlist-css').value = localStorage.getItem('qq_chatlist_css') || "";
-document.getElementById('qq-contacts-css').value = localStorage.getItem('qq_contacts_css') || "";
-document.getElementById('qq-discover-css').value = localStorage.getItem('qq_discover_css') || "";
-document.getElementById('qq-me-css').value = localStorage.getItem('qq_me_css') || "";
+
             if (navigator.getBattery) {
                 navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
             }

@@ -441,6 +441,9 @@
                 <div class="list-item" onclick="openStickersPage()"><span style="margin-right:15px;color:#ffbe00">😊</span>表情</div>
             </div>
             <div class="list-group">
+                <div class="list-group">
+    <div class="list-item" onclick="openAppBeautify()"><span style="margin-right:15px;color:#9b59b6">🎨</span>美化</div>
+</div>
                 <div class="list-item" onclick="openApiConfig()"><div class="info"><span style="margin-right:15px;color:#4facfe">⚙️</span>API 与模型设置</div><span>></span></div>
             </div>
         </div>
@@ -1503,6 +1506,25 @@ openChat = function(n) {
     originalOpenChat(n);
     applyFriendBubbleStyle();
 };
+function openAppBeautify() {
+    document.getElementById('edit-qq-chatlist-css').value = localStorage.getItem('qq_chatlist_css') || "";
+    document.getElementById('edit-qq-contacts-css').value = localStorage.getItem('qq_contacts_css') || "";
+    document.getElementById('edit-qq-discover-css').value = localStorage.getItem('qq_discover_css') || "";
+    document.getElementById('edit-qq-me-css').value = localStorage.getItem('qq_me_css') || "";
+    document.getElementById('app-beautify-page').classList.add('active');
+}
+function closeAppBeautify() {
+    document.getElementById('app-beautify-page').classList.remove('active');
+}
+function saveAppBeautify() {
+    localStorage.setItem('qq_chatlist_css', document.getElementById('edit-qq-chatlist-css').value);
+    localStorage.setItem('qq_contacts_css', document.getElementById('edit-qq-contacts-css').value);
+    localStorage.setItem('qq_discover_css', document.getElementById('edit-qq-discover-css').value);
+    localStorage.setItem('qq_me_css', document.getElementById('edit-qq-me-css').value);
+    applyGlobalStyles(); // 立即应用新样式
+    alert("美化配置已保存并生效");
+    closeAppBeautify();
+}
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -1519,6 +1541,33 @@ openChat = function(n) {
             1. .msg.friend .bubble 代表对方的气泡<br>
             2. .msg.self .bubble 代表自己的气泡
         </div>
+    </div>
+</div>
+<!-- QQ 美化主设置页面 -->
+<div id="app-beautify-page" class="page" style="z-index: 6000; background: #f1f1f1;">
+    <div class="header">
+        <span onclick="closeAppBeautify()">〈 返回</span>
+        <span>美化设置</span>
+        <span class="btn-green" onclick="saveAppBeautify()">保存</span>
+    </div>
+    <div class="content" style="padding: 10px;">
+        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">消息列表 CSS</label>
+            <textarea id="edit-qq-chatlist-css" style="width:100%; height:80px; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; outline:none; box-sizing:border-box; resize:none;"></textarea>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">通讯录 CSS</label>
+            <textarea id="edit-qq-contacts-css" style="width:100%; height:80px; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; outline:none; box-sizing:border-box; resize:none;"></textarea>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">发现页 CSS</label>
+            <textarea id="edit-qq-discover-css" style="width:100%; height:80px; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; outline:none; box-sizing:border-box; resize:none;"></textarea>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">“我”页面 CSS</label>
+            <textarea id="edit-qq-me-css" style="width:100%; height:80px; border:1px solid #eee; border-radius:8px; padding:10px; font-size:12px; outline:none; box-sizing:border-box; resize:none;"></textarea>
+        </div>
+        <p style="font-size:11px; color:#999; padding: 0 10px;">提示：粘贴 CSS 代码后点击保存，效果将立即应用。记得在属性后加 !important。</p>
     </div>
 </div>
 </body>
