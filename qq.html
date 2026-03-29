@@ -949,14 +949,21 @@
             const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
             
             let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
-            
-            let worldBookPrompt = "";
-            if (friend.mountedBooks && friend.mountedBooks.length > 0) {
-                const activeBooks = wb.books.filter(b => friend.mountedBooks.includes(b.title));
-                worldBookPrompt = "当前挂载剧本库（触发词精确匹配）：\n" + 
-                activeBooks.map(b => `触发词：${b.title}\n输出代码：\n${b.content}`).join("\n") +
-                "\n指令：只要用户输入包含上述触发词，你必须【立即强制】在 [REPLY] 中原样输出代码，严禁废话，严禁拆分。";
-            }
+
+let worldBookPrompt = "";
+// 1. 获取所有标记为“全局”的书
+const globalBooks = wb.books.filter(b => b.scope === 'global');
+// 2. 获取标记为“局部”且“已手动挂载”的书
+const mountedLocalBooks = wb.books.filter(b => b.scope === 'local' && (friend.mountedBooks || []).includes(b.title));
+
+// 合并这两类书
+const allActiveBooks = [...globalBooks, ...mountedLocalBooks];
+
+if (allActiveBooks.length > 0) {
+    worldBookPrompt = "当前生效剧本库：\n" + 
+    allActiveBooks.map(b => `触发词：${b.title}\n输出代码：\n${b.content}`).join("\n") +
+    "\n指令：只要用户输入包含上述触发词，你必须【立即强制】在 [REPLY] 中原样输出代码，严禁废话，严禁拆分。";
+}
             
             let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
 

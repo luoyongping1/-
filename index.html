@@ -208,9 +208,22 @@
             display: flex; flex-direction: column; color: white;
         }
         .wb-header {
-            padding: 50px 20px 10px; background: #222;
-            display: flex; align-items: center; gap: 10px;
-        }
+    padding: 50px 20px 10px; background: #222;
+    display: flex; flex-direction: column; gap: 10px;
+}
+/* 新增的标签切换样式 */
+.wb-tabs {
+    display: flex; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 4px;
+}
+.wb-tab-btn {
+    flex: 1; text-align: center; padding: 8px; font-size: 13px; color: #888; cursor: pointer; border-radius: 8px;
+}
+.wb-tab-btn.active {
+    background: #4facfe; color: white;
+}
+.wb-search-row {
+    display: flex; align-items: center; gap: 10px;
+}
         .wb-search {
             flex: 1; padding: 8px 15px; border-radius: 20px;
             border: none; background: #333; color: white; outline: none;
@@ -252,6 +265,55 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 300; display: none;
         }
+    /* 背景设置选项卡样式 */
+.bg-tabs {
+    display: flex;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.bg-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+.bg-tab-btn.active {
+    background: white;
+    color: black;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+.url-input-group {
+    display: flex;
+    gap: 8px;
+}
+.url-input-group input {
+    flex: 1;
+    margin-bottom: 0 !important;
+}
+.apply-btn {
+    padding: 0 15px;
+    background: #4facfe;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
     </style>
 </head>
 <body>
@@ -293,12 +355,19 @@
         <div id="app-overlay">
             <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
             <div id="worldbook-app" style="display: none;">
-                <div class="wb-header">
-                    <input type="text" class="wb-search" id="wb-search-input" placeholder="搜索世界书..." oninput="renderWorldBook()">
-                    <div class="wb-add-icon" onclick="showWbModal()">+</div>
-                </div>
-                <div class="wb-content" id="wb-list-container"></div>
-            </div>
+    <div class="wb-header">
+        <!-- 新增的切换标签 -->
+        <div class="wb-tabs">
+            <div class="wb-tab-btn active" id="tab-scope-global" onclick="switchWbTab('global')">全局生效</div>
+            <div class="wb-tab-btn" id="tab-scope-local" onclick="switchWbTab('local')">局部挂载</div>
+        </div>
+        <div class="wb-search-row">
+            <input type="text" class="wb-search" id="wb-search-input" placeholder="搜索世界书..." oninput="renderWorldBook()">
+            <div class="wb-add-icon" onclick="showWbModal()">+</div>
+        </div>
+    </div>
+    <div class="wb-content" id="wb-list-container"></div>
+</div>
         </div>
 
         <!-- 修改后的世界书添加弹窗 -->
@@ -329,9 +398,10 @@
                 <button style="padding: 8px; border-radius: 8px; border:none; background:#444; color:white;" onclick="addNewGroup()">+</button>
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="action-btn" style="background:#555" onclick="closeWbModal()">取消</button>
-                <button class="action-btn" onclick="saveNewBook()">保存</button>
-            </div>
+    <button class="action-btn" style="background:#555" onclick="closeWbModal()">取消</button>
+    <button class="action-btn" style="background:#ff4d4f" onclick="deleteBook()">删除</button>
+    <button class="action-btn" onclick="saveNewBook()">保存</button>
+</div>
         </div>
 
         <div id="html-preview-container">
@@ -395,20 +465,48 @@
                 <button class="action-btn" style="margin-top:20px;" onclick="saveApiSettings()">保存当前配置并应用</button>
             </div>
             <div id="appearance-inputs" style="display:none">
-                <div class="setting-group">
-                    <label>修改手机背景图</label>
-                    <input type="file" accept="image/*" onchange="previewImage(this, 'phone-bg')">
-                </div>
-                <div class="setting-group">
-                    <label>修改左侧组件背景图</label>
-                    <input type="file" accept="image/*" onchange="previewImage(this, 'item-widget')">
-                </div>
-                <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-                    <label>图标美化</label>
-                    <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
-                </div>
-                <button class="action-btn" onclick="saveAppearance()">保存外观</button>
+    <!-- 手机背景设置 -->
+    <div class="setting-group">
+        <label>修改手机背景图</label>
+        <div class="bg-tabs">
+            <div class="bg-tab-btn active" id="tab-phone-file" onclick="switchBgTab('phone', 'file')">本地上传</div>
+            <div class="bg-tab-btn" id="tab-phone-url" onclick="switchBgTab('phone', 'url')">图片 URL</div>
+        </div>
+        <div id="content-phone-file" class="tab-content active">
+            <input type="file" accept="image/*" onchange="previewImage(this, 'phone-bg')">
+        </div>
+        <div id="content-phone-url" class="tab-content">
+            <div class="url-input-group">
+                <input type="text" id="url-phone-input" placeholder="输入图片直链 URL">
+                <button class="apply-btn" onclick="applyUrlBackground('url-phone-input', 'phone-bg')">确定</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 组件背景设置 -->
+    <div class="setting-group">
+        <label>修改左侧组件背景图</label>
+        <div class="bg-tabs">
+            <div class="bg-tab-btn active" id="tab-widget-file" onclick="switchBgTab('widget', 'file')">本地上传</div>
+            <div class="bg-tab-btn" id="tab-widget-url" onclick="switchBgTab('widget', 'url')">图片 URL</div>
+        </div>
+        <div id="content-widget-file" class="tab-content active">
+            <input type="file" accept="image/*" onchange="previewImage(this, 'item-widget')">
+        </div>
+        <div id="content-widget-url" class="tab-content">
+            <div class="url-input-group">
+                <input type="text" id="url-widget-input" placeholder="输入图片直链 URL">
+                <button class="apply-btn" onclick="applyUrlBackground('url-widget-input', 'item-widget')">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <label>图标美化</label>
+        <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
+    </div>
+    <button class="action-btn" onclick="saveAppearance()">保存外观</button>
+</div>
         </div>
 
         <div id="preset-name-modal" class="glass-modal">
@@ -581,34 +679,99 @@
         }
 
         let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
-        let currentWbMode = 'global';
+let currentWbMode = 'global';
+let editingBookIndex = null; 
+let currentWbTab = 'global'; 
 
-        function renderWorldBook() {
-            const container = document.getElementById('wb-list-container');
-            const searchTerm = document.getElementById('wb-search-input').value.toLowerCase();
-            container.innerHTML = "";
-            wbData.groups.forEach(group => {
-                const groupDiv = document.createElement('div');
-                groupDiv.className = "wb-group";
-                const filteredBooks = wbData.books.filter(b => b.group === group && b.title.toLowerCase().includes(searchTerm));
-                groupDiv.innerHTML = `
-                    <div class="wb-group-title" onclick="toggleGroup(this)">
-                        <span>📁 ${group}</span><span>${filteredBooks.length}</span>
-                    </div>
-                    <div class="wb-group-content">
-                        ${filteredBooks.map(b => `<div class="wb-item"><div class="wb-item-name">${b.title} ${b.mode==='keyword'?`<small style='color:#ff6b6b; font-size:10px;'>[关键词: ${b.keyword}]</small>`:''}</div><div class="wb-item-text">${b.content.substring(0,50)}...</div></div>`).join('')}
-                    </div>`;
-                container.appendChild(groupDiv);
+        function switchWbTab(scope) {
+    currentWbTab = scope;
+    document.getElementById('tab-scope-global').classList.toggle('active', scope === 'global');
+    document.getElementById('tab-scope-local').classList.toggle('active', scope === 'local');
+    renderWorldBook();
+}
+
+function renderWorldBook() {
+    const container = document.getElementById('wb-list-container');
+    const searchTerm = document.getElementById('wb-search-input').value.toLowerCase();
+    container.innerHTML = "";
+    wbData.groups.forEach(group => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = "wb-group";
+        
+        // 修改这里：增加了一个 b.scope === currentWbTab 的判断
+        const filteredBooks = wbData.books.map((b, index) => ({...b, originalIndex: index}))
+            .filter(b => {
+                const matchScope = (b.scope === currentWbTab) || (!b.scope && currentWbTab === 'local'); // 兼容旧数据
+                const matchSearch = b.title.toLowerCase().includes(searchTerm);
+                return b.group === group && matchScope && matchSearch;
             });
-        }
+        
+        if (filteredBooks.length === 0) return; // 如果这个分组下没书就不显示分组名
+
+        groupDiv.innerHTML = `
+            <div class="wb-group-title" onclick="toggleGroup(this)">
+                <span>📁 ${group}</span><span>${filteredBooks.length}</span>
+            </div>
+            <div class="wb-group-content">
+                ${filteredBooks.map(b => `
+                    <div class="wb-item" onclick="editBook(${b.originalIndex})">
+                        <div class="wb-item-name">${b.title} ${b.mode==='keyword'?`<small style='color:#ff6b6b; font-size:10px;'>[关键词: ${b.keyword}]</small>`:''}</div>
+                        <div class="wb-item-text">${b.content.substring(0,50)}...</div>
+                    </div>`).join('')}
+            </div>`;
+        container.appendChild(groupDiv);
+    });
+}
 
         function toggleGroup(el) { el.nextElementSibling.classList.toggle('collapsed'); }
         
         function showWbModal() {
-            document.getElementById('wb-modal').style.display = "block";
-            document.getElementById('wb-group-select').innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
-            switchWbMode('global');
+    editingBookIndex = null; // 重置为新建模式
+    document.getElementById('wb-modal').style.display = "block";
+    document.getElementById('wb-group-select').innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    
+    // 清空输入框
+    document.getElementById('new-wb-title').value = "";
+    document.getElementById('new-wb-content').value = "";
+    document.getElementById('new-wb-keyword').value = "";
+    switchWbMode('global');
+}
+
+// 新增：编辑函数
+function editBook(index) {
+    editingBookIndex = index;
+    const book = wbData.books[index];
+    
+    document.getElementById('wb-modal').style.display = "block";
+    document.getElementById('wb-group-select').innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    
+    // 填入已有数据
+    document.getElementById('new-wb-title').value = book.title;
+    document.getElementById('new-wb-content').value = book.content;
+    document.getElementById('new-wb-keyword').value = book.keyword || "";
+    document.getElementById('wb-group-select').value = book.group;
+    
+    // 这一步很重要：如果是编辑，我们需要暂时让当前标签页匹配这本书的属性
+    if(book.scope) {
+        currentWbTab = book.scope;
+        document.getElementById('tab-scope-global').classList.toggle('active', book.scope === 'global');
+        document.getElementById('tab-scope-local').classList.toggle('active', book.scope === 'local');
+    }
+    
+    switchWbMode(book.mode || 'global');
+}
+
+// 新增：删除函数（如果你想顺便加个删除功能，可以加个按钮调用这个）
+function deleteBook() {
+    if(editingBookIndex !== null) {
+        if(confirm("确定要删除这本书吗？")) {
+            wbData.books.splice(editingBookIndex, 1);
+            localStorage.setItem('wb_data', JSON.stringify(wbData));
+            closeWbModal();
+            renderWorldBook();
         }
+    }
+}
 
         function closeWbModal() { document.getElementById('wb-modal').style.display = "none"; }
 
@@ -640,22 +803,33 @@
         }
 
         function saveNewBook() {
-            const title = document.getElementById('new-wb-title').value;
-            const content = document.getElementById('new-wb-content').value;
-            const group = document.getElementById('wb-group-select').value;
-            const keyword = document.getElementById('new-wb-keyword').value;
-            if(!title) return alert("请输入标题");
-            if(currentWbMode === 'keyword' && !keyword) return alert("请填写触发关键词");
-            wbData.books.push({ 
-                title, 
-                content, 
-                group, 
-                mode: currentWbMode, 
-                keyword: currentWbMode === 'keyword' ? keyword : null 
-            });
-            localStorage.setItem('wb_data', JSON.stringify(wbData));
-            closeWbModal(); renderWorldBook();
-        }
+    const title = document.getElementById('new-wb-title').value;
+    const content = document.getElementById('new-wb-content').value;
+    const group = document.getElementById('wb-group-select').value;
+    const keyword = document.getElementById('new-wb-keyword').value;
+    
+    if(!title) return alert("请输入标题");
+    if(currentWbMode === 'keyword' && !keyword) return alert("请填写触发关键词");
+
+    const bookData = { 
+        title, 
+        content, 
+        group, 
+        mode: currentWbMode, 
+        keyword: currentWbMode === 'keyword' ? keyword : null,
+        scope: currentWbTab // 新增：保存当前属于哪个选项卡（全局/局部）
+    };
+
+    if(editingBookIndex !== null) {
+        wbData.books[editingBookIndex] = bookData;
+    } else {
+        wbData.books.push(bookData);
+    }
+
+    localStorage.setItem('wb_data', JSON.stringify(wbData));
+    closeWbModal(); 
+    renderWorldBook();
+}
 
         function updateTime() {
             const now = new Date();
@@ -701,6 +875,40 @@
                 reader.readAsDataURL(file);
             }
         }
+
+// 切换背景设置的选项卡
+function switchBgTab(target, mode) {
+    // target 是 'phone' 或 'widget'，mode 是 'file' 或 'url'
+    const tabFile = document.getElementById(`tab-${target}-file`);
+    const tabUrl = document.getElementById(`tab-${target}-url`);
+    const contentFile = document.getElementById(`content-${target}-file`);
+    const contentUrl = document.getElementById(`content-${target}-url`);
+
+    if (mode === 'file') {
+        tabFile.classList.add('active');
+        tabUrl.classList.remove('active');
+        contentFile.classList.add('active');
+        contentUrl.classList.remove('active');
+    } else {
+        tabFile.classList.remove('active');
+        tabUrl.classList.add('active');
+        contentFile.classList.remove('active');
+        contentUrl.classList.add('active');
+    }
+}
+
+// 应用输入的 URL 背景
+function applyUrlBackground(inputId, targetId) {
+    const url = document.getElementById(inputId).value.trim();
+    if (!url) return alert("请输入有效的图片 URL");
+    
+    const target = document.getElementById(targetId);
+    // 立即预览效果
+    target.style.backgroundImage = `url("${url}")`;
+    // 存入临时变量，以便点击“保存外观”时存入本地存储
+    target.dataset.tempBg = url;
+    alert("预览成功，请点击下方的“保存外观”永久生效");
+}
 
         function saveAppearance() {
             try {
