@@ -292,6 +292,29 @@
     color: #bc1888;
     margin-right: 5px;
 }
+/* 手帐风格日记样式 */
+.scrapbook {
+    background: #fffef9; 
+    border-radius: 12px; padding: 25px 20px;
+    background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+    background-size: 20px 20px; /* 点阵底纹 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    font-family: "PingFang SC", "STHeiti", cursive;
+    color: #4a4a4a; position: relative;
+}
+.scrapbook-date { font-size: 20px; font-weight: bold; border-bottom: 2px solid #ffccc7; display: inline-block; margin-bottom: 15px; }
+.scrapbook-section { background: rgba(255,255,255,0.7); border: 1px dashed #d9d9d9; border-radius: 8px; padding: 12px; margin-bottom: 15px; line-height: 1.6; font-size: 14px; }
+.scrapbook-label { color: #bc1888; font-size: 12px; font-weight: bold; margin-bottom: 5px; display: block; }
+
+/* 收藏夹卡片样式 */
+.fav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.fav-card {
+    background: white; border-radius: 15px; padding: 15px;
+    border: 1px solid #f2f2f2; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    display: flex; flex-direction: column; gap: 8px;
+}
+.fav-card-date { font-size: 13px; font-weight: bold; color: #262626; }
+.fav-card-preview { font-size: 11px; color: #8e8e8e; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -303,7 +326,10 @@
     <div class="nav-bar">
         <i class="fas fa-times" onclick="closeApp()"></i>
         <span id="app-title">Application</span>
-        <div class="ai-btn" id="ai-scan-btn" onclick="triggerAI()"><i class="fas fa-sync-alt"></i></div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+    <div id="diary-fav-btn" style="display:none; color: #ff4d4f; font-size: 20px; cursor: pointer;" onclick="saveCurrentDiary()"><i class="far fa-heart"></i></div>
+    <div class="ai-btn" id="ai-scan-btn" onclick="triggerAI()"><i class="fas fa-sync-alt"></i></div>
+</div>
     </div>
     <div id="app-content" class="page-content"></div>
 
@@ -340,11 +366,12 @@
         { id: 'diary', type: 'a', name: '日记', icon: 'https://cdn-icons-png.flaticon.com/512/2991/2991106.png' },
         { id: 'photo', type: 'a', name: '相册', icon: 'https://cdn-icons-png.flaticon.com/512/1375/1375106.png' },
         { id: 'wallet', type: 'a', name: '钱包', icon: 'https://cdn-icons-png.flaticon.com/512/631/631200.png' },
-        { id: 'appearance', type: 'a', name: '外观', icon: 'https://cdn-icons-png.flaticon.com/512/944/944061.png' },
-        { id: 'mood', type: 'w', name: 'Mood' }
-    ];
+{ id: 'appearance', type: 'a', name: '外观', icon: 'https://cdn-icons-png.flaticon.com/512/944/944061.png' },
+{ id: 'fav', type: 'a', name: '收藏', icon: 'https://cdn-icons-png.flaticon.com/512/1042/1042339.png' },
+{ id: 'mood', type: 'w', name: 'Mood' }
+]; // 这一行必须有这三个符号，代表列表结束
 
-    let isEditMode = false;
+let isEditMode = false;
     let draggedEl = null;
     let startX, startY;
     let currentAppId = '';
@@ -352,7 +379,9 @@
     let currentChatFriend = null;
 let qqChatHistories = {};
 let browserHistory = []; // 新增：用于存放生成的浏览器记录
-let shopCartData = [];   // 新增：用于存放生成的购物车商品
+let shopCartData = [];   
+let currentDiaryData = null; // 存放当前生成的日记
+let savedDiaries = JSON.parse(localStorage.getItem('saved_diaries')) || []; // 存放已收藏的日记
 
     window.onload = () => {
         const targetName = localStorage.getItem('target_check_name') || "手机";
@@ -484,13 +513,25 @@ let shopCartData = [];   // 新增：用于存放生成的购物车商品
         renderBrowserList(); 
         document.getElementById('app-window').style.display = 'flex';
     } else if(id === 'shop') {
-        document.getElementById('app-title').innerText = '购物车';
-        renderShopList(); // 调用渲染购物车的函数
+    document.getElementById('app-title').innerText = '购物车';
+    renderShopList();
+    document.getElementById('app-window').style.display = 'flex';
+} else if(id === 'diary') {
+    document.getElementById('app-title').innerText = '日记';
+    document.getElementById('diary-fav-btn').style.display = 'block'; // 显示收藏按钮
+    renderDiary();
+    document.getElementById('app-window').style.display = 'flex';
+    } else if(id === 'fav') {
+        document.getElementById('app-title').innerText = '我的收藏';
+        renderCollections();
         document.getElementById('app-window').style.display = 'flex';
     } else {
-        document.getElementById('app-title').innerText = layout.find(a => a.id === id).name;
-        document.getElementById('app-content').innerHTML = '<div style="text-align:center; margin-top:50px; color:#ccc;">这里还没有数据</div>';
-        document.getElementById('app-window').style.display = 'flex';
+        const foundApp = layout.find(a => a.id === id);
+        if(foundApp) {
+            document.getElementById('app-title').innerText = foundApp.name;
+            document.getElementById('app-content').innerHTML = '<div style="text-align:center; margin-top:50px; color:#ccc;">这里还没有数据</div>';
+            document.getElementById('app-window').style.display = 'flex';
+        }
     }
 }
 
@@ -530,7 +571,10 @@ function renderShopList() {
     content.innerHTML = html;
 }
 
-    function closeApp() { document.querySelectorAll('.app-page').forEach(p => p.style.display = 'none'); }
+    function closeApp() { 
+    document.querySelectorAll('.app-page').forEach(p => p.style.display = 'none'); 
+    document.getElementById('diary-fav-btn').style.display = 'none'; // 退出时隐藏收藏按钮
+}
     function editIcon(idx) { const url = prompt("图标 URL:", layout[idx].icon); if(url) { layout[idx].icon = url; render(); save(); } }
     function updateWallpaper() { const url = document.getElementById('wp-url').value; document.getElementById('wallpaper').style.backgroundImage = `url('${url}')`; save(); alert("已更新"); }
     function save() { localStorage.setItem('ai_persona_v3', JSON.stringify({ layout: layout, wallpaper: document.getElementById('wallpaper').style.backgroundImage })); }
@@ -700,18 +744,35 @@ function renderBrowserList() {
     } finally {
         btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
     }
+} else if (currentAppId === 'diary') {
+    try {
+        const chatContext = JSON.stringify(qqChatHistories);
+        const sysPrompt = `你现在是[${targetName}]。根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇今天的私密手帐日记。
+        格式要求：日期|日记正文|内心最真实的秘密|心情简述
+        注意：语气要极度口语化、真实。`;
+        
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+        });
+        const data = await res.json();
+        const parts = data.choices[0].message.content.split('|');
+        currentDiaryData = { date: parts[0], body: parts[1], secret: parts[2], mood: parts[3] };
+        document.querySelector('#diary-fav-btn i').className = 'far fa-heart'; // 重置为未收藏状态
+        renderDiary();
+    } catch (e) { alert("生成失败"); } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
 } else {
-            content.innerHTML = `<p>正在深入分析 ${targetName} 的数据流...</p>`;
-            try {
-                const sysPrompt = `你现在是手机分析专家。你正在翻阅[${targetName}]的手机。此人的人设是：${targetFriend.persona}。请编造一条关于此人手机里的秘密（最近搜索、相册、日记等）。100字内，语气带点偷窥感，符合人设。`;
-                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                    method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }, { role: "user", content: "快告诉我你发现了什么？" }] })
-                });
-                const data = await res.json();
-                content.innerHTML = `<div style="padding:15px; background:#fff5f5; border:1px solid #ffccc7; border-radius:12px; color:#ff4d4f;"><h4 style="margin-top:0;">🔍 深度扫描报告：${targetName}</h4><div style="font-size:14px; line-height:1.6;">${data.choices[0].message.content}</div></div>`;
-            } catch (e) { content.innerHTML = '<p style="color:red;">分析失败</p>'; } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
-        }
+    content.innerHTML = `<p>正在深入分析 ${targetName} 的数据流...</p>`;
+    try {
+        const sysPrompt = `你现在是手机分析专家。你正在翻阅[${targetName}]的手机。此人的人设是：${targetFriend.persona}。请编造一条关于此人手机里的秘密。`;
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+        });
+        const data = await res.json();
+        content.innerHTML = `<div style="padding:15px; background:#fff5f5; border:1px solid #ffccc7; border-radius:12px; color:#ff4d4f;"><h4>🔍 报告：${targetName}</h4>${data.choices[0].message.content}</div>`;
+    } catch (e) { content.innerHTML = '<p style="color:red;">分析失败</p>'; } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+}
     }
 
     async function sendQQMsg() {
@@ -736,6 +797,84 @@ function renderBrowserList() {
             renderMessages();
         } catch (e) { console.error(e); }
     }
+// 渲染手帐日记
+function renderDiary() {
+    const content = document.getElementById('app-content');
+    if (!currentDiaryData) {
+        content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><i class="fas fa-pen-fancy" style="font-size:40px; margin-bottom:10px;"></i><p>日记本是空的</p><p style="font-size:12px;">点击右上角按钮偷看今日心情</p></div>`;
+        return;
+    }
+    content.innerHTML = `
+        <div class="scrapbook">
+            <div class="scrapbook-date">${currentDiaryData.date}</div>
+            <div class="scrapbook-section"><span class="scrapbook-label">☁️ 今日碎碎念</span>${currentDiaryData.body}</div>
+            <div class="scrapbook-section"><span class="scrapbook-label">💡 他的心里话</span>${currentDiaryData.secret}</div>
+            <div class="scrapbook-section" style="border:none; text-align:right; font-style:italic;">心情指数：${currentDiaryData.mood}</div>
+        </div>`;
+}
+
+// 收藏当前日记
+function saveCurrentDiary() {
+    if (!currentDiaryData) return;
+    const heartIcon = document.querySelector('#diary-fav-btn i');
+    if (savedDiaries.some(d => d.body === currentDiaryData.body)) {
+        alert("这篇日记已经收藏过啦");
+        return;
+    }
+    savedDiaries.unshift(currentDiaryData);
+    localStorage.setItem('saved_diaries', JSON.stringify(savedDiaries));
+    heartIcon.classList.replace('far', 'fas');
+    alert("已存入收藏夹");
+}
+
+// 渲染收藏夹
+function renderCollections() {
+    const content = document.getElementById('app-content');
+    if (savedDiaries.length === 0) {
+        content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><p>还没有收藏任何日记</p></div>`;
+        return;
+    }
+    let html = '<div class="fav-grid">';
+    savedDiaries.forEach((d, index) => {
+        html += `
+            <div class="fav-card" onclick="viewSavedDiary(${index})">
+                <div class="fav-card-date">${d.date}</div>
+                <div class="fav-card-preview">${d.body}</div>
+                <div style="font-size:10px; color:#bc1888;"># ${d.mood}</div>
+            </div>`;
+    });
+    content.innerHTML = html + '</div>';
+}
+
+// 查看已收藏的日记详情
+function viewSavedDiary(index) {
+    currentDiaryData = savedDiaries[index];
+    document.getElementById('app-title').innerText = '日记详情';
+    renderDiary();
+}
+
+// 修改原有的 triggerAI 增加日记生成逻辑
+// 请在 triggerAI 函数的 if 链条最后加上：
+/*
+else if (currentAppId === 'diary') {
+    try {
+        const chatContext = JSON.stringify(qqChatHistories);
+        const sysPrompt = `你现在是[${targetName}]。根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇今天的私密手帐日记。
+        格式要求：日期|日记正文|内心最真实的秘密|心情简述
+        注意：语气要极度口语化、真实，像女/男生在自己日记本里写的话。`;
+        
+        const res = await fetch(\`\${aiConfig.url.replace(/\\/$/, "")}/chat/completions\`, {
+            method: 'POST', headers: { 'Authorization': \`Bearer \${aiConfig.key}\`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+        });
+        const data = await res.json();
+        const parts = data.choices[0].message.content.split('|');
+        currentDiaryData = { date: parts[0], body: parts[1], secret: parts[2], mood: parts[3] };
+        document.querySelector('#diary-fav-btn i').classList.replace('fas', 'far');
+        renderDiary();
+    } catch (e) { alert("生成失败"); } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+}
+*/
 </script>
 </body>
 </html>
