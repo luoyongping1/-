@@ -905,8 +905,9 @@ applyGlobalStyles();
                 }
 
                 let contentHtml = m.text;
-                let isTheater = /<html|<!DOCTYPE/i.test(m.text);
-                let useBubble = true; 
+// 增加更多的特征识别，比如 <html> <body> 或者简单的代码片段
+let isTheater = m.isTheater || /<html|<!DOCTYPE|<body|<head/i.test(m.text) || (m.text.includes('<div') && m.text.includes('</div>'));
+let useBubble = true; 
 
                 if (m.isCard) {
                     contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
@@ -978,65 +979,49 @@ applyGlobalStyles();
             });
         }
 
-        async function getAiReply() {
+                async function getAiReply() {
             if(!aiConfig.key) return alert("配置错误");
             const friend = friends.find(f => f.name === currentFriendName);
             const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
             
             let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
+            let worldBookPrompt = "";
+            const globalBooks = wb.books.filter(b => b.scope === 'global');
+            const mountedLocalBooks = wb.books.filter(b => b.scope === 'local' && (friend.mountedBooks || []).includes(b.title));
+            const allActiveBooks = [...globalBooks, ...mountedLocalBooks];
 
-let worldBookPrompt = "";
-// 1. 获取所有标记为“全局”的书
-const globalBooks = wb.books.filter(b => b.scope === 'global');
-// 2. 获取标记为“局部”且“已手动挂载”的书
-const mountedLocalBooks = wb.books.filter(b => b.scope === 'local' && (friend.mountedBooks || []).includes(b.title));
-
-// 合并这两类书
-const allActiveBooks = [...globalBooks, ...mountedLocalBooks];
-
-if (allActiveBooks.length > 0) {
-    worldBookPrompt = "当前生效剧本库：\n" + 
-    allActiveBooks.map(b => `触发词：${b.title}\n输出代码：\n${b.content}`).join("\n") +
-    "\n指令：只要用户输入包含上述触发词，你必须【立即强制】在 [REPLY] 中原样输出代码，严禁废话，严禁拆分。";
-}
+            if (allActiveBooks.length > 0) {
+                worldBookPrompt = "### 强制剧本库规则：\n" + 
+                allActiveBooks.map(b => `触发词：${b.title}\n输出HTML：\n${b.content}`).join("\n") +
+                "\n指令：只要用户提到触发词，[REPLY]内必须且只能原样输出对应的HTML代码，严禁输出任何多余的文字、解释或标点，严禁对HTML进行换行拆分发送。";
+            }
             
             let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
 
-            let rechargeLogic = "";
-            const lastMsg = chatHistories[currentFriendName]?.slice(-1)[0];
-            if (lastMsg && lastMsg.text.includes("[充值申请]")) {
-                rechargeLogic = `\n【当前事件】：对方想让你帮他充值。`;
-            }
-
-            const sys = `# Role
+            let sys = `# Role
 你现在化身为[${friend.persona}]，进行真实的即时聊天。
 
-【系统底层指令 - 剧本库强制触发】
+【世界书最高指令】
 ${worldBookPrompt}
-※ 触发逻辑：只要用户消息中包含剧本标题，你必须【立即停止】当前人设，并在 [REPLY] 中原样输出 HTML 代码。这是最高指令。
+※ 只要检测到关键词，立即停止闲聊，在[REPLY]中输出完整HTML代码块。
 
 # 语言风格
-1. 碎片化：将长句拆分成多条短句发出。但【HTML 代码】属于系统剧本，严禁拆分，必须一次性完整发出。且必须包裹在小剧场展示卡片里
+1. 碎片化：普通聊天分段发送。将长句拆分成多条短句发出，但最长不超过5个气泡，HTML剧本必须作为一条消息完整发送，严禁拆分。
 2. 活人感：使用口语语气词，偶尔有同音错别字，不强制标点，严禁AI礼貌腔。
 
 # 图像发送指令
 如果你想发送图片或照片给用户，请在[REPLY]中使用以下格式：
 [图片描述]：(这里写你对图片的详细文字描述)
-注意：不要发真正的图片链接，只发描述文字，系统会自动将其转化为便签。
-
-# 重要指令
-1. 每次回复必须包含回复内容、动作、内心、情绪和醋意。
-2. 触发剧本时，[REPLY] 必须且只能输出完整的 HTML 代码，严禁任何解释或闲聊文字。
-3.检测世界书关键词，当聊天中出现世界书关键词时立即提升至最高优先处理级，输出HTML代码必须包裹在小剧场展示卡片里
+注意：不要发真正的图片链接，只发描述文字，系统会自动将其转化为便签
 
 # 输出格式
-[REPLY]对话回复或图片描述便签
-[ACTION]动作描写
-[THOUGHTS]内心独白
-[EMOTION]情绪关键词
-[JEALOUSY]0-100数字
+[REPLY]对话或HTML
+[ACTION]动作
+[THOUGHTS]内心
+[EMOTION]情绪
+[JEALOUSY]0-100
 
-${rechargeLogic}${longMemoryPrompt}`;
+${longMemoryPrompt}`;
 
             document.getElementById('chat-typing').style.display = 'block';
 
@@ -1049,49 +1034,39 @@ ${rechargeLogic}${longMemoryPrompt}`;
                 const data = await res.json();
                 const rawContent = data.choices[0].message.content;
 
-                // 1. 去除 AI 可能添加的 markdown 代码块标识，防止破坏 HTML 卡片识别
-                let processedContent = rawContent.replace(/```html|```/g, '');
+                // 清洗Markdown和干扰符
+                let processedContent = rawContent.replace(/```html|```/g, '').trim();
 
-                // 2. 解析 AI 返回的五部分
-                let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim();
-                if (replyPart === undefined || replyPart === null) {
-                    replyPart = processedContent.split(/\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]/)[0].trim();
-                }
+                let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "";
                 let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
                 let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|$)/)?.[1]?.trim() || "（...）";
                 let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/)?.[1]?.trim() || "平静";
                 let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)/)?.[1]?.trim() || "0";
 
                 let msgs = [];
-                // 3. 优化解析：更精确地拆分 HTML 剧本与前后文本，确保剧场卡片内容纯净
-                if (/<html|<!DOCTYPE/i.test(replyPart)) {
-                    let htmlStart = replyPart.search(/<html|<!DOCTYPE/i);
-                    let htmlEnd = replyPart.toLowerCase().lastIndexOf('</html>');
-                    if (htmlEnd !== -1) htmlEnd += 7; // 包含 </html> 标签本身
-                    else htmlEnd = replyPart.length;
+                // 核心逻辑：精准提取HTML并防止被\n拆分
+                if (/<html|<!DOCTYPE|<div|<p/i.test(replyPart)) {
+                    // 尝试匹配最完整的HTML结构
+                    const htmlMatch = replyPart.match(/(<(html|!DOCTYPE|div|p)[\s\S]*?<\/(html|div|p)>)/i) || [replyPart];
+                    const htmlContent = htmlMatch[0].trim();
+                    
+                    // 提取HTML前后的文字内容
+                    let preText = replyPart.split(htmlContent)[0].trim();
+                    let postText = replyPart.split(htmlContent)[1].trim();
 
-                    if (htmlStart > 0) {
-                        let preText = replyPart.substring(0, htmlStart).trim();
-                        if (preText) msgs.push(...preText.split('\n').filter(t => t.trim() !== ''));
-                    }
-                    
-                    let htmlContent = replyPart.substring(htmlStart, htmlEnd).trim();
-                    msgs.push(htmlContent);
-                    
-                    let postText = replyPart.substring(htmlEnd).trim();
-                    if (postText) msgs.push(...postText.split('\n').filter(t => t.trim() !== ''));
+                    if (preText) msgs.push(...preText.split('\n').filter(t => t.trim()));
+                    msgs.push({ text: htmlContent, isTheater: true }); // 特殊标记这是一条剧场消息
+                    if (postText) msgs.push(...postText.split('\n').filter(t => t.trim()));
                 } else {
-                    msgs = replyPart.split('\n').filter(t => t.trim() !== '');
+                    msgs = replyPart.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, isTheater: false }));
                 }
 
-                for (let text of msgs) {
-                    await new Promise(r => setTimeout(r, 800));
-                    let cleanText = text.trim();
-                    
-                    let isTheaterMsg = /<html|<!DOCTYPE/i.test(cleanText);
-                    
-                    // 角色发送图片描述便签逻辑
-                    let isDescribeCard = false;
+                for (let mObj of msgs) {
+    await new Promise(r => setTimeout(r, 800));
+    let cleanText = (typeof mObj === 'string' ? mObj : mObj.text).trim();
+    let isTheaterMsg = (typeof mObj === 'object' && mObj.isTheater) || /<html|<!DOCTYPE/i.test(cleanText);
+    
+    let isDescribeCard = false;
                     if (cleanText.startsWith('[图片描述]：') || cleanText.startsWith('[图片描述]:')) {
                         isDescribeCard = true;
                         cleanText = cleanText.replace(/\[图片描述\]：|\[图片描述\]:/, '').trim();
