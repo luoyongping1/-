@@ -180,46 +180,30 @@
     border-radius: 16px;
     border: 1px solid #f2f2f2;
     display: flex;
-    align-items: center;
+    /* 修改这里：从 center 改为 flex-start，让图标对齐顶部，文字变多时更好看 */
+    align-items: flex-start; 
     gap: 15px;
     transition: background 0.2s;
-}
-.browser-item:active {
-    background: #fafafa;
-}
-.browser-icon-box {
-    width: 38px; height: 38px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #8e8e8e;
-    font-size: 16px;
-    flex-shrink: 0;
-}
-.browser-info {
-    flex: 1;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
 }
 .browser-title {
     font-size: 14px;
     font-weight: 600;
     color: #262626;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* 修改这里：允许文字正常换行 */
+    white-space: normal;
+    word-break: break-all;
+    line-height: 1.4;
+    overflow: visible;
 }
 .browser-url {
     font-size: 11px;
     color: #8e8e8e;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* 修改这里：允许网址正常换行 */
+    white-space: normal;
+    word-break: break-all;
     letter-spacing: 0.3px;
+    margin-top: 4px;
+    overflow: visible;
 }
 .browser-time {
     font-size: 11px;
