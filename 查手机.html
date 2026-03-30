@@ -297,13 +297,27 @@
     background: #fffef9; 
     border-radius: 12px; padding: 25px 20px;
     background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
-    background-size: 20px 20px; /* 点阵底纹 */
+    background-size: 20px 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     font-family: "PingFang SC", "STHeiti", cursive;
-    color: #4a4a4a; position: relative;
+    color: #4a4a4a; 
+    position: relative;
+    /* 新增：确保内容超过页面时可以正常撑开 */
+    min-height: 100%;
+    margin-bottom: 20px;
 }
-.scrapbook-date { font-size: 20px; font-weight: bold; border-bottom: 2px solid #ffccc7; display: inline-block; margin-bottom: 15px; }
-.scrapbook-section { background: rgba(255,255,255,0.7); border: 1px dashed #d9d9d9; border-radius: 8px; padding: 12px; margin-bottom: 15px; line-height: 1.6; font-size: 14px; }
+.scrapbook-section { 
+    background: rgba(255,255,255,0.7); 
+    border: 1px dashed #d9d9d9; 
+    border-radius: 8px; 
+    padding: 15px; 
+    margin-bottom: 15px; 
+    line-height: 1.8; 
+    font-size: 15px;
+    /* 新增：允许文字长内容正常显示 */
+    word-wrap: break-word;
+    white-space: pre-wrap; 
+}
 .scrapbook-label { color: #bc1888; font-size: 12px; font-weight: bold; margin-bottom: 5px; display: block; }
 
 /* 收藏夹卡片样式 */
@@ -747,9 +761,9 @@ function renderBrowserList() {
 } else if (currentAppId === 'diary') {
     try {
         const chatContext = JSON.stringify(qqChatHistories);
-        const sysPrompt = `你现在是[${targetName}]。根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇今天的私密手帐日记。
-        格式要求：日期|日记正文|内心最真实的秘密|心情简述
-        注意：语气要极度口语化、真实。`;
+        const sysPrompt = `你现在是[${targetName}]。根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇私密手帐日记。
+格式要求：日期|日记正文内容|内心深处的秘密内容|心情简述
+【特别要求】：直接输出内容，严禁在正文中出现任何类似于"[日记正文]"、"**[日期]**"、"内心最真实的秘密"等标签或标题文字。语气要极度口语化、真实。`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
@@ -804,12 +818,29 @@ function renderDiary() {
         content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><i class="fas fa-pen-fancy" style="font-size:40px; margin-bottom:10px;"></i><p>日记本是空的</p><p style="font-size:12px;">点击右上角按钮偷看今日心情</p></div>`;
         return;
     }
+
+    // 清理函数：去除 AI 可能输出的各种标签痕迹和多余的星号
+    const clean = (text) => {
+        return text.replace(/\[.*?\]/g, '') // 去掉 [ ] 及其里面的文字
+                   .replace(/\*\*.*?\*\*/g, (m) => m.replace(/\*\*/g, '')) // 去掉粗体星号
+                   .replace(/日期：|日记正文：|秘密：|内心：/g, '') // 去掉冒号标签
+                   .trim();
+    };
+
     content.innerHTML = `
         <div class="scrapbook">
-            <div class="scrapbook-date">${currentDiaryData.date}</div>
-            <div class="scrapbook-section"><span class="scrapbook-label">☁️ 今日碎碎念</span>${currentDiaryData.body}</div>
-            <div class="scrapbook-section"><span class="scrapbook-label">💡 他的心里话</span>${currentDiaryData.secret}</div>
-            <div class="scrapbook-section" style="border:none; text-align:right; font-style:italic;">心情指数：${currentDiaryData.mood}</div>
+            <div class="scrapbook-date">${clean(currentDiaryData.date)}</div>
+            <div class="scrapbook-section">
+                <span class="scrapbook-label">☁️ 今日碎碎念</span>
+                ${clean(currentDiaryData.body)}
+            </div>
+            <div class="scrapbook-section">
+                <span class="scrapbook-label">💡 他的心里话</span>
+                ${clean(currentDiaryData.secret)}
+            </div>
+            <div class="scrapbook-section" style="border:none; text-align:right; font-style:italic;">
+                心情：${clean(currentDiaryData.mood)}
+            </div>
         </div>`;
 }
 
