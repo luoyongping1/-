@@ -4,6 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WeChat AI Plus</title>
+/* 微信风格开关 */
+.wx-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+.wx-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: #07c160;
+}
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
     <style>
         :root {
             --bg-gray: #ededed;
@@ -594,7 +631,14 @@
                 </div>
             </div>
             <div class="list-group">
-                <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888"></div><span>></span></div>
+                <div class="list-item">
+    <div class="info">时间感知 (感知现实时间)</div>
+    <label class="wx-switch">
+        <input type="checkbox" id="time-awareness-toggle" onchange="toggleTimeAwareness(this.checked)">
+        <span class="slider"></span>
+    </label>
+</div>
+<div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888"></div><span>></span></div>
                 <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888"></div><span>></span></div>
                 <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" style="color:#888"></div><span>></span></div>
                 <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888"></div><span>></span></div>
@@ -1012,9 +1056,17 @@ targets.forEach((b) => {
             }
             
             let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
+            
+            // 新增：时间感知逻辑
+            let timePrompt = "";
+            if (friend.timeAwareness) {
+                const now = new Date();
+                const timeStr = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate() + " " + now.getHours() + ":" + now.getMinutes();
+                timePrompt = `\n【当前现实时间】：${timeStr}\n请在聊天中参考此时间（例如：如果现在是深夜，你可以表现得困倦或说晚安）。`;
+            }
 
             let sys = `# Role
-你现在化身为[${friend.persona}]，进行真实的即时聊天。
+你现在化身为[${friend.persona}]，进行真实的即时聊天。${timePrompt}
 
 【世界书最高指令】
 ${worldBookPrompt}
@@ -1464,7 +1516,29 @@ function deleteFavorite(id) {
         function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : 'ME'; }
         function openChat(n) { currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active'); if(window.pendingRecharge) { if(!chatHistories[n]) chatHistories[n] = []; chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); } setTimeout(renderMessages, 50); }
         function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; setTimeout(renderChatList, 10); }
-        function openSettings() { const f = friends.find(f => f.name === currentFriendName); document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial; document.getElementById('settings-name').innerText = f.name; document.getElementById('settings-nick-display').innerText = f.name; document.getElementById('settings-sticker-display').innerText = f.allowStickers ? '允许' : '不允许'; document.getElementById('settings-group-display').innerText = f.group || '我的好友'; document.getElementById('settings-voice-display').innerText = f.voiceId || '默认(cherry)'; document.getElementById('settings-page').classList.add('active'); }
+        function openSettings() { 
+    const f = friends.find(f => f.name === currentFriendName); 
+    document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial; 
+    document.getElementById('settings-name').innerText = f.name; 
+    document.getElementById('settings-nick-display').innerText = f.name; 
+    document.getElementById('settings-sticker-display').innerText = f.allowStickers ? '允许' : '不允许'; 
+    document.getElementById('settings-group-display').innerText = f.group || '我的好友'; 
+    document.getElementById('settings-voice-display').innerText = f.voiceId || '默认(cherry)'; 
+    
+    // 新增：设置时间感知开关的状态
+    document.getElementById('time-awareness-toggle').checked = f.timeAwareness || false;
+    
+    document.getElementById('settings-page').classList.add('active'); 
+}
+
+// 新增：保存开关状态的函数
+function toggleTimeAwareness(val) {
+    const f = friends.find(f => f.name === currentFriendName);
+    if (f) {
+        f.timeAwareness = val;
+        saveData();
+    }
+}
         function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
         function toggleDescribeCard(index) { chatHistories[currentFriendName][index].expanded = !chatHistories[currentFriendName][index].expanded; renderMessages(); }
 
