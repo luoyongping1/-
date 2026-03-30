@@ -2889,7 +2889,28 @@ let apiConfig = JSON.parse(localStorage.getItem('xhs_api_config')) || {
     url: '', key: '', model: ''
 };
 
-let worldBooks = JSON.parse(localStorage.getItem('xhs_world_books')) || [];
+// 世界书从主页面的 wb_data 同步读取，合并到小红书自己的世界书
+function loadMergedWorldBooks() {
+    let xhsBooks = JSON.parse(localStorage.getItem('xhs_world_books')) || [];
+    try {
+        let mainWbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":[],"books":[]}');
+        if (mainWbData.books && mainWbData.books.length > 0) {
+            mainWbData.books.forEach(mb => {
+                const exists = xhsBooks.find(b => b.title === mb.title);
+                if (!exists) {
+                    xhsBooks.push({
+                        title: mb.title,
+                        content: mb.content
+                    });
+                }
+            });
+        }
+    } catch (e) {
+        console.error('同步主页面世界书失败', e);
+    }
+    return xhsBooks;
+}
+let worldBooks = loadMergedWorldBooks();
 let cart = JSON.parse(localStorage.getItem('xhs_cart')) || [];
 
 function getMeAvatar() {
@@ -3942,15 +3963,56 @@ window.addEventListener('click', (e) => {
 document.getElementById('me-avatar').onclick = () => document.getElementById('avatar-input').click();
 document.getElementById('avatar-input').onchange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            localStorage.setItem('xhs_me_avatar', event.target.result);
-            document.getElementById('me-avatar').src = event.target.result;
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxSize = 200;
+            canvas.width = maxSize;
+            canvas.height = maxSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, maxSize, maxSize);
+            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+            try {
+                localStorage.setItem('xhs_me_avatar', compressed);
+                document.getElementById('me-avatar').src = compressed;
+            } catch (err) {
+                alert('头像保存失败，存储空间不足');
+            }
         };
-        reader.readAsDataURL(file);
-    }
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
 };
+
+// 从 QQ 同步好友到小红书
+function syncFriendsFromQQ() {
+    try {
+        const qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+        if (qqFriends.length === 0) return;
+        let changed = false;
+        qqFriends.forEach(qf => {
+            const exists = friends.find(f => f.name === qf.name);
+            if (!exists) {
+                friends.push({
+                    id: Date.now() + Math.floor(Math.random() * 10000),
+                    name: qf.name,
+                    avatar: qf.avatarUrl || ('https://picsum.photos/100/100?random=' + Date.now()),
+                    lastMsg: '',
+                    persona: qf.persona || '普通人'
+                });
+                changed = true;
+            }
+        });
+        if (changed) {
+            localStorage.setItem('xhs_friends', JSON.stringify(friends));
+        }
+    } catch (e) {
+        console.error('同步QQ好友失败', e);
+    }
+}
 
 // 底部导航
 document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
@@ -3962,7 +4024,10 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
         item.classList.add('active');
         if (tab === 'market') renderMarket();
         if (tab === 'home') renderPosts();
-        if (tab === 'message') renderFriends();
+        if (tab === 'message') {
+            syncFriendsFromQQ();
+            renderFriends();
+        }
         if (tab === 'me') renderMeNotes();
     };
 });
@@ -4308,6 +4373,32 @@ document.getElementById('save-friend-btn').onclick = () => {
 
     friends.push(newFriend);
     localStorage.setItem('xhs_friends', JSON.stringify(friends));
+
+    // 同步到 QQ 好友列表
+    try {
+        let qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+        const existsInQQ = qqFriends.find(f => f.name === name);
+        if (!existsInQQ) {
+            qqFriends.push({
+                name: name,
+                initial: name[0],
+                lastMsg: '',
+                persona: persona,
+                freq: 0,
+                lastMoment: Date.now(),
+                avatarUrl: '',
+                mountedBooks: [],
+                group: '我的好友',
+                memoryFreq: 20,
+                lastSummaryIdx: 0,
+                longMemory: ''
+            });
+            localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
+        }
+    } catch (e) {
+        console.error('同步到QQ失败', e);
+    }
+
     renderFriends();
     document.getElementById('friend-modal').style.display = 'none';
     alert("添加成功");
@@ -4336,6 +4427,7 @@ function renderWorldBooks() {
 }
 
 document.getElementById('world-book-btn').onclick = () => {
+    worldBooks = loadMergedWorldBooks();
     renderWorldBooks();
     document.getElementById('world-book-modal').style.display = 'flex';
     document.getElementById('sidebar').classList.remove('active');
@@ -4343,6 +4435,7 @@ document.getElementById('world-book-btn').onclick = () => {
 };
 
 document.getElementById('top-world-book-btn').onclick = () => {
+    worldBooks = loadMergedWorldBooks();
     renderWorldBooks();
     document.getElementById('world-book-modal').style.display = 'flex';
 };
@@ -4376,6 +4469,29 @@ document.getElementById('save-world-book-item-btn').onclick = () => {
     }
 
     localStorage.setItem('xhs_world_books', JSON.stringify(worldBooks));
+
+    // 同步到主页面的世界书
+    try {
+        let mainWbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"],"books":[]}');
+        const existsInMain = mainWbData.books.find(b => b.title === title);
+        if (!existsInMain) {
+            mainWbData.books.push({
+                title: title,
+                content: content,
+                group: '默认分组',
+                mode: 'global',
+                keyword: null,
+                scope: 'global'
+            });
+            localStorage.setItem('wb_data', JSON.stringify(mainWbData));
+        } else {
+            existsInMain.content = content;
+            localStorage.setItem('wb_data', JSON.stringify(mainWbData));
+        }
+    } catch (e) {
+        console.error('同步到主页面世界书失败', e);
+    }
+
     renderWorldBooks();
     document.getElementById('edit-world-book-modal').style.display = 'none';
 };
