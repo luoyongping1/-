@@ -2023,10 +2023,10 @@ input:checked + .slider:before {
         <!-- 侧边栏 -->
         <div id="sidebar" class="sidebar">
             <div class="sidebar-header">更多</div>
-            <div class="sidebar-item" id="api-settings-btn">
-                <i class="fas fa-cog"></i>
-                <span>API 设置</span>
-            </div>
+            <div class="sidebar-item" id="api-settings-btn" style="display: none;">
+    <i class="fas fa-cog"></i>
+    <span>API 设置</span>
+</div>
             <div class="sidebar-item" id="add-friend-trigger">
                 <i class="fas fa-user-plus"></i>
                 <span>添加好友</span>
@@ -2809,7 +2809,8 @@ function parseAIJSON(content) {
 
 // 统一 AI 调用函数
 async function callAI(messages, jsonMode = true) {
-    if (!apiConfig.key) throw new Error("请先设置 API 密钥");
+    apiConfig = JSON.parse(localStorage.getItem('ai_config')) || { url: '', key: '', model: '' };
+    if (!apiConfig.key) throw new Error("请先在手机主屏幕的‘设置’中配置 API 密钥");
     if (!apiConfig.url) throw new Error("请先设置 API 地址");
     if (!apiConfig.model) throw new Error("请先在侧边栏 API 设置中拉取并选择一个模型");
     
@@ -2885,7 +2886,7 @@ let currentChatFriend = null;
 let isChatSelectionMode = false;
 let selectedMessageIndices = new Set();
 let chatHistories = JSON.parse(localStorage.getItem('xhs_chat_histories')) || {};
-let apiConfig = JSON.parse(localStorage.getItem('xhs_api_config')) || { 
+let apiConfig = JSON.parse(localStorage.getItem('ai_config')) || { 
     url: '', key: '', model: ''
 };
 
