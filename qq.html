@@ -694,11 +694,11 @@
     </div>
 
     <div id="msg-context-menu">
-        <div class="menu-item" onclick="redoReply()">重回</div>
-        <div class="menu-item" onclick="enterMultiSelect()">多选</div>
-        <div class="menu-item" onclick="deleteSingleMsg()">删除</div>
-        <div class="menu-item" onclick="quoteMsg()">引用</div>
-    </div>
+    <div class="menu-item" onclick="redoReply()">重回</div>
+    <div class="menu-item" onclick="enterMultiSelect()">多选</div>
+    <div class="menu-item" onclick="deleteSingleMsg()">删除</div>
+    <div class="menu-item" onclick="quoteMsg()">引用</div>
+</div>
 
     <div id="multi-select-bar">
         <div onclick="cancelMultiSelect()">取消</div>
@@ -966,17 +966,32 @@ let useBubble = true;
             container.innerHTML = htmlArr.join('');
             container.scrollTop = container.scrollHeight;
             
-            const targets = container.querySelectorAll('.bubble, .recharge-card, .describe-card, .theater-card, img, .voice-bar');
-            targets.forEach((b, idx) => {
-                let timer;
-                const start = (e) => { 
-                    const touch = e.touches ? e.touches[0] : e; 
-                    timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, history.length - displayHistory.length + idx), 700); 
-                };
-                const stop = () => clearTimeout(timer);
-                b.onmousedown = start; b.onmouseup = stop;
-                b.ontouchstart = start; b.ontouchend = stop;
-            });
+            // 获取所有可以点击的部件
+const targets = container.querySelectorAll('.bubble, .recharge-card, .describe-card, .theater-card, img, .voice-bar');
+targets.forEach((b) => {
+    // 如果长按的是头像，直接跳过，不弹出菜单
+    if (b.closest('.avatar')) return;
+
+    let timer;
+    const start = (e) => { 
+        const touch = e.touches ? e.touches[0] : e; 
+        
+        // 【核心修复】：不再直接用 idx 数数，而是查找当前点击的部件属于第几条 .msg
+        const allMsgs = Array.from(container.querySelectorAll('.msg'));
+        const parentMsg = b.closest('.msg');
+        const realIdxInView = allMsgs.indexOf(parentMsg);
+
+        // 如果找到了对应的消息行，才弹出菜单
+        if (realIdxInView !== -1) {
+            timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, history.length - displayHistory.length + realIdxInView), 700); 
+        }
+    };
+    const stop = () => clearTimeout(timer);
+    b.onmousedown = start; 
+    b.onmouseup = stop;
+    b.ontouchstart = start; 
+    b.ontouchend = stop;
+});
         }
 
                 async function getAiReply() {
@@ -1340,7 +1355,30 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
         document.getElementById('chat-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { friends.find(f => f.name === currentFriendName).chatBg = e.target.result; saveData(); renderMessages(); }; reader.readAsDataURL(this.files[0]); } };
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
         function showContextMenu(x, y, i) { if(isMultiSelecting) return; menuTargetIndex = i; const m = document.getElementById('msg-context-menu'); m.style.display = 'block'; m.style.left = Math.min(x, window.innerWidth - 110) + 'px'; m.style.top = y + 'px'; setTimeout(() => document.addEventListener('click', function c(){ m.style.display = 'none'; document.removeEventListener('click', c); }), 100); }
-        function deleteSingleMsg() { chatHistories[currentFriendName].splice(menuTargetIndex, 1); saveData(); renderMessages(); }
+        function deleteSingleMsg() {
+    if (menuTargetIndex === -1) return;
+    // 1. 从历史记录中删除这一条
+    chatHistories[currentFriendName].splice(menuTargetIndex, 1);
+    
+    // 2. 找到这个朋友，更新他的最后一条消息预览
+    const friend = friends.find(f => f.name === currentFriendName);
+    const history = chatHistories[currentFriendName] || [];
+    
+    if (history.length > 0) {
+        const last = history[history.length - 1];
+        if (last.isSticker) friend.lastMsg = "[表情]";
+        else if (last.isRealImage) friend.lastMsg = "[图片]";
+        else if (last.isDescribeCard) friend.lastMsg = "[便签]";
+        else friend.lastMsg = last.text;
+    } else {
+        friend.lastMsg = "";
+    }
+
+    // 3. 保存数据并刷新所有显示
+    saveData();
+    renderMessages();
+    renderChatList();
+}
         function redoReply() { const h = chatHistories[currentFriendName]; let i = h.length - 1; while(i >= 0 && h[i].type === 'friend') { h.splice(i, 1); i--; } saveData(); renderMessages(); getAiReply(); }
         function quoteMsg() { quotedText = chatHistories[currentFriendName][menuTargetIndex].text; const p = document.getElementById('quote-preview'); p.innerHTML = `引用：${quotedText.substring(0,10)}... <span onclick="clearQuote()">×</span>`; p.style.display = 'block'; }
         function clearQuote() { quotedText = ""; document.getElementById('quote-preview').style.display = 'none'; }
@@ -1348,8 +1386,73 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
         function cancelMultiSelect() { isMultiSelecting = false; document.getElementById('multi-select-bar').style.display = 'none'; renderMessages(); }
         function toggleSelect(i) { chatHistories[currentFriendName][i].selected = !chatHistories[currentFriendName][i].selected; }
         function batchDelete() { chatHistories[currentFriendName] = chatHistories[currentFriendName].filter(m => !m.selected); saveData(); cancelMultiSelect(); }
-        function batchFavorite() { chatHistories[currentFriendName].forEach(m => { if(m.selected) favorites.push({ id: Date.now()+Math.random(), text: m.text, from: m.type==='self'?'我':currentFriendName, time: new Date().toLocaleString() }); }); saveData(); alert("已收藏"); cancelMultiSelect(); }
-        function openFavorites() { document.getElementById('favorites-page').classList.add('active'); renderFavorites(); }
+        // 批量收藏功能
+function batchFavorite() { 
+    chatHistories[currentFriendName].forEach(m => { 
+        if(m.selected) favorites.push({ id: Date.now()+Math.random(), text: m.text, from: m.type==='self'?'我':currentFriendName, time: new Date().toLocaleString() }); 
+    }); 
+    saveData(); 
+    alert("已加入收藏"); 
+    cancelMultiSelect(); 
+}
+
+// --- 收藏夹核心功能 (补齐了打开、显示、删除) ---
+
+// 1. 打开收藏页面
+function openFavorites() {
+    document.getElementById('favorites-page').classList.add('active');
+    renderFavorites(); // 确保打开时立即刷新列表内容
+}
+
+// 2. 单条消息长按收藏
+function favoriteSingleMsg() {
+    const m = chatHistories[currentFriendName][menuTargetIndex];
+    if (!m) return;
+    favorites.push({ 
+        id: Date.now() + Math.random(), 
+        text: m.text, 
+        from: m.type === 'self' ? '我' : currentFriendName, 
+        time: new Date().toLocaleString() 
+    });
+    saveData();
+    alert("已成功添加至收藏");
+}
+
+// 3. 渲染（画出）收藏列表
+function renderFavorites() {
+    const list = document.getElementById('favorites-list');
+    if (!list) return;
+    const kwInput = document.getElementById('fav-search');
+    const kw = kwInput ? kwInput.value.toLowerCase() : '';
+    
+    if (!favorites || favorites.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">暂无收藏内容</div>';
+        return;
+    }
+
+    list.innerHTML = favorites.filter(f => f.text.toLowerCase().includes(kw)).reverse().map(f => `
+        <div style="background:white; margin:10px; padding:15px; border-radius:8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="font-size:12px; color:#888; margin-bottom:8px; border-bottom:0.5px solid #f5f5f5; padding-bottom:5px;">
+                来自: ${f.from} | ${f.time}
+            </div>
+            <div style="font-size:15px; color:#191919; line-height:1.5; word-break:break-all;">
+                ${f.text}
+            </div>
+            <div style="text-align:right; margin-top:10px;">
+                <span style="color:#fa5151; font-size:13px; cursor:pointer;" onclick="deleteFavorite(${f.id})">删除</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 4. 删除单条收藏
+function deleteFavorite(id) {
+    if(confirm("确定要删除这条收藏吗？")) {
+        favorites = favorites.filter(f => f.id !== id);
+        saveData();
+        renderFavorites();
+    }
+}
         function openWallet() { document.getElementById('wallet-page').classList.add('active'); updateWalletUI(); }
         function closeWallet() { document.getElementById('wallet-page').classList.remove('active'); }
         function updateWalletUI() { document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`; saveData(); }
