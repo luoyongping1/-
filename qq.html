@@ -905,8 +905,8 @@ applyGlobalStyles();
                 }
 
                 let contentHtml = m.text;
-// 增加更多的特征识别，比如 <html> <body> 或者简单的代码片段
-let isTheater = m.isTheater || /<html|<!DOCTYPE|<body|<head/i.test(m.text) || (m.text.includes('<div') && m.text.includes('</div>'));
+// 强化判断：如果标记了是剧场，或者文本以 < 开头且包含 html/doctype/div，则渲染为卡片
+let isTheater = m.isTheater || /<html|<!DOCTYPE|<body/i.test(m.text) || (m.text.trim().startsWith('<') && m.text.includes('>'));
 let useBubble = true; 
 
                 if (m.isCard) {
@@ -1044,27 +1044,33 @@ ${longMemoryPrompt}`;
                 let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)/)?.[1]?.trim() || "0";
 
                 let msgs = [];
-                // 核心逻辑：精准提取HTML并防止被\n拆分
-                if (/<html|<!DOCTYPE|<div|<p/i.test(replyPart)) {
-                    // 尝试匹配最完整的HTML结构
-                    const htmlMatch = replyPart.match(/(<(html|!DOCTYPE|div|p)[\s\S]*?<\/(html|div|p)>)/i) || [replyPart];
-                    const htmlContent = htmlMatch[0].trim();
-                    
-                    // 提取HTML前后的文字内容
-                    let preText = replyPart.split(htmlContent)[0].trim();
-                    let postText = replyPart.split(htmlContent)[1].trim();
-
-                    if (preText) msgs.push(...preText.split('\n').filter(t => t.trim()));
-                    msgs.push({ text: htmlContent, isTheater: true }); // 特殊标记这是一条剧场消息
-                    if (postText) msgs.push(...postText.split('\n').filter(t => t.trim()));
-                } else {
-                    msgs = replyPart.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, isTheater: false }));
-                }
+// 只要内容里包含 html 标签特征，就严禁按换行符拆分，确保代码完整性
+if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
+    // 检查是否有普通的文本在代码前面（通常AI会说：好的，为您播放剧场：）
+    let codeStartIndex = replyPart.search(/<html|<!DOCTYPE|<div/i);
+    if (codeStartIndex > 0) {
+        let leadingText = replyPart.substring(0, codeStartIndex).trim();
+        if (leadingText) {
+            // 前置文字可以按换行拆分
+            leadingText.split('\n').forEach(t => {
+                if(t.trim()) msgs.push({ text: t.trim(), isTheater: false });
+            });
+        }
+    }
+    // 将剩余的所有部分（即HTML代码块）作为一个整体，不许拆分
+    let onlyCode = replyPart.substring(codeStartIndex).trim();
+    msgs.push({ text: onlyCode, isTheater: true });
+} else {
+    // 普通对话，按换行拆分
+    msgs = replyPart.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, isTheater: false }));
+}
 
                 for (let mObj of msgs) {
     await new Promise(r => setTimeout(r, 800));
-    let cleanText = (typeof mObj === 'string' ? mObj : mObj.text).trim();
-    let isTheaterMsg = (typeof mObj === 'object' && mObj.isTheater) || /<html|<!DOCTYPE/i.test(cleanText);
+    // 统一提取文本内容
+    let cleanText = mObj.text.trim();
+    // 只要我们刚才标记了是剧场，或者内容包含 html，就判定为剧场消息
+    let isTheaterMsg = mObj.isTheater || /<html|<!DOCTYPE|<body/i.test(cleanText);
     
     let isDescribeCard = false;
                     if (cleanText.startsWith('[图片描述]：') || cleanText.startsWith('[图片描述]:')) {
