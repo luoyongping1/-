@@ -342,6 +342,7 @@
             <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
             <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
             <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
+<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
             <div id="item-progress" class="grid-item progress-widgets">
                 <div class="progress-item">
                     今年剩余 <span id="year-days">0</span> 天
@@ -662,7 +663,35 @@
 
         // --- App 控制逻辑 ---
         function openQQ() { showAppFrame("qq.html"); }
-        function openApp() { showAppFrame("书书小红书.html"); }
+function openApp() { showAppFrame("书书小红书.html"); }
+
+// 新增：显示好友选择器
+function showFriendSelector() {
+    const friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
+    const container = document.getElementById('friend-list-for-check');
+    
+    if (friends.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#666;">QQ里还没有好友哦</p>';
+    } else {
+        container.innerHTML = friends.map(f => `
+            <div onclick="startCheckPhone('${f.name}')" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:10px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center;">
+                <div style="width:30px; height:30px; border-radius:50%; background:#ccc; margin-right:10px; overflow:hidden;">
+                    ${f.avatarUrl ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+                </div>
+                <b>${f.name}</b>
+            </div>
+        `).join('');
+    }
+    document.getElementById('friend-selector-modal').style.display = 'flex';
+}
+
+// 新增：进入选定角色的手机
+function startCheckPhone(name) {
+    document.getElementById('friend-selector-modal').style.display = 'none';
+    // 把选中的名字存入临时缓存，让查手机App能读到
+    localStorage.setItem('target_check_name', name);
+    showAppFrame("查手机.html");
+}
         function showAppFrame(url) {
             document.getElementById('app-overlay').style.display = "block";
             document.getElementById('app-frame').style.display = "block";
@@ -1214,5 +1243,15 @@ if(savedBallCss) {
             }
         };
     </script>
+<!-- 选择查谁的手机弹窗 -->
+<div id="friend-selector-modal" class="glass-modal">
+    <div class="glass-modal-content">
+        <h3 style="margin-top:0">想查谁的手机？</h3>
+        <div id="friend-list-for-check" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
+            <!-- 这里会自动填入QQ好友 -->
+        </div>
+        <button class="action-btn" style="background:#ccc; color:#333;" onclick="document.getElementById('friend-selector-modal').style.display='none'">取消</button>
+    </div>
+</div>
 </body>
 </html>
