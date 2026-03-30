@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WeChat AI Plus</title>
+        <title>WeChat AI Plus</title>
+    <style>
 /* 微信风格开关 */
 .wx-switch {
     position: relative;
@@ -41,7 +42,6 @@ input:checked + .slider {
 input:checked + .slider:before {
     transform: translateX(22px);
 }
-    <style>
         :root {
             --bg-gray: #ededed;
             --border-color: #e5e5e5;
@@ -436,6 +436,177 @@ input:checked + .slider:before {
     .bg-tab-content { display: none; }
     .bg-tab-content.active { display: block; }
     .bg-page-sel { margin-bottom: 10px; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #ddd; outline: none; }
+/* 约会页面 Ins 风格样式 */
+#dating-page {
+    background: #ffffff;
+    z-index: 1500;
+}
+.dating-header {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background: #fff;
+    border-bottom: 0.5px solid #f0f0f0;
+    flex-shrink: 0;
+}
+.dating-avatar-wrap {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.dating-avatar-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.dating-heart {
+    color: #ff4d4f;
+    font-size: 24px;
+    animation: dating-heartbeat 1.5s infinite;
+}
+@keyframes dating-heartbeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+.dating-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px 20px;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+/* Ins 风消息卡片 */
+.dating-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 25px 20px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    max-width: 90%;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+.dating-card-avatar {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    background: #eee;
+}
+.dating-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.dating-text {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #333;
+    text-align: center;
+    margin-top: 10px;
+    word-break: break-all;
+}
+.dating-input-bar {
+    padding: 15px;
+    background: #fff;
+    border-top: 0.5px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: calc(15px + env(safe-area-inset-bottom));
+}
+.dating-input {
+    flex: 1;
+    background: #f5f5f5;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 25px;
+    outline: none;
+    font-size: 15px;
+}
+.dating-send-btn {
+    color: #ff4d4f;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+/* 仿微信转账卡片样式 */
+.transfer-bubble {
+    background: #f99f3e !important; 
+    width: 220px;
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+/* 已接收状态：颜色变浅 */
+.transfer-bubble.received {
+    background: #f99f3e99 !important; 
+}
+/* 已退回状态：颜色变灰 */
+.transfer-bubble.refunded {
+    background: #cccccc !important;
+}
+.transfer-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.transfer-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.transfer-icon-circle {
+    width: 35px;
+    height: 35px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+.transfer-info {
+    flex: 1;
+}
+.transfer-amount-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+.transfer-note {
+    font-size: 12px;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.transfer-footer {
+    font-size: 11px;
+    border-top: 0.5px solid rgba(255,255,255,0.3);
+    padding-top: 5px;
+    margin-top: 5px;
+}
 </style>
 </head>
 <body>
@@ -527,23 +698,20 @@ input:checked + .slider:before {
             <button class="btn-green" onclick="sendMsg()">发送</button>
         </div>
         <div id="tool-box" style="display:none; background:#f7f7f7; border-top:0.5px solid #ccc; padding:20px; grid-template-columns: repeat(4, 1fr); gap:20px; padding-bottom: calc(20px + env(safe-area-inset-bottom));">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openImageChoiceModal()">
-                <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🖼️</div>
-                <div style="font-size:12px; color:#666;">图片</div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; opacity:0.3;">
-                <div style="width:55px; height:55px; background:white; border-radius:12px;"></div>
-                <div style="font-size:12px; color:#666;">视频</div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; opacity:0.3;">
-                <div style="width:55px; height:55px; background:white; border-radius:12px;"></div>
-                <div style="font-size:12px; color:#666;">位置</div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; opacity:0.3;">
-                <div style="width:55px; height:55px; background:white; border-radius:12px;"></div>
-                <div style="font-size:12px; color:#666;">红包</div>
-            </div>
-        </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openImageChoiceModal()">
+        <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🖼️</div>
+        <div style="font-size:12px; color:#666;">图片</div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openDatingPage()">
+        <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🌹</div>
+        <div style="font-size:12px; color:#666;">约会</div>
+    </div>
+    <!-- 转账图标 -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openTransferModal()">
+        <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">💸</div>
+        <div style="font-size:12px; color:#666;">转账</div>
+    </div>
+</div>
     </div>
 
     <!-- 记忆总结页面 -->
@@ -852,7 +1020,27 @@ applyGlobalStyles();
         let groups = JSON.parse(localStorage.getItem('qq_groups')) || ['我的好友'];
         let collapsedGroups = JSON.parse(localStorage.getItem('qq_collapsed_groups')) || [];
         let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
-        let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
+// 新增：约会记录数据库
+let datingHistories = JSON.parse(localStorage.getItem('qq_dating_history')) || {};
+let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
+
+// 在 saveData 函数里也要加上这一行
+function saveData() {
+    try {
+        localStorage.setItem('qq_friends', JSON.stringify(friends));
+        localStorage.setItem('qq_groups', JSON.stringify(groups));
+        localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
+        localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+        // 新增：保存约会记录
+        localStorage.setItem('qq_dating_history', JSON.stringify(datingHistories));
+        localStorage.setItem('qq_moments', JSON.stringify(moments));
+        localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+        localStorage.setItem('my_info', JSON.stringify(myInfo));
+        localStorage.setItem('wallet_data', JSON.stringify(walletData));
+        localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+        localStorage.setItem('qq_stickers', JSON.stringify(stickers));
+    } catch (e) { console.error("Save Error"); }
+}
         let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
         let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
         let walletData = JSON.parse(localStorage.getItem('wallet_data')) || { balance: 0.00, history: [] };
@@ -954,9 +1142,42 @@ let isTheater = m.isTheater || /<html|<!DOCTYPE|<body/i.test(m.text) || (m.text.
 let useBubble = true; 
 
                 if (m.isCard) {
-                    contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
-                    useBubble = false;
-                } else if (m.isRealImage) {
+    contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
+    useBubble = false;
+} else if (m.isTransfer) {
+    // 仿微信转账气泡 HTML
+    let statusClass = "";
+    let footerText = "微信转账";
+    let iconText = "¥";
+    let clickAction = ""; // 点击动作
+    
+    if (m.status === 'received') {
+        statusClass = "received";
+        footerText = "已收钱";
+        iconText = "✓";
+    } else if (m.status === 'refunded') {
+        statusClass = "refunded";
+        footerText = "已退还";
+        iconText = "↩";
+    } else if (m.type === 'friend' && (!m.status || m.status === 'unclaimed')) {
+        // 如果是AI发的且没领
+        footerText = "点击领取";
+        clickAction = `onclick="receiveAiTransfer(${realIndex})" style="cursor:pointer;"`;
+    }
+
+    contentHtml = `
+        <div class="transfer-bubble ${statusClass}" ${clickAction}>
+            <div class="transfer-top">
+                <div class="transfer-icon-circle">${iconText}</div>
+                <div class="transfer-info">
+                    <div class="transfer-amount-text">￥${parseFloat(m.text).toFixed(2)}</div>
+                    <div class="transfer-note">${m.transferNote}</div>
+                </div>
+            </div>
+            <div class="transfer-footer">${footerText}</div>
+        </div>`;
+    useBubble = false;
+} else if (m.isRealImage) {
                     contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">`;
                     useBubble = false;
                 } else if (m.isDescribeCard) {
@@ -1065,8 +1286,20 @@ targets.forEach((b) => {
                 timePrompt = `\n【当前现实时间】：${timeStr}\n请在聊天中参考此时间（例如：如果现在是深夜，你可以表现得困倦或说晚安）。`;
             }
 
-            let sys = `# Role
-你现在化身为[${friend.persona}]，进行真实的即时聊天。${timePrompt}
+                        // 新增：金钱感知逻辑
+            let moneyPrompt = "";
+            const lastMsgObj = chatHistories[currentFriendName][chatHistories[currentFriendName].length - 1];
+            if (lastMsgObj && lastMsgObj.isTransfer && !lastMsgObj.status) {
+                moneyPrompt = `\n【金钱提醒】：用户刚刚向你转账了 ￥${lastMsgObj.text}，备注为：“${lastMsgObj.transferNote}”。
+                你可以根据你的人设[${friend.persona}]决定：
+                1. 接收钱：请在回复的开头加上 [MONEY_ACTION]RECEIVE
+                2. 退回钱：请在回复的开头加上 [MONEY_ACTION]REFUND
+                如果你不写这些标签，则默认不处理（钱会一直挂着）。`;
+            }
+
+                                    let sys = `# Role
+你现在化身为[${friend.persona}]，进行真实的即时聊天。${timePrompt}${moneyPrompt}
+【转账特殊指令】：如果你想主动给用户转账或发零花钱，请务必在回复文字的最后加上标签：[SEND_MONEY]金额|备注（例如：[SEND_MONEY]50.00|拿去买奶茶）。注意：金额必须是数字。
 
 【世界书最高指令】
 ${worldBookPrompt}
@@ -1099,9 +1332,29 @@ ${longMemoryPrompt}`;
                     body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, ...history] })
                 });
                 const data = await res.json();
-                const rawContent = data.choices[0].message.content;
+                let rawContent = data.choices[0].message.content;
 
-                // 清洗Markdown和干扰符
+// 解析转账动作
+const transferMsg = chatHistories[currentFriendName].find(m => m.isTransfer && !m.status);
+if (rawContent.includes("[MONEY_ACTION]RECEIVE")) {
+    if (transferMsg) transferMsg.status = 'received';
+    rawContent = rawContent.replace("[MONEY_ACTION]RECEIVE", "");
+} else if (rawContent.includes("[MONEY_ACTION]REFUND")) {
+    if (transferMsg) {
+        transferMsg.status = 'refunded';
+        // 退款逻辑：钱回口袋
+        walletData.balance += parseFloat(transferMsg.text);
+        walletData.history.push({
+            title: '转账退回-' + currentFriendName,
+            amount: '+' + parseFloat(transferMsg.text).toFixed(2),
+            time: new Date().toLocaleString()
+        });
+        updateWalletUI();
+    }
+    rawContent = rawContent.replace("[MONEY_ACTION]REFUND", "");
+}
+
+// 清洗Markdown和干扰符
                 let processedContent = rawContent.replace(/```html|```/g, '').trim();
 
                 let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "";
@@ -1132,11 +1385,31 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
     msgs = replyPart.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, isTheater: false }));
 }
 
-                for (let mObj of msgs) {
-    await new Promise(r => setTimeout(r, 800));
-    // 统一提取文本内容
-    let cleanText = mObj.text.trim();
-    // 只要我们刚才标记了是剧场，或者内容包含 html，就判定为剧场消息
+                                        for (let mObj of msgs) {
+await new Promise(r => setTimeout(r, 800));
+// 统一提取文本内容
+let cleanText = mObj.text.trim();
+
+// --- 新增：解析 AI 主动转账指令 ---
+if (cleanText.includes("[SEND_MONEY]")) {
+    const moneyMatch = cleanText.match(/\[SEND_MONEY\](\d+\.?\d*)\|?([\s\S]*)/);
+    if (moneyMatch) {
+        const amount = moneyMatch[1];
+        const note = moneyMatch[2] || "微信转账";
+        chatHistories[currentFriendName].push({ 
+            type: 'friend', 
+            text: amount, 
+            isTransfer: true, 
+            transferNote: note,
+            status: 'unclaimed' // 标记为待领取状态
+        });
+        friend.lastMsg = "[微信转账] ￥" + amount;
+        saveData(); renderMessages();
+        continue; // 跳过这一条，不显示原本的指令文字
+    }
+}
+
+// 只要我们刚才标记了是剧场，或者内容包含 html，就判定为剧场消息
     let isTheaterMsg = mObj.isTheater || /<html|<!DOCTYPE|<body/i.test(cleanText);
     
     let isDescribeCard = false;
@@ -1202,6 +1475,7 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
                 alert("AI回复失败"); 
             } finally { 
                 document.getElementById('chat-typing').style.display = 'none'; 
+                if(document.getElementById('dating-page').classList.contains('active')) renderDatingMessages();
             }
         }
 
@@ -1512,8 +1786,255 @@ function deleteFavorite(id) {
         function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
         function selfRecharge() { const amt = prompt("金额:"); if(amt && !isNaN(amt)) { walletData.balance += parseFloat(amt); walletData.history.push({ title: '手动充值', amount: '+'+parseFloat(amt).toFixed(2), time: new Date().toLocaleString() }); updateWalletUI(); document.getElementById('recharge-modal').style.display = 'none'; } }
         function askFriendRecharge() { const amt = prompt("金额:"); if(amt) { window.pendingRecharge = parseFloat(amt); document.getElementById('recharge-modal').style.display='none'; closeWallet(); switchTab('tab-chat', document.querySelector('.tab-item')); alert("选择好友"); } }
+        // 打开转账弹窗
+function openTransferModal() {
+    document.getElementById('transfer-modal').style.display = 'flex';
+    document.getElementById('tool-box').style.display = 'none';
+}
+
+// 关闭转账弹窗
+function closeTransferModal() {
+    document.getElementById('transfer-modal').style.display = 'none';
+    document.getElementById('transfer-amount-input').value = '';
+    document.getElementById('transfer-note-input').value = '';
+}
+
+// 1. 领取 AI 转账的函数 (独立存在)
+function receiveAiTransfer(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg || msg.status === 'received' || msg.status === 'refunded') return;
+
+    const amount = parseFloat(msg.text);
+    msg.status = 'received';
+    walletData.balance += amount;
+    
+    walletData.history.push({
+        title: '收到转账-来自' + currentFriendName,
+        amount: '+' + amount.toFixed(2),
+        time: new Date().toLocaleString()
+    });
+
+    updateWalletUI();
+    saveData();
+    renderMessages();
+    alert("已成功领取转账 ￥" + amount.toFixed(2));
+}
+
+// 2. 你发起转账的逻辑函数 (独立存在)
+function executeTransfer() {
+    const amountStr = document.getElementById('transfer-amount-input').value;
+    const amount = parseFloat(amountStr);
+    const note = document.getElementById('transfer-note-input').value || "微信转账";
+
+    if (isNaN(amount) || amount <= 0) {
+        return alert("请输入正确的金额");
+    }
+
+    if (walletData.balance < amount) {
+        return alert("钱包余额不足，当前余额：￥" + walletData.balance.toFixed(2));
+    }
+
+    // 扣钱
+    walletData.balance -= amount;
+    walletData.history.push({
+        title: '转账-给' + currentFriendName,
+        amount: '-' + amount.toFixed(2),
+        time: new Date().toLocaleString()
+    });
+
+    // 存入消息
+    if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    chatHistories[currentFriendName].push({
+        type: 'self',
+        text: amount.toFixed(2),
+        isTransfer: true,
+        transferNote: note
+    });
+
+    friends.find(f => f.name === currentFriendName).lastMsg = "[微信转账] ￥" + amount.toFixed(2);
+    updateWalletUI();
+    saveData();
+    renderMessages();
+    closeTransferModal();
+    getAiReply();
+}
         function sendMsg() { const val = document.getElementById('msg-input').value.trim(); if(!val) return; if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); friends.find(f => f.name === currentFriendName).lastMsg = val; document.getElementById('msg-input').value = ''; clearQuote(); saveData(); renderMessages(); getAiReply(); }
         function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : 'ME'; }
+        // --- 约会功能逻辑 ---
+
+// 打开约会页面
+function openDatingPage() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    document.getElementById('dating-user-avatar').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我';
+    document.getElementById('dating-friend-avatar').innerHTML = friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial;
+    document.getElementById('dating-page').classList.add('active');
+    document.getElementById('tool-box').style.display = 'none'; 
+    renderDatingMessages();
+}
+
+// 修改后的关闭逻辑：显示弹窗
+function closeDatingPage() {
+    document.getElementById('dating-exit-modal').style.display = 'flex';
+}
+
+// 约会消息渲染（从 datingHistories 读取）
+function renderDatingMessages() {
+    const container = document.getElementById('dating-container');
+    const history = datingHistories[currentFriendName] || [];
+    container.innerHTML = history.map(m => {
+        const friend = friends.find(f => f.name === currentFriendName);
+        let av = m.type === 'self' ? 
+            (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : 
+            (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
+        return `
+            <div class="dating-card">
+                <div class="dating-card-avatar">${av}</div>
+                <div class="dating-text">${m.text}</div>
+            </div>`;
+    }).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
+// 约会发送（存入 datingHistories 且长文本回复）
+async function sendDatingMsg() {
+    const input = document.getElementById('dating-input-field');
+    const val = input.value.trim();
+    if (!val) return;
+    if (!datingHistories[currentFriendName]) datingHistories[currentFriendName] = [];
+    datingHistories[currentFriendName].push({ type: 'self', text: val });
+    input.value = '';
+    renderDatingMessages();
+    await getDatingAiReply(); // 调用专门的约会AI逻辑
+}
+// --- 第三步的结尾：约会页面发送消息 ---
+async function sendDatingMsg() {
+    const input = document.getElementById('dating-input-field');
+    const val = input.value.trim();
+    if (!val) return;
+
+    // 存入独立的约会数据库 datingHistories
+    if (!datingHistories[currentFriendName]) datingHistories[currentFriendName] = [];
+    datingHistories[currentFriendName].push({ type: 'self', text: val });
+    
+    input.value = '';
+    renderDatingMessages();
+    
+    // 调用专门的约会模式 AI 回复（长文本不拆分）
+    await getDatingAiReply();
+    renderDatingMessages(); 
+}
+
+// --- 第四步开始：处理约会退出及双重总结逻辑 ---
+
+// 当点击退出弹窗里的“总结”或“不总结”按钮时触发
+async function confirmDatingExit(doSummarize) {
+    const modal = document.getElementById('dating-exit-modal');
+    const f = friends.find(f => f.name === currentFriendName);
+
+    if (!doSummarize) {
+        // 如果用户点“不总结”，直接关掉弹窗和约会界面
+        modal.style.display = 'none';
+        document.getElementById('dating-page').classList.remove('active');
+        return;
+    }
+
+    // 如果用户点“总结并存入记忆”
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
+    btn.innerText = "⏳ 正在同步时空记忆...";
+    btn.style.pointerEvents = "none"; // 防止重复点击
+
+    try {
+        // 1. 总结【线上】聊天记录（如果自上次总结以来有新消息的话）
+        const chatHist = chatHistories[currentFriendName] || [];
+        const newChatMsgs = chatHist.slice(f.lastSummaryIdx || 0);
+        let chatSummary = "";
+        if (newChatMsgs.length > 0) {
+            chatSummary = await fetchSummaryFromAPI("线上聊天", newChatMsgs);
+        }
+
+        // 2. 总结【线下约会】记录
+        const dateHist = datingHistories[currentFriendName] || [];
+        let dateSummary = "";
+        if (dateHist.length > 0) {
+            dateSummary = await fetchSummaryFromAPI("线下约会", dateHist);
+        }
+
+        // 3. 将两份总结按顺序存入长期记忆
+        const timestamp = new Date().toLocaleString();
+        if (chatSummary) {
+            f.longMemory = (f.longMemory ? f.longMemory + "\n" : "") + `[${timestamp} 线上总结]: ${chatSummary}`;
+        }
+        if (dateSummary) {
+            f.longMemory = (f.longMemory ? f.longMemory + "\n" : "") + `[${timestamp} 约会总结]: ${dateSummary}`;
+        }
+        
+        // 更新线上总结的标记点，并清空本次约会记录
+        f.lastSummaryIdx = chatHist.length; 
+        datingHistories[currentFriendName] = []; 
+        
+        saveData(); // 保存到本地浏览器缓存
+        alert("记忆已交织，时空已同步。");
+    } catch (e) {
+        console.error(e);
+        alert("记忆总结过程中出现了一点小意外，请检查网络或API设置。");
+    } finally {
+        // 恢复按钮状态并退出界面
+        modal.style.display = 'none';
+        document.getElementById('dating-page').classList.remove('active');
+        btn.innerText = originalText;
+        btn.style.pointerEvents = "auto";
+    }
+}
+
+// 辅助函数：专门用来敲 AI 的门，让它写总结
+async function fetchSummaryFromAPI(type, msgs) {
+    if (!aiConfig.key) return "";
+    // 把对话转换成 AI 能看懂的格式
+    const msgContent = msgs.map(m => `${m.type === 'self' ? '用户' : 'AI'}: ${m.text}`).join('\n');
+    const sysPrompt = `你是一个记忆总结专家。请简要总结这段[${type}]中用户表现出的喜好、情感状态及重要约定。只输出总结内容，不要带开头语。`;
+    
+    const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+        method: 'POST',
+        headers: { 
+            'Authorization': 'Bearer ' + aiConfig.key, 
+            'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ 
+            model: aiConfig.model, 
+            messages: [
+                { role: "system", content: sysPrompt }, 
+                { role: "user", content: "需要总结的内容如下：\n" + msgContent }
+            ] 
+        })
+    });
+    const data = await res.json();
+    return data.choices[0].message.content.trim();
+}
+
+// 约会专用 AI 回复逻辑：长文字，不拆分
+async function getDatingAiReply() {
+    if(!aiConfig.key) return;
+    const friend = friends.find(f => f.name === currentFriendName);
+    const history = (datingHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
+    let sys = `# Role\n你现在正和用户进行[线下约会]。人设：${friend.persona}。\n# 任务\n请进行沉浸式的互动描述，包括你的动作、神态、环境和对话。使用长文字输出，严禁拆分成短句。不要发送HTML代码。`;
+    
+    try {
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, ...history] })
+        });
+        const data = await res.json();
+        const aiReply = data.choices[0].message.content.trim();
+        
+        // 直接存入一个完整的长气泡
+        datingHistories[currentFriendName].push({ type: 'friend', text: aiReply });
+        saveData();
+        renderDatingMessages();
+    } catch (e) { alert("约会互动失败"); }
+}
         function openChat(n) { currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active'); if(window.pendingRecharge) { if(!chatHistories[n]) chatHistories[n] = []; chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); } setTimeout(renderMessages, 50); }
         function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; setTimeout(renderChatList, 10); }
         function openSettings() { 
@@ -1822,6 +2343,34 @@ applyGlobalStyles = function() {
     applyAllBackgrounds();
 };
 applyAllBackgrounds(); // 初始化执行一次
+// 领取 AI 发来的转账
+function receiveAiTransfer(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    // 只有 AI 发来的、且状态不是已收、不是已退的才能领
+    if (!msg || msg.type !== 'friend' || msg.status === 'received' || msg.status === 'refunded') return;
+
+    const amount = parseFloat(msg.text);
+    
+    // 1. 修改卡片状态为已接收
+    msg.status = 'received';
+
+    // 2. 将金额加到你的钱包余额里
+    walletData.balance += amount;
+    
+    // 3. 在钱包明细里增加一条收入记录
+    walletData.history.push({
+        title: '转账收入-来自' + currentFriendName,
+        amount: '+' + amount.toFixed(2),
+        time: new Date().toLocaleString()
+    });
+
+    // 4. 更新钱包界面、保存数据并刷新聊天框
+    updateWalletUI();
+    saveData();
+    renderMessages();
+    
+    alert("已成功领取 " + currentFriendName + " 的转账 ￥" + amount.toFixed(2));
+}
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -1914,5 +2463,51 @@ applyAllBackgrounds(); // 初始化执行一次
             <div style="text-align:center; margin-top:15px; color:#666; cursor:pointer; font-size:14px;" onclick="closeBgSettingModal()">取消</div>
         </div>
     </div>
+<!-- 约会模拟页面 -->
+<div id="dating-page" class="page">
+    <div class="dating-header">
+        <span onclick="closeDatingPage()" style="position:absolute; left:15px; font-size:18px; color:#999;">✕</span>
+        <div class="dating-avatar-wrap" id="dating-user-avatar"></div>
+        <div class="dating-heart">❤️</div>
+        <div class="dating-avatar-wrap" id="dating-friend-avatar"></div>
+    </div>
+    <div id="dating-container" class="dating-content"></div>
+    <div class="dating-input-bar">
+        <input type="text" id="dating-input-field" class="dating-input" placeholder="写下这一刻的互动..." onkeydown="if(event.key==='Enter') sendDatingMsg()">
+        <div class="dating-send-btn" onclick="sendDatingMsg()">发送</div>
+    </div>
+</div>
+<!-- 退出约会确认弹窗 -->
+<div id="dating-exit-modal" class="glass-modal" style="z-index: 8000;">
+    <div class="glass-card" style="text-align: center;">
+        <h3 style="margin-bottom: 20px; color: #333;">约会结束</h3>
+        <p style="font-size: 14px; color: #666; margin-bottom: 25px;">是否需要将本次约会的点滴存入记忆？</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="wx-btn wx-btn-recharge" style="width: 100%; margin-bottom: 0;" onclick="confirmDatingExit(true)">✨ 总结并存入记忆</button>
+            <button class="wx-btn" style="width: 100%; background: rgba(255,255,255,0.8); color: #888;" onclick="confirmDatingExit(false)">不总结，直接退出</button>
+        </div>
+    </div>
+</div>
+<!-- 转账输入弹窗 -->
+<div id="transfer-modal" class="glass-modal" style="z-index: 9000;">
+    <div class="glass-card" style="width: 280px; padding: 20px; border-radius: 15px;">
+        <h3 style="text-align: center; margin-bottom: 20px; font-size: 17px;">转账给好友</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 12px; color: #888;">转账金额</label>
+            <input type="number" id="transfer-amount-input" style="width: 100%; border: none; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 24px; outline: none;" placeholder="0.00">
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <label style="font-size: 12px; color: #888;">添加转账说明</label>
+            <input type="text" id="transfer-note-input" style="width: 100%; border: none; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 14px; outline: none;" placeholder="转账备注">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; background: #eee; color: #666; margin-bottom: 0;" onclick="closeTransferModal()">取消</button>
+            <button class="wx-btn wx-btn-recharge" style="flex: 1; margin-bottom: 0;" onclick="executeTransfer()">发送转账</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
