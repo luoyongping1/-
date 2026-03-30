@@ -399,17 +399,45 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         if (currentAppId === 'qq') {
-            try {
-                const sysPrompt = `你现在是手机破解专家。你正在破解[${targetName}]的QQ联系人。此人的人设是：${targetFriend.persona}。请根据人设虚构出5个此人的QQ好友。格式：名字1:关系简述1|名字2:关系简述2... (只输出格式内容)`;
-                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                    method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
-                });
-                const data = await res.json();
-                currentQQFriends = data.choices[0].message.content.split('|').map(item => { const [n, r] = item.split(':'); return { name: n, relation: r }; });
-                renderQQList();
-            } catch (e) { alert("破解失败"); } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
-        } else {
+    try {
+        const sysPrompt = `你现在是手机破解专家。你正在破解[${targetName}]的QQ联系人。
+        被查者[${targetName}]的人设是：${targetFriend.persona}。
+        请根据人设虚构出5个QQ好友，并为每个好友编造3轮历史对话（好友先说，被查者回，共6条消息）。
+        格式要求（严格遵守，只输出格式内容）：
+        名字:关系:话1#话2#话3#话4#话5#话6|名字:关系:话1#话2#话3#话4#话5#话6...`;
+        
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+        });
+        const data = await res.json();
+        const rawData = data.choices[0].message.content;
+        
+        // 解析逻辑：先按 | 分隔好友，再按 : 分隔名字/关系/对话
+        currentQQFriends = rawData.split('|').map(item => { 
+            const parts = item.split(':'); 
+            const name = parts[0];
+            const relation = parts[1];
+            const chatText = parts[2] || "";
+            
+            // 将 6 条对话按 # 分隔并存入对应的历史记录
+            const msgs = chatText.split('#');
+            qqChatHistories[name] = msgs.map((txt, idx) => ({
+                type: idx % 2 === 0 ? 'friend' : 'self', // 偶数是好友，奇数是被查者自己
+                text: txt.trim()
+            }));
+
+            return { name: name, relation: relation }; 
+        });
+        
+        renderQQList();
+    } catch (e) { 
+        console.error(e);
+        alert("破解失败"); 
+    } finally { 
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; 
+    }
+} else {
             content.innerHTML = `<p>正在深入分析 ${targetName} 的数据流...</p>`;
             try {
                 const sysPrompt = `你现在是手机分析专家。你正在翻阅[${targetName}]的手机。此人的人设是：${targetFriend.persona}。请编造一条关于此人手机里的秘密（最近搜索、相册、日记等）。100字内，语气带点偷窥感，符合人设。`;
