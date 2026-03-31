@@ -731,18 +731,22 @@ function renderWallet() {
     
     let listHtml = '';
     walletHistory.list.forEach(item => {
-        listHtml += `
-            <div class="trans-item">
-                <div class="trans-main">
-                    <span class="trans-title">${item.title}</span>
-                    <span class="trans-amount">-${item.price}</span>
-                </div>
-                <div class="trans-time">${item.time}</div>
-                <div class="trans-comment">
-                    <b><i class="fas fa-heart"></i> 消费心理:</b> ${item.comment}
-                </div>
-            </div>`;
-    });
+    // 清理掉评价里可能存在的“评价：”、“消费心理：”等冗余字样
+    const cleanComment = (item.comment || "").replace(/(评价|心理|活动|消费心理|心理评价)[：:]/g, '').replace(/\*/g, '').trim();
+    const cleanTitle = (item.title || "").replace(/\*/g, '').trim();
+
+    listHtml += `
+        <div class="trans-item">
+            <div class="trans-main">
+                <span class="trans-title">${cleanTitle}</span>
+                <span class="trans-amount">-${item.price}</span>
+            </div>
+            <div class="trans-time">${item.time}</div>
+            <div class="trans-comment">
+                <b><i class="fas fa-heart"></i> 消费心理:</b> ${cleanComment}
+            </div>
+        </div>`;
+});
 
     content.innerHTML = `
         <div class="wallet-card">
@@ -987,22 +991,36 @@ renderPhotoList();
     }
 } else if (currentAppId === 'wallet') {
     try {
-        const sysPrompt = `你现在是手机财务破解专家。你正在查看[${targetName}]的银行卡账单。
-        被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构账户总余额和最近7条消费明细。
-        【重要要求】：消费评价必须是一段感性的、口语化的【心理描写】（例如：看到这个包包就想起他，咬牙买了），绝对严禁只输出数字评分。
-        格式要求：总余额|项目:金额:时间:心理评价文字#项目:金额:时间:心理评价文字...`;
+        const sysPrompt = `你现在是手机财务破解专家。你正在破解[${targetName}]的银行卡。
+【绝对指令】：直接输出结果，严禁输出任何开场白、解释或“以下是恢复内容”等字样！
+【绝对指令】：必须以数字和管道符开头，格式为：余额数字|项目:金额:时间:心理评价文字...
+【要求】：评价文字必须是口语化的感性话语（如：这双鞋想了好久终于买了），严禁只给数字。
+示例格式：15840.50|某运动旗舰店:1899.00:昨天 18:这双鞋子虽然贵，但穿上它去见他一定很棒#便利店:15.50:今天 10:心情不好，买个甜筒安慰下`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
         });
         const data = await res.json();
-        const rawData = data.choices[0].message.content;
-        
-        const mainParts = rawData.split('|');
-        const balance = mainParts[0].trim();
-        const items = mainParts[1].split('#');
+let rawContent = data.choices[0].message.content;
+
+// --- 核心修复：自动清理开场白 ---
+// 1. 如果 AI 废话太多，我们只从第一个数字开始截取
+if (rawContent.includes('|')) {
+    const firstPipe = rawContent.indexOf('|');
+    // 尝试在第一个竖线前找数字开头
+    const tempStr = rawContent.substring(0, firstPipe);
+    const match = tempStr.match(/\d/); 
+    if (match) {
+        rawContent = rawContent.substring(rawContent.indexOf(match[0]));
+    }
+}
+// 2. 清理掉星号、元、逗号，防止显示错乱
+rawContent = rawContent.replace(/\*\*|元|,/g, '').trim();
+
+const mainParts = rawContent.split('|');
+const balance = mainParts[0].trim();
+const items = (mainParts[1] || "").split('#');
         
         const list = items.map(str => {
             const p = str.split(':');
