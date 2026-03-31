@@ -350,7 +350,7 @@
     </div>
 
     <script>
-                let coins = 8;
+        let coins = 8;
         let wallet = 100.00;
         const ballColors = ['#ffb7c5', '#c3f0ca', '#bae1ff', '#ffffba', '#e2ceff', '#ffd3b6'];
 
@@ -398,6 +398,7 @@
 
         function initBalls() {
             const container = document.getElementById('balls-container');
+            container.innerHTML = ""; // 清空旧的
             for(let i=0; i<12; i++) {
                 const b = document.createElement('div');
                 b.className = 'ball';
@@ -441,48 +442,45 @@
         }
 
         async function showResult() {
-    const overlay = document.getElementById('result-overlay');
-    const target = document.getElementById('note-target');
-    
-    // 1. 随机选个好友
-    const char = qqFriends[Math.floor(Math.random() * qqFriends.length)];
-    // 2. 随机选个样式
-    const styleNum = Math.floor(Math.random() * 3) + 1;
-    
-    // 3. 先显示“正在书写”的加载状态
-    overlay.style.display = 'flex';
-    target.innerHTML = `<div class="note-style-${styleNum}" style="text-align:center; padding-top:100px;">
-        <div class="note-content">💖 ${char.name} 正在认真书写中...</div>
-    </div>`;
-
-    // 4. 调用 AI 获取内容
-    const aiText = await getAiResponse(char.name, char.prompt || "你的好朋友");
-
-    // 5. 渲染最终的小纸条
-    let footerText = styleNum === 1 ? `来自你的好友：${char.name}` : 
-                    (styleNum === 2 ? `发送人：${char.name}` : `${char.name} 的秘密悄悄话`);
-    let btnText = styleNum === 1 ? `收起便签` : 
-                 (styleNum === 2 ? `我知道啦` : `乖乖收好`);
-
-    target.innerHTML = `
-        <div class="note-style-${styleNum}">
-            ${styleNum === 2 ? '<div class="tape-purple"></div>' : ''}
-            ${styleNum === 3 ? '<div class="pin"></div>' : ''}
-            <div class="note-content" style="${styleNum === 2 ? 'padding-top:10px;' : ''}">${aiText}</div>
-            <div class="note-author">—— ${footerText}</div>
-            <button class="close-note-btn" onclick="closeResult()">${btnText}</button>
-        </div>
-    `;
-}
-
-            target.innerHTML = noteHtml;
+            const overlay = document.getElementById('result-overlay');
+            const target = document.getElementById('note-target');
+            
+            // 1. 随机选个好友
+            const char = qqFriends[Math.floor(Math.random() * qqFriends.length)];
+            // 2. 随机选个样式
+            const styleNum = Math.floor(Math.random() * 3) + 1;
+            
+            // 3. 先显示“正在书写”的加载状态
             overlay.style.display = 'flex';
+            target.innerHTML = `<div class="note-style-${styleNum}" style="text-align:center; padding-top:100px;">
+                <div class="note-content">💖 ${char.name} 正在认真书写中...</div>
+            </div>`;
+
+            // 4. 调用 AI 获取内容
+            const aiText = await getAiResponse(char.name, char.prompt || "你的好朋友");
+
+            // 5. 渲染最终的小纸条
+            let footerText = styleNum === 1 ? `来自你的好友：${char.name}` : 
+                            (styleNum === 2 ? `发送人：${char.name}` : `${char.name} 的秘密悄悄话`);
+            let btnText = styleNum === 1 ? `收起便签` : 
+                         (styleNum === 2 ? `我知道啦` : `乖乖收好`);
+
+            target.innerHTML = `
+                <div class="note-style-${styleNum}">
+                    ${styleNum === 2 ? '<div class="tape-purple"></div>' : ''}
+                    ${styleNum === 3 ? '<div class="pin"></div>' : ''}
+                    <div class="note-content" style="${styleNum === 2 ? 'padding-top:10px;' : ''}">${aiText}</div>
+                    <div class="note-author">—— ${footerText}</div>
+                    <button class="close-note-btn" onclick="closeResult()">${btnText}</button>
+                </div>
+            `;
         }
 
         function closeResult() {
             document.getElementById('result-overlay').style.display = 'none';
         }
 
+        // 初始化
         initBalls();
         updateUI();
     </script>
