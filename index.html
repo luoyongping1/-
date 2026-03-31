@@ -374,6 +374,7 @@
             <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
             <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
             <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
+<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()" style="background: rgba(180, 199, 231, 0.2); border: 1px solid #B4C7E7; color: #8D6E63;">自律打卡</div>
         </div>
 
     </div>
@@ -691,10 +692,11 @@
         }
 
         // --- App 控制逻辑 ---
-        function openQQ() { showAppFrame("qq.html"); }
+function openQQ() { showAppFrame("qq.html"); }
 function openApp() { showAppFrame("书书小红书.html"); }
 // 新增：打开扭蛋机函数
 function openGacha() { showAppFrame("扭蛋机.html"); }
+function openSelfApp() { showAppFrame("自律.html"); }
 
 // --- 新增：左右滑动逻辑 ---
 let startX = 0;
@@ -1157,9 +1159,9 @@ function applyCustomBallCss(cssText) {
 
         let currentEditingAppId = null;
         const appNames = {
-            'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
-            'item-face': '外观', 'item-set': '设置'
-        };
+    'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
+    'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡'
+};
         function showAppListModal() {
             const container = document.getElementById('app-items-container');
             container.innerHTML = "";
