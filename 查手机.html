@@ -381,6 +381,50 @@
     color: #dbdbdb;
     margin-bottom: 8px;
 }
+/* 银行卡与钱包列表样式 */
+.wallet-card {
+    background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%);
+    border-radius: 20px;
+    padding: 25px;
+    color: white;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+}
+.wallet-card::after {
+    content: "VISA";
+    position: absolute;
+    bottom: 20px; right: 25px;
+    font-weight: bold; font-style: italic; font-size: 20px; opacity: 0.3;
+}
+.wallet-balance-label { font-size: 13px; opacity: 0.7; margin-bottom: 8px; }
+.wallet-balance-num { font-size: 32px; font-weight: 700; letter-spacing: 1px; }
+.wallet-card-chip { width: 45px; height: 35px; background: #d4af37; border-radius: 6px; margin-bottom: 20px; opacity: 0.8; }
+
+.trans-item {
+    background: #ffffff;
+    border-bottom: 1px solid #f2f2f2;
+    padding: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.trans-main { display: flex; justify-content: space-between; align-items: center; }
+.trans-title { font-size: 15px; font-weight: 600; color: #333; }
+.trans-amount { font-size: 16px; font-weight: bold; color: #ff4d4f; }
+.trans-time { font-size: 11px; color: #bbb; }
+/* 角色点评样式 */
+.trans-comment {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.5;
+    border-left: 3px solid #bc1888;
+}
+.trans-comment b { color: #bc1888; margin-right: 4px; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -448,7 +492,8 @@ let browserHistory = []; // 新增：用于存放生成的浏览器记录
 let shopCartData = [];   
 let currentDiaryData = null; // 存放当前生成的日记
 let savedDiaries = JSON.parse(localStorage.getItem('saved_diaries')) || []; 
-let albumData = []; // 新增：用于存放生成的相册描述数据
+let albumData = []; 
+let walletHistory = null; // 新增：用于存放生成的银行卡和消费数据
 
     window.onload = () => {
         const targetName = localStorage.getItem('target_check_name') || "手机";
@@ -590,7 +635,11 @@ let albumData = []; // 新增：用于存放生成的相册描述数据
     document.getElementById('app-window').style.display = 'flex';
 } else if(id === 'photo') {
     document.getElementById('app-title').innerText = '私密相册';
-    renderPhotoList(); // 调用渲染相册的函数
+    renderPhotoList();
+    document.getElementById('app-window').style.display = 'flex';
+} else if(id === 'wallet') {
+    document.getElementById('app-title').innerText = '我的钱包';
+    renderWallet(); // 调用渲染钱包的函数
     document.getElementById('app-window').style.display = 'flex';
 } else if(id === 'fav') {
         document.getElementById('app-title').innerText = '我的收藏';
@@ -665,6 +714,45 @@ function renderPhotoList() {
     });
     html += '</div>';
     content.innerHTML = html;
+}
+
+// 渲染银行卡和消费记录
+function renderWallet() {
+    const content = document.getElementById('app-content');
+    if (!walletHistory) {
+        content.innerHTML = `
+            <div style="text-align:center; margin-top:100px; color:#999;">
+                <i class="fas fa-credit-card" style="font-size:40px; margin-bottom:10px;"></i>
+                <p>账户信息已加密</p>
+                <p style="font-size:12px;">点击右上角 AI 按钮破解支付数据</p>
+            </div>`;
+        return;
+    }
+    
+    let listHtml = '';
+    walletHistory.list.forEach(item => {
+        listHtml += `
+            <div class="trans-item">
+                <div class="trans-main">
+                    <span class="trans-title">${item.title}</span>
+                    <span class="trans-amount">-${item.price}</span>
+                </div>
+                <div class="trans-time">${item.time}</div>
+                <div class="trans-comment">
+                    <b><i class="fas fa-heart"></i> 消费心理:</b> ${item.comment}
+                </div>
+            </div>`;
+    });
+
+    content.innerHTML = `
+        <div class="wallet-card">
+            <div class="wallet-card-chip"></div>
+            <div class="wallet-balance-label">账户可用余额 (CNY)</div>
+            <div class="wallet-balance-num">￥ ${walletHistory.balance}</div>
+        </div>
+        <h4 style="margin: 20px 0 10px; color:#333;">最近交易账单</h4>
+        <div class="transaction-list">${listHtml}</div>
+    `;
 }
 
 // 点击便签切换显示内容
@@ -884,8 +972,39 @@ function renderBrowserList() {
         }));
         
         renderPhotoList();
-    } catch (e) {
+        } catch (e) {
         alert("恢复失败");
+    } finally {
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+    }
+} else if (currentAppId === 'wallet') {
+    try {
+        const sysPrompt = `你现在是手机财务破解专家。你正在查看[${targetName}]的银行卡账单。
+        被查者[${targetName}]的人设是：${targetFriend.persona}。
+        请根据人设虚构出其账户总余额，以及最近的7条消费明细。
+        每一条消费明细需要包括：消费项目、金额、时间、以及此人当时买这个东西时的心理活动评价。
+        格式要求：总余额|项目:金额:时间:评价#项目:金额:时间:评价...`;
+        
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+        });
+        const data = await res.json();
+        const rawData = data.choices[0].message.content;
+        
+        const mainParts = rawData.split('|');
+        const balance = mainParts[0].trim();
+        const items = mainParts[1].split('#');
+        
+        const list = items.map(str => {
+            const p = str.split(':');
+            return { title: p[0], price: p[1], time: p[2], comment: p[3] };
+        });
+
+        walletHistory = { balance: balance, list: list };
+        renderWallet();
+    } catch (e) {
+        alert("破解失败");
     } finally {
         btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
     }
