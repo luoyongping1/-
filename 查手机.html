@@ -17,15 +17,22 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     user-select: none;
-    touch-action: auto; /* 修改这里：允许手势，否则无法滑动 */
+    touch-action: auto; 
     box-sizing: border-box;
 }
+/* 新增：允许输入框可以被点击和输入 */
+input, textarea {
+    user-select: auto !important;
+    touch-action: auto !important;
+}
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background: var(--bg); font-family: -apple-system, sans-serif;
-            overflow: hidden;
-        }
+body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    /* 修改这里：背景改为透明，否则会遮挡底层的壁纸 */
+    background: transparent; 
+    font-family: -apple-system, sans-serif;
+    overflow: hidden;
+}
 
         #wallpaper {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -496,18 +503,21 @@ let albumData = [];
 let walletHistory = null; // 新增：用于存放生成的银行卡和消费数据
 
     window.onload = () => {
-        const targetName = localStorage.getItem('target_check_name') || "手机";
-        document.title = targetName + "的手机";
-        const saved = localStorage.getItem('ai_persona_v3');
-        if(saved) {
-            const data = JSON.parse(saved);
-            layout = data.layout;
-            if(data.wallpaper) document.getElementById('wallpaper').style.backgroundImage = data.wallpaper;
+    const targetName = localStorage.getItem('target_check_name') || "手机";
+    document.title = targetName + "的手机";
+    const saved = localStorage.getItem('ai_persona_v3');
+    if(saved) {
+        const data = JSON.parse(saved);
+        layout = data.layout;
+        // 确保加载保存的壁纸并应用到背景
+        if(data.wallpaper) {
+            document.getElementById('wallpaper').style.backgroundImage = data.wallpaper;
         }
-        render();
-        updateTime();
-        setInterval(updateTime, 1000);
-    };
+    }
+    render();
+    updateTime();
+    setInterval(updateTime, 1000);
+};
 
     function updateTime() {
         const now = new Date();
@@ -770,7 +780,17 @@ function togglePhoto(index) {
     document.getElementById('diary-fav-btn').style.display = 'none'; // 退出时隐藏收藏按钮
 }
     function editIcon(idx) { const url = prompt("图标 URL:", layout[idx].icon); if(url) { layout[idx].icon = url; render(); save(); } }
-    function updateWallpaper() { const url = document.getElementById('wp-url').value; document.getElementById('wallpaper').style.backgroundImage = `url('${url}')`; save(); alert("已更新"); }
+    function updateWallpaper() { 
+    const url = document.getElementById('wp-url').value.trim(); 
+    if (!url) {
+        alert("请输入有效的图片地址");
+        return;
+    }
+    // 确保 URL 格式正确地应用到背景上
+    document.getElementById('wallpaper').style.backgroundImage = "url('" + url + "')";
+    save(); 
+    alert("壁纸更新成功！"); 
+}
     function save() { localStorage.setItem('ai_persona_v3', JSON.stringify({ layout: layout, wallpaper: document.getElementById('wallpaper').style.backgroundImage })); }
 
     function renderQQList() {
