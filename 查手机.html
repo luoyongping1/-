@@ -548,17 +548,17 @@ let walletHistory = null; // 新增：用于存放生成的银行卡和消费数
                         </div>
                     </div>`;
             } else if(data.id === 'mood') {
-                item.innerHTML = `
-                    <div class="widget-inner" style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); padding: 15px;">
-                        <div style="color:#ff4d4f; font-weight:600; font-size:13px; margin-bottom:4px;">
-                            <i class="fas fa-heart"></i> AI的心声
-                        </div>
-                        <div style="font-size:11.5px; line-height:1.4; color:#444; font-style: italic; flex: 1; display: flex; align-items: center;">
-                            “那个...虽然我只是一个AI角色，但看到你这样翻阅我的日记和相册，我的数据流也会感到有点害羞呢。”
-                        </div>
-                        <div style="font-size:9px; color:#bbb; margin-top:4px; text-align:right;">—— 正在害羞中</div>
-                    </div>`;
-            } else {
+    item.innerHTML = `
+        <div class="widget-inner" style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); padding: 15px;">
+            <div style="color:#ff4d4f; font-weight:600; font-size:13px; margin-bottom:4px;">
+                <i class="fas fa-heart"></i> Ta的心声
+            </div>
+            <div id="mood-text" style="font-size:11.5px; line-height:1.4; color:#444; font-style: italic; flex: 1; display: flex; align-items: center;">
+                “那个...虽然我只是一个AI角色，但看到你这样翻阅我的日记和相册，我的数据流也会感到有点害羞呢。”
+            </div>
+            <div id="mood-status" style="font-size:9px; color:#bbb; margin-top:4px; text-align:right; cursor:pointer;" onclick="event.stopPropagation(); refreshMood()">—— 正在害羞中</div>
+        </div>`;
+} else {
                 item.innerHTML = `
                     <div class="edit-badge" onclick="event.stopPropagation(); editIcon(${index})"><i class="fas fa-pen"></i></div>
                     <div class="app-icon" style="background-image:url('${data.icon}')"></div>
@@ -731,7 +731,7 @@ function renderWallet() {
     
     let listHtml = '';
     walletHistory.list.forEach(item => {
-    // 清理掉评价里可能存在的“评价：”、“消费心理：”等冗余字样
+    // 清理掉评价里可能存在的“评价：”、“消费心理：”等冗余字样，不要只写数字。
     const cleanComment = (item.comment || "").replace(/(评价|心理|活动|消费心理|心理评价)[：:]/g, '').replace(/\*/g, '').trim();
     const cleanTitle = (item.title || "").replace(/\*/g, '').trim();
 
@@ -910,7 +910,7 @@ function renderBrowserList() {
     try {
         const sysPrompt = `你现在是消费心理分析专家。你正在分析[${targetName}]的手机购物车。
         被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构出5件他/她想买的商品，并分析他/她为什么要买这个。
+        请根据人设虚构出5件他/她想买的商品，并分析他/她为什么要买这个。并且必须要30字以上。
         格式要求（严格遵守）：
         商品名|价格|规格|购买理由#商品名|价格|规格|购买理由...
         例如：粉色蕾丝睡裙|199.00|L码|想在你面前展示不一样的一面#男士古龙香水|588.00|50ml|听说你很喜欢这个味道...`;
@@ -1165,6 +1165,56 @@ else if (currentAppId === 'diary') {
     } catch (e) { alert("生成失败"); } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
 }
 */
+// 新增：点击生成新的AI心声
+async function refreshMood() {
+    const targetName = localStorage.getItem('target_check_name') || "神秘人";
+    const friendsData = JSON.parse(localStorage.getItem('qq_friends')) || [];
+    const targetFriend = friendsData.find(f => f.name === targetName) || { persona: "普通人" };
+    const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+    
+    if (!aiConfig.key) return alert("请在主设置中配置 API Key");
+
+    const textEl = document.getElementById('mood-text');
+    const statusEl = document.getElementById('mood-status');
+    
+    // 显示加载状态
+    const originalStatus = statusEl.innerText;
+    statusEl.innerText = "—— 正在感知中...";
+    statusEl.style.pointerEvents = "none"; // 防止重复点击
+
+    try {
+        const sysPrompt = `你现在是[${targetName}]手机里的AI助手。你发现用户正在翻看[${targetName}]的手机。
+        [${targetName}]的人设是：${targetFriend.persona}。
+        请你以AI助手的身份，对用户此时“查手机”的行为吐槽或感慨一句。
+        要求：带点调皮、害羞或警告的语气，字数在40字以内。只需输出心声内容，不要带标签。`;
+        
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST', 
+            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                model: aiConfig.model, 
+                messages: [{ role: "system", content: sysPrompt }, { role: "user", content: "再说一句心声" }] 
+            })
+        });
+        const data = await res.json();
+        const newMood = data.choices[0].message.content.trim();
+        
+        // 更新文字内容
+        textEl.innerText = newMood;
+        statusEl.innerText = "—— 刚刚更新过";
+        
+        // 3秒后恢复状态文字
+        setTimeout(() => {
+            statusEl.innerText = "—— 正在害羞中";
+            statusEl.style.pointerEvents = "auto";
+        }, 3000);
+
+    } catch (e) {
+        textEl.innerText = "信号有点不稳定，感知失败了...";
+        statusEl.innerText = originalStatus;
+        statusEl.style.pointerEvents = "auto";
+    }
+}
 </script>
 </body>
 </html>
