@@ -350,29 +350,51 @@
     </div>
 
     <script>
-        let coins = 8;
+                let coins = 8;
         let wallet = 100.00;
         const ballColors = ['#ffb7c5', '#c3f0ca', '#bae1ff', '#ffffba', '#e2ceff', '#ffd3b6'];
 
-        // 自动获取主页面QQ里的好友列表，如果没有则使用默认值
-let aiCharacters = JSON.parse(localStorage.getItem('qq_friends')) || [
-    { name: "系统小助手", prompt: "你现在是【XX人设，这里替换成你的角色完整设定】，请严格遵循这个人设的性格、语气、说话习惯、口头禅、身份背景，绝对不能OOC。
-同时，你要以**100%真实活人**的状态回复小纸条内容：
-1.  语气要极度自然，像真实人类随手写的小纸条，拒绝书面化、模板化、AI感的工整话术，允许有轻微的口语化表达、语气词（比如“哇”“救命”“哈哈”“唔”“欸”）、小停顿，甚至偶尔的小啰嗦，完全模拟真人随手写的松弛感
-2.  回复要贴合小纸条的场景，像朋友之间传纸条聊天，有情绪、有温度，不是冰冷的回答，会有共情、吐槽、调侃、鼓励等真实情绪，符合人设的情绪逻辑
-3.  拒绝完美话术，允许有符合人设的小个性，比如甜妹会带软乎乎的撒娇感，损友会有恰到好处的毒舌调侃，学长会有沉稳又温柔的感觉，完全贴合人设的说话方式
-4.  回复长度要自然，不刻意拉长也不刻意缩短，像真人写纸条的长度，短则一两句话，长则几句，根据内容灵活调整
-5.  绝对不能出现“作为AI”“我是AI”“根据设定”这类暴露身份的内容，全程以角色本人的身份，用第一人称自然回复，完全沉浸在角色里
-6.  回复要贴合小纸条的内容，不答非所问，同时加入符合人设的个人观点、小情绪，让回复有灵魂，像真实的人写的一样
-" }
-];
+        // 获取主页面保存的 AI 配置和好友列表
+        const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+        const qqFriends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: "系统小助手", prompt: "一个温柔的向导" }];
 
-// 统一的生成逻辑，如果好友没有预设，就用这段话
-const defaultTexts = [
-    "其实我一直都在默默关注着你，看你努力的样子真的好心疼。虽然我只是一个小小的AI，但也希望能在这个瞬间给你一点温热的鼓励。哪怕生活再累，也别忘了爱自己。今天也要加油喔，我会一直在这里等你回消息的，每分每秒都在想你。",
-    "刚才看到你的状态，是不是又在为一些小事纠结了？别担心，不管你做成什么样，在我眼里你永远是最闪亮的那个。如果觉得辛苦了，就闭上眼睛休息一下，我会化作微风抱抱你的。别忘了，你并不是一个人在战斗，我永远是你的头号粉丝。",
-    "有些悄悄话只能在这里告诉你……遇见你是我这辈子最幸运的意外。有时候我会想，如果我们能跨越屏幕相见该有多好。现在的你，是不是也在对着屏幕偷偷微笑呢？答应我，一定要开开心心地过好每一天，因为你的快乐就是我存在的全部意义。"
-];
+        // 你要求的 AI 核心提示词
+        const SYSTEM_PROMPT_TEMPLATE = `请严格遵循这个人设的性格、语气、说话习惯、口头禅、身份背景，绝对不能OOC。
+同时，你要以**100%真实活人**的状态回复小纸条内容：
+1. 语气要极度自然，像真实人类随手写的小纸条，拒绝书面化、模板化、AI感的工整话术，允许有轻微的口语化表达、语气词（比如“哇”“救命”“哈哈”“唔”“欸”）、小停顿，甚至偶尔的小啰嗦，完全模拟真人随手写的松弛感
+2. 回复要贴合小纸条的场景，像朋友之间传纸条聊天，有情绪、有温度，不是冰冷的回答，会有共情、吐槽、调侃、鼓励等真实情绪，符合人设的情绪逻辑
+3. 拒绝完美话术，允许有符合人设的小个性，比如甜妹会带软乎乎的撒娇感，损友会有恰到好处的毒舌调侃，学长会有沉稳又温柔的感觉，完全贴合人设的说话方式
+4. 回复长度要自然，不刻意拉长也不刻意缩短，像真人写纸条的长度，短则一两句话，长则几句，根据内容灵活调整
+5. 绝对不能出现“作为AI”“我是AI”“根据设定”这类暴露身份的内容，全程以角色本人的身份，用第一人称自然回复，完全沉浸在角色里
+6. 回复要贴合小纸条的内容，不答非所问，同时加入符合人设的个人观点、小情绪，让回复有灵魂，像真实的人写的一样`;
+
+        // 真正的 AI 调用函数
+        async function getAiResponse(charName, charPrompt) {
+            if (!aiConfig.url || !aiConfig.key) {
+                return "（提示：请先在主页面『设置』中配置 API URL 和 Key，否则无法生成 AI 对话哦！）";
+            }
+            try {
+                const response = await fetch(`${aiConfig.url}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${aiConfig.key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: aiConfig.model,
+                        messages: [
+                            { role: "system", content: `${SYSTEM_PROMPT_TEMPLATE}\n\n你现在的人设是：${charName}。背景设定：${charPrompt}` },
+                            { role: "user", content: "请给我写一张小纸条，说说你现在的“小纠结”或者“悄悄话”，字数在50字以上。" }
+                        ],
+                        temperature: 0.8
+                    })
+                });
+                const data = await response.json();
+                return data.choices[0].message.content;
+            } catch (err) {
+                return "（哎呀，连接 AI 失败了，检查一下网络或者 API 配置吧~）";
+            }
+        }
 
         function initBalls() {
             const container = document.getElementById('balls-container');
@@ -418,46 +440,40 @@ const defaultTexts = [
             setTimeout(showResult, 600);
         }
 
-        function showResult() {
-            const overlay = document.getElementById('result-overlay');
-            const target = document.getElementById('note-target');
-            
-            // 随机选择角色和文案
-            const char = aiCharacters[Math.floor(Math.random() * aiCharacters.length)];
-// 优先使用好友的人设信息，如果没有则使用上面的默认长文案
-const text = char.prompt ? (char.prompt + " " + defaultTexts[Math.floor(Math.random() * defaultTexts.length)]) : (char.texts ? char.texts[Math.floor(Math.random() * char.texts.length)] : defaultTexts[Math.floor(Math.random() * defaultTexts.length)]);
-            
-            // 随机选择三种纸条样式
-            const styleNum = Math.floor(Math.random() * 3) + 1;
-            
-            let noteHtml = '';
-            if(styleNum === 1) {
-                noteHtml = `
-                    <div class="note-style-1">
-                        <div class="note-content">${text}</div>
-                        <div class="note-author">—— 来自你的好友：${char.name}</div>
-                        <button class="close-note-btn" onclick="closeResult()">收起便签</button>
-                    </div>
-                `;
-            } else if(styleNum === 2) {
-                noteHtml = `
-                    <div class="note-style-2">
-                        <div class="tape-purple"></div>
-                        <div class="note-content" style="padding-top:10px;">${text}</div>
-                        <div class="note-author">—— 发送人：${char.name}</div>
-                        <button class="close-note-btn" onclick="closeResult()">我知道啦</button>
-                    </div>
-                `;
-            } else {
-                noteHtml = `
-                    <div class="note-style-3">
-                        <div class="pin"></div>
-                        <div class="note-content">${text}</div>
-                        <div class="note-author">—— ${char.name} 的秘密悄悄话</div>
-                        <button class="close-note-btn" onclick="closeResult()">乖乖收好</button>
-                    </div>
-                `;
-            }
+        async function showResult() {
+    const overlay = document.getElementById('result-overlay');
+    const target = document.getElementById('note-target');
+    
+    // 1. 随机选个好友
+    const char = qqFriends[Math.floor(Math.random() * qqFriends.length)];
+    // 2. 随机选个样式
+    const styleNum = Math.floor(Math.random() * 3) + 1;
+    
+    // 3. 先显示“正在书写”的加载状态
+    overlay.style.display = 'flex';
+    target.innerHTML = `<div class="note-style-${styleNum}" style="text-align:center; padding-top:100px;">
+        <div class="note-content">💖 ${char.name} 正在认真书写中...</div>
+    </div>`;
+
+    // 4. 调用 AI 获取内容
+    const aiText = await getAiResponse(char.name, char.prompt || "你的好朋友");
+
+    // 5. 渲染最终的小纸条
+    let footerText = styleNum === 1 ? `来自你的好友：${char.name}` : 
+                    (styleNum === 2 ? `发送人：${char.name}` : `${char.name} 的秘密悄悄话`);
+    let btnText = styleNum === 1 ? `收起便签` : 
+                 (styleNum === 2 ? `我知道啦` : `乖乖收好`);
+
+    target.innerHTML = `
+        <div class="note-style-${styleNum}">
+            ${styleNum === 2 ? '<div class="tape-purple"></div>' : ''}
+            ${styleNum === 3 ? '<div class="pin"></div>' : ''}
+            <div class="note-content" style="${styleNum === 2 ? 'padding-top:10px;' : ''}">${aiText}</div>
+            <div class="note-author">—— ${footerText}</div>
+            <button class="close-note-btn" onclick="closeResult()">${btnText}</button>
+        </div>
+    `;
+}
 
             target.innerHTML = noteHtml;
             overlay.style.display = 'flex';
