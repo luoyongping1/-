@@ -955,7 +955,8 @@ function renderBrowserList() {
     try {
         const sysPrompt = `你现在是手机数据恢复专家。你正在破解[${targetName}]的加密相册。
         被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构出6张照片的详细文字描述（每张描述要带点生活感或小秘密）。
+        请虚构6张照片的详细文字描述。
+        【警告】：直接输出描述内容，严禁输出任何开场白、介绍语或总结（如禁止写：以下是为您恢复的照片）。
         格式要求：描述1#描述2#描述3#描述4#描述5#描述6`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
@@ -963,15 +964,22 @@ function renderBrowserList() {
             body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
         });
         const data = await res.json();
-        const rawData = data.choices[0].message.content;
-        
-        // 解析生成照片数据
-        albumData = rawData.split('#').map(desc => ({
-            desc: desc.trim(),
-            flipped: false // 初始状态为不显示文字
-        }));
-        
-        renderPhotoList();
+let rawData = data.choices[0].message.content;
+
+// --- 修改点：增加自动清理开场白逻辑 ---
+let parts = rawData.split('#');
+// 如果第一段文字太长，或者包含“以下是”、“总结”等废话字眼，就把它删掉
+if (parts[0].length > 40 || parts[0].includes("以下是") || parts[0].includes("为您")) {
+    parts.shift(); 
+}
+
+albumData = parts.map(desc => ({
+    desc: desc.trim(),
+    flipped: false 
+}));
+// --- 修改结束 ---
+
+renderPhotoList();
         } catch (e) {
         alert("恢复失败");
     } finally {
@@ -981,9 +989,9 @@ function renderBrowserList() {
     try {
         const sysPrompt = `你现在是手机财务破解专家。你正在查看[${targetName}]的银行卡账单。
         被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构出其账户总余额，以及最近的7条消费明细。
-        每一条消费明细需要包括：消费项目、金额、时间、以及此人当时买这个东西时的心理活动评价。
-        格式要求：总余额|项目:金额:时间:评价#项目:金额:时间:评价...`;
+        请根据人设虚构账户总余额和最近7条消费明细。
+        【重要要求】：消费评价必须是一段感性的、口语化的【心理描写】（例如：看到这个包包就想起他，咬牙买了），绝对严禁只输出数字评分。
+        格式要求：总余额|项目:金额:时间:心理评价文字#项目:金额:时间:心理评价文字...`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
