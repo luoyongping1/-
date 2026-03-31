@@ -341,7 +341,7 @@
             <div id="item-qq" class="grid-item icon-btn" onclick="openQQ()">QQ</div>
             <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
             <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
-            <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
+            <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
 <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
             <div id="item-progress" class="grid-item progress-widgets">
                 <div class="progress-item">
@@ -664,6 +664,7 @@
         // --- App 控制逻辑 ---
         function openQQ() { showAppFrame("qq.html"); }
 function openApp() { showAppFrame("书书小红书.html"); }
+function openGacha() { showAppFrame("扭蛋机.html"); }
 
 // 新增：显示好友选择器
 function showFriendSelector() {
