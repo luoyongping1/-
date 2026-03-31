@@ -318,13 +318,26 @@
     font-size: 12px;
     cursor: pointer;
 }
+    
+/* 滑动容器样式优化 */
+.content.page {
+    box-sizing: border-box;
+}
+/* 指示灯动画 */
+.dot { transition: opacity 0.3s; }
+.dot.active { opacity: 1 !important; transform: scale(1.2); }
     </style>
 </head>
 <body>
 
     <div class="phone-container" id="phone-bg">
         <div class="overlay"></div>
-        <div class="content" id="main-grid" oncontextmenu="return false;">
+        <!-- 新增了滑动容器包裹 -->
+<div id="swiper-container" style="width: 100%; height: 100%; overflow: hidden; position: relative; z-index: 2;">
+    <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
+        
+        <!-- 第一页桌面 -->
+        <div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
             <div id="item-time" class="grid-item time-widget">
                 <div id="date-display" class="date-str">正在加载日期...</div>
                 <div id="clock-display" class="clock-str">00:00</div>
@@ -340,9 +353,6 @@
             <div id="item-wb" class="grid-item icon-btn" onclick="openWorldBook()">世界书</div>
             <div id="item-qq" class="grid-item icon-btn" onclick="openQQ()">QQ</div>
             <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
-            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
-            <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
-<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
             <div id="item-progress" class="grid-item progress-widgets">
                 <div class="progress-item">
                     今年剩余 <span id="year-days">0</span> 天
@@ -354,6 +364,25 @@
                 </div>
             </div>
         </div>
+
+        <!-- 第二页桌面 (放置扭蛋机和其他图标) -->
+        <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
+            <!-- 扭蛋机图标 -->
+            <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
+            
+            <!-- 把原来的设置和外观搬到第二页，显得不拥挤 -->
+            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
+            <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
+            <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
+        </div>
+
+    </div>
+    <!-- 页面指示灯 (可选) -->
+    <div id="page-dots" style="position: absolute; bottom: 120px; width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;">
+        <div class="dot active" style="width: 8px; height: 8px; border-radius: 50%; background: white; opacity: 1;"></div>
+        <div class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: white; opacity: 0.3;"></div>
+    </div>
+</div>
 
         <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
 
@@ -664,7 +693,42 @@
         // --- App 控制逻辑 ---
         function openQQ() { showAppFrame("qq.html"); }
 function openApp() { showAppFrame("书书小红书.html"); }
+// 新增：打开扭蛋机函数
 function openGacha() { showAppFrame("扭蛋机.html"); }
+
+// --- 新增：左右滑动逻辑 ---
+let startX = 0;
+let currentPageIndex = 0;
+const wrapper = document.getElementById('swiper-wrapper');
+const dots = document.querySelectorAll('.dot');
+
+document.getElementById('swiper-container').addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+}, {passive: true});
+
+document.getElementById('swiper-container').addEventListener('touchend', (e) => {
+    let endX = e.changedTouches[0].clientX;
+    let diff = startX - endX;
+
+    if (Math.abs(diff) > 50) { // 滑动超过50像素才翻页
+        if (diff > 0 && currentPageIndex === 0) {
+            // 向左划，去第二页
+            currentPageIndex = 1;
+        } else if (diff < 0 && currentPageIndex === 1) {
+            // 向右划，回第一页
+            currentPageIndex = 0;
+        }
+        updatePage();
+    }
+});
+
+function updatePage() {
+    wrapper.style.transform = `translateX(-${currentPageIndex * 50}%)`;
+    // 更新指示点
+    dots.forEach((dot, index) => {
+        dot.style.opacity = (index === currentPageIndex) ? "1" : "0.3";
+    });
+}
 
 // 新增：显示好友选择器
 function showFriendSelector() {
