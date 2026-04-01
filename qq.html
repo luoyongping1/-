@@ -1446,23 +1446,24 @@ if (cleanText.includes("[SEND_MONEY]")) {
                         jealousy: jealousyPart
                     });
                     
-                    friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
+friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
 saveData(); 
 
-// 只有在页面可见时才渲染 UI，防止后台运行时 DOM 操作报错
 if (!document.hidden) {
     renderMessages();
 }
 
-// --- 核心修复：后台弹窗通知 ---
+// 核心修改：不再使用 new Notification，而是向 sw.js 发送投递请求
 const allowNotify = localStorage.getItem('allow_notifications') === 'true';
-// 如果开启了通知且权限已允许，且用户在后台
-if (allowNotify && Notification.permission === "granted" && document.hidden) {
-    new Notification(currentFriendName, {
-        body: isTheaterMsg ? "[发来了一个小剧场]" : cleanText,
-        icon: friend.avatarUrl || "https://cdn-icons-png.flaticon.com/512/3670/3670044.png",
-        badge: "https://cdn-icons-png.flaticon.com/512/3670/3670044.png"
-    });
+if (allowNotify && document.hidden) {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: currentFriendName,
+            body: isTheaterMsg ? "[发来了一个小剧场]" : cleanText,
+            icon: friend.avatarUrl
+        });
+    }
 }
 
 // 自动记忆总结逻辑
