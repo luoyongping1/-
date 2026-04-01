@@ -138,10 +138,17 @@ body, html {
     display: block;
 }
         .home-bar {
-            position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
-            width: 130px; height: 5px; background: #e0e0e0; border-radius: 10px;
-            z-index: 1100;
-        }
+    position: fixed; 
+    /* 将固定的 12px 改为计算系统安全距离 */
+    bottom: calc(10px + env(safe-area-inset-bottom)); 
+    left: 50%; 
+    transform: translateX(-50%);
+    width: 130px; 
+    height: 5px; 
+    background: #e0e0e0; 
+    border-radius: 10px;
+    z-index: 1100;
+}
 
         /* QQ 样式 */
         .qq-list-item {

@@ -458,7 +458,8 @@ body {
 
 /* 底部导航 */
 .bottom-nav {
-    height: 54px;
+    height: auto;
+    min-height: 54px;
     background: #fff;
     border-top: 1px solid var(--xhs-border);
     display: flex;
@@ -469,6 +470,8 @@ body {
     width: 100%;
     max-width: 500px;
     z-index: 100;
+    padding-top: 5px;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-item {
