@@ -1233,20 +1233,22 @@ function applyCustomBallCss(cssText) {
             document.getElementById('icon-url-input').value = "";
         }
         function saveAndApplyIcon(imgData) {
-            const appEl = document.getElementById(currentEditingAppId);
-            appEl.style.backgroundImage = `url("${imgData}")`;
-            let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-            customIcons[currentEditingAppId] = imgData;
-            localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
-        }
+    const appEl = document.getElementById(currentEditingAppId);
+    // 修改点：使用 background 综合属性，强制覆盖掉 HTML 里写死的背景颜色
+    appEl.style.background = `url("${imgData}") center/cover no-repeat`;
+    let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
+    customIcons[currentEditingAppId] = imgData;
+    localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
+}
         function resetIcon() {
-            const appEl = document.getElementById(currentEditingAppId);
-            appEl.style.backgroundImage = "";
-            let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-            delete customIcons[currentEditingAppId];
-            localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
-            closeIconChoiceModal(); showAppListModal();
-        }
+    const appEl = document.getElementById(currentEditingAppId);
+    // 修改点：将 background 设为空，它会自动恢复到 HTML/CSS 定义的初始颜色
+    appEl.style.background = ""; 
+    let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
+    delete customIcons[currentEditingAppId];
+    localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
+    closeIconChoiceModal(); showAppListModal();
+}
 
         function exportFullData() {
             const data = {};
@@ -1355,10 +1357,11 @@ async function toggleNotifications(enabled) {
             loadGridOrder(); 
             initGridSortable(); 
             const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-            Object.keys(customIcons).forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.style.backgroundImage = `url("${customIcons[id]}")`;
-            });
+Object.keys(customIcons).forEach(id => {
+    const el = document.getElementById(id);
+    // 修改点：加载时同样使用 background 综合属性覆盖原色
+    if(el) el.style.background = `url("${customIcons[id]}") center/cover no-repeat`;
+});
             const savedPhoneBg = localStorage.getItem('phone_bg_data');
             if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
             const savedWidgetBg = localStorage.getItem('widget_bg_data');
