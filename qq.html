@@ -1371,7 +1371,18 @@ if (rawContent.includes("[MONEY_ACTION]RECEIVE")) {
 // 清洗Markdown和干扰符
                 let processedContent = rawContent.replace(/```html|```/g, '').trim();
 
-                let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "";
+                // 尝试解析 [REPLY] 标签
+let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim();
+
+// 如果解析不到 [REPLY]，说明 AI 可能没按格式输出，则直接把除掉标签后的全文当作回复
+if (!replyPart) {
+    replyPart = processedContent.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]/g, "").trim();
+}
+
+// 如果最后还是空的，报错提示
+if (!replyPart) {
+    throw new Error("AI 返回内容为空");
+}
                 let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
                 let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|$)/)?.[1]?.trim() || "（...）";
                 let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/)?.[1]?.trim() || "平静";
@@ -1400,7 +1411,7 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
 }
 
                                         for (let mObj of msgs) {
-await new Promise(r => setTimeout(r, 800));
+await new Promise(r => setTimeout(r, 100)); // 大幅缩短等待时间
 // 统一提取文本内容
 let cleanText = mObj.text.trim();
 
@@ -1508,12 +1519,11 @@ if (!document.hidden) {
                                 renderMessages();
         }
     } catch (e) { 
-    // 核心修复：不再随便弹窗“回复失败”
-    console.error("AI流程中断（可能是切到后台引起）:", e);
-    // 只有当页面在前台且真的没收到数据时才提示
-    if (!document.hidden && !chatHistories[currentFriendName].length) {
-        alert("网络连接似乎中断了，请重试");
-    }
+    console.error("AI流程中断:", e);
+    // 隐藏加载状态
+    document.getElementById('chat-typing').style.display = 'none';
+    // 弹出错误原因，方便排查是 API Key 错了还是网络断了
+    alert("回复失败，原因：" + e.message + "。请检查您的网络或 API 设置。");
 } finally { 
         // 隐藏输入状态
         const typingEl = document.getElementById('chat-typing');
@@ -1724,7 +1734,26 @@ if (!document.hidden) {
         document.getElementById('my-avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{myInfo.avatar=e.target.result;saveData();renderMePage();}; r.readAsDataURL(this.files[0]);}}
         function changeAvatar() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('avatar-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if(u){friends.find(f => f.name === currentFriendName).avatarUrl=u;saveData();openSettings();}} }
         document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
-        function changeChatBackground() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('chat-bg-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if (u) { friends.find(f => f.name === currentFriendName).chatBg = u; saveData(); renderMessages(); } } }
+        function changeChatBackground() {
+    const choice = prompt("请输入数字选择：\n1. 从本地相册上传\n2. 使用网络图片链接(URL)");
+    if (choice === "1") {
+        document.getElementById('chat-bg-upload').click();
+    } else if (choice === "2") {
+        const u = prompt("请直接粘贴图片的网络链接(URL):");
+        if (u && u.trim() !== "") {
+            const friend = friends.find(f => f.name === currentFriendName);
+            if (friend) {
+                friend.chatBg = u.trim();
+                saveData();
+                // 立即应用背景
+                const container = document.getElementById('message-container');
+                container.style.backgroundImage = `url("${u.trim()}")`;
+                container.style.backgroundSize = 'cover';
+                alert("背景设置成功！");
+            }
+        }
+    }
+}
         document.getElementById('chat-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { friends.find(f => f.name === currentFriendName).chatBg = e.target.result; saveData(); renderMessages(); }; reader.readAsDataURL(this.files[0]); } };
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
         function showContextMenu(x, y, i) { if(isMultiSelecting) return; menuTargetIndex = i; const m = document.getElementById('msg-context-menu'); m.style.display = 'block'; m.style.left = Math.min(x, window.innerWidth - 110) + 'px'; m.style.top = y + 'px'; setTimeout(() => document.addEventListener('click', function c(){ m.style.display = 'none'; document.removeEventListener('click', c); }), 100); }
