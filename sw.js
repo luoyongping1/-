@@ -5,15 +5,14 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const options = {
-  body: event.data.body,
-  icon: event.data.icon,
-  // 修改这里：将 tag 设为随机值或时间戳，这样消息就会一条条堆叠，不会被覆盖
-  tag: 'msg-' + Date.now(), 
-  renotify: true,
-  badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
-  vibrate: [200, 100, 200],
-  data: { url: self.registration.scope }
-};
+      body: event.data.body,
+      icon: event.data.icon || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
+      tag: 'msg-' + Date.now(), 
+      renotify: true,
+      badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
+      vibrate: [200, 100, 200],
+      data: { url: self.registration.scope }
+    };
     event.waitUntil(
       self.registration.showNotification(event.data.title, options)
     );
@@ -24,24 +23,17 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // 如果网页开着就切回去，没开就新开一个
+      // 检查是否已经打开了网页，如果有就切回去
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if ('focus' in client) return client.focus();
+        if (client.url.includes(event.notification.data.url) && 'focus' in client) {
+          return client.focus();
+        }
       }
-      if (clients.openWindow) return clients.openWindow(event.notification.data.url);
-    })
-  );
-});
-// 新增：点击通知后，自动打开或切回网页
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(windowClients => {
-      if (windowClients.length > 0) {
-        return windowClients[0].focus();
+      // 如果没打开，就新开一个
+      if (clients.openWindow) {
+        return clients.openWindow(event.notification.data.url);
       }
-      return clients.openWindow(event.notification.data.url);
     })
   );
 });

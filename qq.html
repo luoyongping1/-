@@ -1434,35 +1434,38 @@ if (cleanText.includes("[SEND_MONEY]")) {
 
                     let isVoice = !isTheaterMsg && !isDescribeCard && (Math.random() > 0.8);
 
-                    chatHistories[currentFriendName].push({ 
-                        type: 'friend', 
-                        text: cleanText,
-                        isVoice: isVoice, 
-                        isDescribeCard: isDescribeCard,
-                        expanded: false,
-                        action: actionPart,
-                        thoughts: thoughtsPart,
-                        emotion: emotionPart,
-                        jealousy: jealousyPart
-                    });
-                    
+                    // 将AI回复存入聊天记录
+chatHistories[currentFriendName].push({ 
+    type: 'friend', 
+    text: cleanText,
+    isVoice: isVoice, 
+    isDescribeCard: isDescribeCard,
+    expanded: false,
+    action: actionPart,
+    thoughts: thoughtsPart,
+    emotion: emotionPart,
+    jealousy: jealousyPart
+});
+
+// 更新最后一条消息预览
 friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
 saveData(); 
 
-// 即使在后台也尝试强制通知（通过 Service Worker）
-const allowNotify = localStorage.getItem('allow_notifications') === 'true';
-if (allowNotify && document.hidden) {
-    navigator.serviceWorker.ready.then(registration => {
-        if (registration.active) {
-            registration.active.postMessage({
-                type: 'SHOW_NOTIFICATION',
-                title: currentFriendName,
-                body: isTheaterMsg ? "[小剧场]" : cleanText,
-                icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
-            });
-        }
-    });
+// --- 核心修复：更强力的后台通知触发逻辑 ---
+// 只要开启了通知开关，且当前你没在看这个QQ页面（切到了后台或桌面）
+if (localStorage.getItem('allow_notifications') === 'true' && document.visibilityState !== 'visible') {
+    // 尝试通过 Service Worker 发送弹窗
+    const sw = navigator.serviceWorker.controller || (window.parent && window.parent.navigator.serviceWorker.controller);
+    if (sw) {
+        sw.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: currentFriendName + ' 发来QQ消息',
+            body: isTheaterMsg ? "[小剧场]" : cleanText,
+            icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+        });
+    }
 }
+// --- 修复结束 ---
 
 // 只有在回到前台时再统一刷新界面
 if (!document.hidden) {

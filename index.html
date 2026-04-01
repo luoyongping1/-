@@ -1287,31 +1287,37 @@ function applyCustomBallCss(cssText) {
 function toggleKeepAlive(enabled) {
     if (enabled) {
         if (!silentAudio) {
-            // 使用一个稍微长一点的静音 base64 音频，增加稳定性
-            silentAudio = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
+            // 这是一个经过优化的10秒静音音频，能确保手机系统的音乐控制卡片稳定存在，不被自动关闭
+            const silentData = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
+            silentAudio = new Audio(silentData);
             silentAudio.loop = true;
         }
         silentAudio.play().then(() => {
             localStorage.setItem('background_keep_alive', 'true');
-            // 核心逻辑：向系统注册媒体会话，伪装成音乐播放器
+            // 注册媒体会话：这是让你的手机下拉菜单出现“播放卡片”的关键
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
-                    title: '系统后台保活',
-                    artist: '书书小手机',
-                    album: 'AI 进程守护中',
+                    title: '书书小手机 - 正在守护后台',
+                    artist: 'AI 角色正在待命',
+                    album: '请保持此卡片运行以接收消息',
                     artwork: [{ src: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png', sizes: '512x512', type: 'image/png' }]
                 });
-                // 注册空的事件监听，防止系统自动暂停
+                // 允许通过系统控制栏操作，防止被系统杀掉
                 navigator.mediaSession.setActionHandler('play', () => { silentAudio.play(); });
                 navigator.mediaSession.setActionHandler('pause', () => { silentAudio.pause(); });
             }
-        }).catch(err => console.log("保活音频启动失败，需点击页面触发", err));
+            console.log("后台保活已成功开启");
+        }).catch(err => {
+            alert("开启失败：请先点击屏幕任意位置，再打开开关（浏览器要求必须有点击才能放声音）");
+            document.getElementById('keep-alive-toggle').checked = false;
+        });
     } else {
         if (silentAudio) {
             silentAudio.pause();
             silentAudio = null;
         }
         localStorage.setItem('background_keep_alive', 'false');
+        console.log("后台保活已关闭");
     }
 }
 async function toggleNotifications(enabled) {
