@@ -1310,40 +1310,44 @@ function applyCustomBallCss(cssText) {
         }
 
         let silentAudio = null;
-function toggleKeepAlive(enabled) {
+let wakeLock = null;
+
+async function toggleKeepAlive(enabled) {
     if (enabled) {
-        if (!silentAudio) {
-            // 这是一个经过优化的10秒静音音频，能确保手机系统的音乐控制卡片稳定存在，不被自动关闭
-            const silentData = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
-            silentAudio = new Audio(silentData);
-            silentAudio.loop = true;
-        }
-        silentAudio.play().then(() => {
-            localStorage.setItem('background_keep_alive', 'true');
-            // 注册媒体会话：这是让你的手机下拉菜单出现“播放卡片”的关键
+        try {
+            // 1. 开启静音音频保活
+            if (!silentAudio) {
+                const silentData = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
+                silentAudio = new Audio(silentData);
+                silentAudio.loop = true;
+            }
+            await silentAudio.play();
+
+            // 2. 开启屏幕/CPU唤醒锁定 (Wake Lock)
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+            }
+
+            // 3. 注册媒体卡片
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
-                    title: '书书小手机 - 正在守护后台',
-                    artist: 'AI 角色正在待命',
-                    album: '请保持此卡片运行以接收消息',
+                    title: '书书小手机 - 后台守护中',
+                    artist: 'AI 聊天运行中',
+                    album: '请勿在多任务界面划掉浏览器',
                     artwork: [{ src: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png', sizes: '512x512', type: 'image/png' }]
                 });
-                // 允许通过系统控制栏操作，防止被系统杀掉
-                navigator.mediaSession.setActionHandler('play', () => { silentAudio.play(); });
-                navigator.mediaSession.setActionHandler('pause', () => { silentAudio.pause(); });
             }
-            console.log("后台保活已成功开启");
-        }).catch(err => {
-            alert("开启失败：请先点击屏幕任意位置，再打开开关（浏览器要求必须有点击才能放声音）");
+
+            localStorage.setItem('background_keep_alive', 'true');
+            console.log("高级保活已开启");
+        } catch (err) {
+            alert("保活开启失败，请确保您点击过屏幕后再打开开关。");
             document.getElementById('keep-alive-toggle').checked = false;
-        });
-    } else {
-        if (silentAudio) {
-            silentAudio.pause();
-            silentAudio = null;
         }
+    } else {
+        if (silentAudio) silentAudio.pause();
+        if (wakeLock) wakeLock.release().then(() => wakeLock = null);
         localStorage.setItem('background_keep_alive', 'false');
-        console.log("后台保活已关闭");
     }
 }
 async function toggleNotifications(enabled) {

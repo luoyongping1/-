@@ -1,39 +1,36 @@
-self.addEventListener('fetch', function(event) {
-  event.respondWith(fetch(event.request));
+// sw.js 增强保活版
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
 });
 
-self.addEventListener('message', function(event) {
-  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const options = {
-      body: event.data.body,
-      icon: event.data.icon || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
-      tag: 'msg-' + Date.now(), 
-      renotify: true,
-      badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
-      vibrate: [200, 100, 200],
-      data: { url: self.registration.scope }
-    };
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+});
+
+// 监听消息通知
+self.addEventListener('message', (event) => {
+    if (event.data.type === 'SHOW_NOTIFICATION') {
+        const title = event.data.title || '新消息';
+        const options = {
+            body: event.data.body,
+            icon: event.data.icon || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
+            badge: event.data.icon,
+            vibrate: [200, 100, 200],
+            data: { url: event.source.url }
+        };
+        event.waitUntil(self.registration.showNotification(title, options));
+    }
+});
+
+// 点击通知回到App
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
     event.waitUntil(
-      self.registration.showNotification(event.data.title, options)
+        clients.matchAll({ type: 'window' }).then((clientList) => {
+            if (clientList.length > 0) {
+                return clientList[0].focus();
+            }
+            return clients.openWindow('/');
+        })
     );
-  }
-});
-
-self.addEventListener('notificationclick', function(event) {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // 检查是否已经打开了网页，如果有就切回去
-      for (var i = 0; i < windowClients.length; i++) {
-        var client = windowClients[i];
-        if (client.url.includes(event.notification.data.url) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // 如果没打开，就新开一个
-      if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
-      }
-    })
-  );
 });

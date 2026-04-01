@@ -1478,10 +1478,9 @@ if (localStorage.getItem('allow_notifications') === 'true' && document.visibilit
 }
 // --- 修复结束 ---
 
-// 只有在回到前台时再统一刷新界面
-if (!document.hidden) {
-    renderMessages();
-}
+// 无论是否在后台，都尝试更新内存和界面（这能维持JS引擎活跃度）
+renderMessages();
+renderChatList();
 
 // 自动记忆总结逻辑
                     const curHist = chatHistories[currentFriendName] || [];
