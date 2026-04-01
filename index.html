@@ -50,15 +50,14 @@
         }
 
         /* --- 核心：网格布局容器 --- */
-        .content {
+                .content {
     position: relative;
     z-index: 2;
-    /* 这里的 padding 第三个参数代表底部间距，我们加上 env(safe-area-inset-bottom) */
     padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px) 20px; 
     height: 100%;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: 85px;
+    grid-auto-rows: auto;
     gap: 15px;
     box-sizing: border-box;
     align-content: start;
@@ -123,19 +122,28 @@
         }
         #battery-fill { height: 100%; background: #4cd137; width: 50%; border-radius: 2px; transition: width 0.5s; }
 
-        .icon-btn {
+                .icon-btn {
     grid-column: span 1;
     grid-row: span 1;
+    width: 100%;
+    aspect-ratio: 1 / 1; /* 强制宽高相等，变成正方形 */
     background: var(--glass-bg);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 18px; 
-    display: flex; justify-content: center;
-    align-items: center; font-size: 11px; backdrop-filter: blur(10px);
-    cursor: pointer; text-align: center; line-height: 1.2;
-    color: white; font-weight: 500;
-    background-size: 100% 100%;
+    border-radius: 22px; /* 增加圆角度数，更加圆润 */
+    display: flex; 
+    justify-content: center;
+    align-items: center; 
+    font-size: 12px; 
+    backdrop-filter: blur(10px);
+    cursor: pointer; 
+    text-align: center; 
+    line-height: 1.2;
+    color: white; 
+    font-weight: 500;
+    background-size: cover; /* 背景图铺满 */
     background-position: center;
     background-repeat: no-repeat;
+    box-sizing: border-box;
 }
         .icon-btn:active { transform: scale(0.9); }
 
