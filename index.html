@@ -1284,18 +1284,36 @@ function applyCustomBallCss(cssText) {
         }
 
         let silentAudio = null;
-        function toggleKeepAlive(enabled) {
-            if (enabled) {
-                if (!silentAudio) {
-                    silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
-                    silentAudio.loop = true;
-                }
-                silentAudio.play().then(() => { localStorage.setItem('background_keep_alive', 'true'); });
-            } else {
-                if (silentAudio) silentAudio.pause();
-                localStorage.setItem('background_keep_alive', 'false');
-            }
+function toggleKeepAlive(enabled) {
+    if (enabled) {
+        if (!silentAudio) {
+            // 使用一个稍微长一点的静音 base64 音频，增加稳定性
+            silentAudio = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA==');
+            silentAudio.loop = true;
         }
+        silentAudio.play().then(() => {
+            localStorage.setItem('background_keep_alive', 'true');
+            // 核心逻辑：向系统注册媒体会话，伪装成音乐播放器
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: '系统后台保活',
+                    artist: '书书小手机',
+                    album: 'AI 进程守护中',
+                    artwork: [{ src: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png', sizes: '512x512', type: 'image/png' }]
+                });
+                // 注册空的事件监听，防止系统自动暂停
+                navigator.mediaSession.setActionHandler('play', () => { silentAudio.play(); });
+                navigator.mediaSession.setActionHandler('pause', () => { silentAudio.pause(); });
+            }
+        }).catch(err => console.log("保活音频启动失败，需点击页面触发", err));
+    } else {
+        if (silentAudio) {
+            silentAudio.pause();
+            silentAudio = null;
+        }
+        localStorage.setItem('background_keep_alive', 'false');
+    }
+}
 async function toggleNotifications(enabled) {
     if (enabled) {
         if (!("Notification" in window)) {

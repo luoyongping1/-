@@ -1449,11 +1449,7 @@ if (cleanText.includes("[SEND_MONEY]")) {
 friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
 saveData(); 
 
-if (!document.hidden) {
-    renderMessages();
-}
-
-// 核心修改：使用 .ready 确保投递成功
+// 即使在后台也尝试强制通知（通过 Service Worker）
 const allowNotify = localStorage.getItem('allow_notifications') === 'true';
 if (allowNotify && document.hidden) {
     navigator.serviceWorker.ready.then(registration => {
@@ -1466,6 +1462,11 @@ if (allowNotify && document.hidden) {
             });
         }
     });
+}
+
+// 只有在回到前台时再统一刷新界面
+if (!document.hidden) {
+    renderMessages();
 }
 
 // 自动记忆总结逻辑

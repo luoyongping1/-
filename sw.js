@@ -5,15 +5,15 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const options = {
-      body: event.data.body,
-      icon: event.data.icon,
-      // tag 属性可以让相同好友的消息合并，不同好友的消息堆叠
-      tag: event.data.title, 
-      renotify: true,
-      badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
-      vibrate: [200, 100, 200],
-      data: { url: self.registration.scope }
-    };
+  body: event.data.body,
+  icon: event.data.icon,
+  // 修改这里：将 tag 设为随机值或时间戳，这样消息就会一条条堆叠，不会被覆盖
+  tag: 'msg-' + Date.now(), 
+  renotify: true,
+  badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
+  vibrate: [200, 100, 200],
+  data: { url: self.registration.scope }
+};
     event.waitUntil(
       self.registration.showNotification(event.data.title, options)
     );
