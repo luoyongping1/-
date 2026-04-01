@@ -1332,27 +1332,32 @@ if(savedBallCss) {
                 navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
             }
         };
-function toggleNotifications(enabled) {
+async function toggleNotifications(enabled) {
     if (enabled) {
-        // 请求浏览器通知权限
         if (!("Notification" in window)) {
             alert("您的浏览器不支持桌面通知");
             document.getElementById('notification-toggle').checked = false;
             return;
         }
 
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                localStorage.setItem('allow_notifications', 'true');
-                new Notification("通知已开启", { body: "当收到新消息时，您将看到此类弹窗", icon: "https://cdn-icons-png.flaticon.com/512/3670/3670044.png" });
-            } else {
-                alert("您拒绝了通知权限，请在浏览器设置中手动开启");
-                document.getElementById('notification-toggle').checked = false;
-                localStorage.setItem('allow_notifications', 'false');
-            }
-        });
+        // 强制弹出系统询问框
+        const permission = await Notification.requestPermission();
+        
+        if (permission === "granted") {
+            localStorage.setItem('allow_notifications', 'true');
+            // 发送一条测试通知
+            new Notification("通知权限已激活", { 
+                body: "现在角色在后台说话时，你会收到提示", 
+                icon: "https://cdn-icons-png.flaticon.com/512/3670/3670044.png" 
+            });
+        } else {
+            alert("权限被拒绝！请在Edge浏览器地址栏左侧点击“锁头”图标，手动开启“通知”权限。");
+            document.getElementById('notification-toggle').checked = false;
+            localStorage.setItem('allow_notifications', 'false');
+        }
     } else {
         localStorage.setItem('allow_notifications', 'false');
+        alert("已关闭后台通知");
     }
 }
     </script>

@@ -1448,19 +1448,24 @@ if (cleanText.includes("[SEND_MONEY]")) {
                     
                     friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
 saveData(); 
-renderMessages();
 
-// 新增：后台消息弹窗逻辑
+// 只有在页面可见时才渲染 UI，防止后台运行时 DOM 操作报错
+if (!document.hidden) {
+    renderMessages();
+}
+
+// --- 核心修复：后台弹窗通知 ---
 const allowNotify = localStorage.getItem('allow_notifications') === 'true';
-// 只有当开启了开关，且用户当前没在看这个页面（或者页面被最小化）时才弹窗
-if (allowNotify && document.hidden) {
+// 如果开启了通知且权限已允许，且用户在后台
+if (allowNotify && Notification.permission === "granted" && document.hidden) {
     new Notification(currentFriendName, {
-        body: cleanText,
-        icon: friend.avatarUrl || "https://cdn-icons-png.flaticon.com/512/3670/3670044.png"
+        body: isTheaterMsg ? "[发来了一个小剧场]" : cleanText,
+        icon: friend.avatarUrl || "https://cdn-icons-png.flaticon.com/512/3670/3670044.png",
+        badge: "https://cdn-icons-png.flaticon.com/512/3670/3670044.png"
     });
 }
 
-                    // 自动记忆总结逻辑
+// 自动记忆总结逻辑
                     const curHist = chatHistories[currentFriendName] || [];
                     if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
                         triggerManualSummary();
@@ -1493,15 +1498,26 @@ if (allowNotify && document.hidden) {
                     });
                     friend.lastMsg = "[表情]";
                     saveData();
-                    renderMessages();
-                }
-            } catch (e) { 
-                alert("AI回复失败"); 
-            } finally { 
-                document.getElementById('chat-typing').style.display = 'none'; 
-                if(document.getElementById('dating-page').classList.contains('active')) renderDatingMessages();
-            }
+                                renderMessages();
         }
+    } catch (e) { 
+    // 核心修复：不再随便弹窗“回复失败”
+    console.error("AI流程中断（可能是切到后台引起）:", e);
+    // 只有当页面在前台且真的没收到数据时才提示
+    if (!document.hidden && !chatHistories[currentFriendName].length) {
+        alert("网络连接似乎中断了，请重试");
+    }
+} finally { 
+        // 隐藏输入状态
+        const typingEl = document.getElementById('chat-typing');
+        if(typingEl) typingEl.style.display = 'none';
+        
+        // 刷新约会页面内容
+        if(document.getElementById('dating-page') && document.getElementById('dating-page').classList.contains('active')) {
+            renderDatingMessages();
+        }
+    }
+}
 
         function showHeartbeat(msgIndex) {
             const msg = chatHistories[currentFriendName][msgIndex];
