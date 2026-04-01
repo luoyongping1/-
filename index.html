@@ -124,19 +124,19 @@
         #battery-fill { height: 100%; background: #4cd137; width: 50%; border-radius: 2px; transition: width 0.5s; }
 
         .icon-btn {
-            grid-column: span 1;
-            grid-row: span 1;
-            background: var(--glass-bg);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 18px; 
-            display: flex; justify-content: center;
-            align-items: center; font-size: 11px; backdrop-filter: blur(10px);
-            cursor: pointer; text-align: center; line-height: 1.2;
-            color: white; font-weight: 500;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
+    grid-column: span 1;
+    grid-row: span 1;
+    background: var(--glass-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px; 
+    display: flex; justify-content: center;
+    align-items: center; font-size: 11px; backdrop-filter: blur(10px);
+    cursor: pointer; text-align: center; line-height: 1.2;
+    color: white; font-weight: 500;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
         .icon-btn:active { transform: scale(0.9); }
 
         .progress-widgets { 
@@ -1232,12 +1232,12 @@ function applyCustomBallCss(cssText) {
             closeUrlInputModal(); closeIconChoiceModal(); showAppListModal();
             document.getElementById('icon-url-input').value = "";
         }
-        function saveAndApplyIcon(imgData) {
+                function saveAndApplyIcon(imgData) {
     const appEl = document.getElementById(currentEditingAppId);
     // 修改点：使用 background 综合属性，强制覆盖掉 HTML 里写死的背景颜色
-    appEl.style.background = `url("${imgData}") center/cover no-repeat`;
+    appEl.style.background = `url("${imgData}") center/100% 100% no-repeat`;
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-    customIcons[currentEditingAppId] = imgData;
+    customIcons[customIcons[currentEditingAppId]] = imgData;
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
 }
         function resetIcon() {
@@ -1356,11 +1356,11 @@ async function toggleNotifications(enabled) {
         window.onload = function() {
             loadGridOrder(); 
             initGridSortable(); 
-            const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
+                        const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
 Object.keys(customIcons).forEach(id => {
     const el = document.getElementById(id);
     // 修改点：加载时同样使用 background 综合属性覆盖原色
-    if(el) el.style.background = `url("${customIcons[id]}") center/cover no-repeat`;
+    if(el) el.style.background = `url("${customIcons[id]}") center/100% 100% no-repeat`;
 });
             const savedPhoneBg = localStorage.getItem('phone_bg_data');
             if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
