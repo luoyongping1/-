@@ -1453,17 +1453,19 @@ if (!document.hidden) {
     renderMessages();
 }
 
-// 核心修改：不再使用 new Notification，而是向 sw.js 发送投递请求
+// 核心修改：使用 .ready 确保投递成功
 const allowNotify = localStorage.getItem('allow_notifications') === 'true';
 if (allowNotify && document.hidden) {
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-            type: 'SHOW_NOTIFICATION',
-            title: currentFriendName,
-            body: isTheaterMsg ? "[发来了一个小剧场]" : cleanText,
-            icon: friend.avatarUrl
-        });
-    }
+    navigator.serviceWorker.ready.then(registration => {
+        if (registration.active) {
+            registration.active.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                title: currentFriendName,
+                body: isTheaterMsg ? "[小剧场]" : cleanText,
+                icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+            });
+        }
+    });
 }
 
 // 自动记忆总结逻辑
