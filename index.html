@@ -490,6 +490,14 @@
                         <input type="checkbox" id="keep-alive-toggle" style="width:40px; margin:0;" onchange="toggleKeepAlive(this.checked)">
                     </div>
                     <p style="font-size:10px; color:#999; margin-top:5px;">开启后将循环播放静音音频。</p>
+<div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <label>消息通知</label>
+    <div style="display:flex; align-items:center; justify-content:space-between; background:#f2f2f7; padding:10px; border-radius:10px;">
+        <span style="font-size:14px;">允许后台消息弹窗</span>
+        <input type="checkbox" id="notification-toggle" style="width:40px; margin:0;" onchange="toggleNotifications(this.checked)">
+    </div>
+    <p style="font-size:10px; color:#999; margin-top:5px;">开启后，当你在后台时收到AI消息会弹出系统通知。</p>
+</div>
                 </div>
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
                     <label>数据管理</label>
@@ -1295,7 +1303,11 @@ function applyCustomBallCss(cssText) {
             if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
             if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
             const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
-            document.getElementById('keep-alive-toggle').checked = isKeepAlive;
+document.getElementById('keep-alive-toggle').checked = isKeepAlive;
+
+// 新增：初始化通知开关
+const isNotify = localStorage.getItem('allow_notifications') === 'true';
+document.getElementById('notification-toggle').checked = isNotify;
             setInterval(updateTime, 1000); updateTime();
             // 加载自定义悬浮球样式
 const savedBallCss = localStorage.getItem('custom_ball_css');
@@ -1309,6 +1321,29 @@ if(savedBallCss) {
                 navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
             }
         };
+function toggleNotifications(enabled) {
+    if (enabled) {
+        // 请求浏览器通知权限
+        if (!("Notification" in window)) {
+            alert("您的浏览器不支持桌面通知");
+            document.getElementById('notification-toggle').checked = false;
+            return;
+        }
+
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                localStorage.setItem('allow_notifications', 'true');
+                new Notification("通知已开启", { body: "当收到新消息时，您将看到此类弹窗", icon: "https://cdn-icons-png.flaticon.com/512/3670/3670044.png" });
+            } else {
+                alert("您拒绝了通知权限，请在浏览器设置中手动开启");
+                document.getElementById('notification-toggle').checked = false;
+                localStorage.setItem('allow_notifications', 'false');
+            }
+        });
+    } else {
+        localStorage.setItem('allow_notifications', 'false');
+    }
+}
     </script>
 <!-- 选择查谁的手机弹窗 -->
 <div id="friend-selector-modal" class="glass-modal">

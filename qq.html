@@ -1433,8 +1433,18 @@ if (cleanText.includes("[SEND_MONEY]")) {
                     });
                     
                     friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
-                    saveData(); 
-                    renderMessages();
+saveData(); 
+renderMessages();
+
+// 新增：后台消息弹窗逻辑
+const allowNotify = localStorage.getItem('allow_notifications') === 'true';
+// 只有当开启了开关，且用户当前没在看这个页面（或者页面被最小化）时才弹窗
+if (allowNotify && document.hidden) {
+    new Notification(currentFriendName, {
+        body: cleanText,
+        icon: friend.avatarUrl || "https://cdn-icons-png.flaticon.com/512/3670/3670044.png"
+    });
+}
 
                     // 自动记忆总结逻辑
                     const curHist = chatHistories[currentFriendName] || [];
