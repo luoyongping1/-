@@ -58,15 +58,15 @@
         }
 
         /* --- 核心：网格布局容器 --- */
-                .content {
-    position: relative;
-    z-index: 2;
-    padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px) 20px; 
-    height: 100%;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: auto;
-    gap: 15px;
+                            .content {
+position: relative;
+z-index: 2;
+padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px) 20px; 
+height: 100%;
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+grid-auto-rows: min-content; /* 修改这一行，防止行高被无意义压缩 */
+gap: 15px;
     box-sizing: border-box;
     align-content: start;
 }
@@ -108,10 +108,11 @@
         .clock-str { font-size: 56px; font-weight: bold; }
 
         .left-widget {
-            grid-column: span 2;
-            grid-row: span 2;
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
+    grid-column: span 2;
+    grid-row: span 2;
+    aspect-ratio: 1 / 1; /* 新增这一行，强制 2x2 组件为正方形，防止压缩 */
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 25px;
             position: relative;
@@ -160,10 +161,11 @@
         .icon-btn:active { transform: scale(0.9); }
 
         .progress-widgets { 
-            grid-column: span 2; 
-            grid-row: span 2;
-            display: flex; flex-direction: column; gap: 10px; 
-            background: var(--glass-bg);
+    grid-column: span 2; 
+    grid-row: span 2;
+    aspect-ratio: 1 / 1; /* 新增这一行，防止进度条组件被压缩变扁 */
+    display: flex; flex-direction: column; gap: 10px; 
+    background: var(--glass-bg);
             backdrop-filter: blur(10px);
             padding: 15px;
             border-radius: 25px;
