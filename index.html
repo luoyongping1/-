@@ -1258,20 +1258,32 @@ function applyCustomBallCss(cssText) {
         }
                 function saveAndApplyIcon(imgData) {
     const appEl = document.getElementById(currentEditingAppId);
-    // 修改点：使用 background 综合属性，强制覆盖掉 HTML 里写死的背景颜色
-    appEl.style.background = `url("${imgData}") center/100% 100% no-repeat`;
+    // 设置当前的显示效果
+    appEl.style.background = `url("${imgData}")`;
+    appEl.style.backgroundSize = "cover";
+    appEl.style.backgroundPosition = "center";
+    appEl.style.backgroundRepeat = "no-repeat";
+    
+    // 保存到本地存储
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-    customIcons[customIcons[currentEditingAppId]] = imgData;
+    customIcons[currentEditingAppId] = imgData; // 修正了这里的保存逻辑
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
 }
         function resetIcon() {
     const appEl = document.getElementById(currentEditingAppId);
-    // 修改点：将 background 设为空，它会自动恢复到 HTML/CSS 定义的初始颜色
+    // 彻底清除自定义样式，恢复 HTML 默认的背景色
+    appEl.style.backgroundImage = "none";
     appEl.style.background = ""; 
+    
+    // 从本地存储中删掉这条记录
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-    delete customIcons[currentEditingAppId];
+    if (customIcons[currentEditingAppId]) {
+        delete customIcons[currentEditingAppId];
+    }
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
-    closeIconChoiceModal(); showAppListModal();
+    
+    closeIconChoiceModal(); 
+    showAppListModal();
 }
 
         function exportFullData() {
