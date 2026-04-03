@@ -482,15 +482,15 @@ body, html {
 <div class="home-bar" onclick="closeApp()"></div>
 
 <script>
-    let layout = [
+let layout = [
     { id: 'time', type: 'w', name: 'Time' },
-    { id: 'qq', type: 'a', name: 'QQ', icon: 'https://img.icons8.com/fluency/144/tencent-qq.png' },
-    { id: 'browser', type: 'a', name: '浏览器', icon: 'https://img.icons8.com/fluency/144/safari--v1.png' },
+    { id: 'qq', type: 'a', name: 'QQ', icon: 'https://img.icons8.com/color/144/qq.png' },
+    { id: 'browser', type: 'a', name: '浏览器', icon: 'https://img.icons8.com/color/144/safari.png' },
     { id: 'shop', type: 'a', name: '购物车', icon: 'https://img.icons8.com/fluency/144/shopping-cart.png' },
     { id: 'diary', type: 'a', name: '日记', icon: 'https://img.icons8.com/fluency/144/journal.png' },
-    { id: 'photo', type: 'a', name: '相册', icon: 'https://img.icons8.com/fluency/144/photos-v1.png' },
+    { id: 'photo', type: 'a', name: '相册', icon: 'https://img.icons8.com/color/144/gallery.png' },
     { id: 'wallet', type: 'a', name: '钱包', icon: 'https://img.icons8.com/fluency/144/wallet.png' },
-    { id: 'appearance', type: 'a', name: '外观', icon: 'https://img.icons8.com/fluency/144/settings.png' },
+    { id: 'appearance', type: 'a', name: '外观', icon: 'https://img.icons8.com/color/144/settings.png' },
     { id: 'fav', type: 'a', name: '收藏', icon: 'https://img.icons8.com/fluency/144/filled-star.png' },
     { id: 'mood', type: 'w', name: 'Mood' }
 ]; // 这一行必须有这三个符号，代表列表结束
@@ -509,13 +509,13 @@ let savedDiaries = JSON.parse(localStorage.getItem('saved_diaries')) || [];
 let albumData = []; 
 let walletHistory = null; // 新增：用于存放生成的银行卡和消费数据
 
-    window.onload = () => {
+        window.onload = () => {
     const targetName = localStorage.getItem('target_check_name') || "手机";
     document.title = targetName + "的手机";
-    const saved = localStorage.getItem('ai_persona_v3');
-    if(saved) {
-        const data = JSON.parse(saved);
-        layout = data.layout;
+    const saved = localStorage.getItem('ai_persona_v6');
+if(saved) {
+    const data = JSON.parse(saved);
+    layout = data.layout;
         // 确保加载保存的壁纸并应用到背景
         if(data.wallpaper) {
             document.getElementById('wallpaper').style.backgroundImage = data.wallpaper;
@@ -798,7 +798,7 @@ function togglePhoto(index) {
     save(); 
     alert("壁纸更新成功！"); 
 }
-    function save() { localStorage.setItem('ai_persona_v3', JSON.stringify({ layout: layout, wallpaper: document.getElementById('wallpaper').style.backgroundImage })); }
+    function save() { localStorage.setItem('ai_persona_v6', JSON.stringify({ layout: layout, wallpaper: document.getElementById('wallpaper').style.backgroundImage })); }
 
     function renderQQList() {
     const content = document.getElementById('app-content');
