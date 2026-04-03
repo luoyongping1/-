@@ -428,6 +428,8 @@ gap: 15px;
     <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
     <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
     <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()" style="background: rgba(180, 199, 231, 0.2); border: 1px solid #B4C7E7; color: #8D6E63;">自律打卡</div>
+    <!-- 新增：网恋模拟器图标 -->
+    <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()" style="background: rgba(255, 183, 197, 0.2); border: 1px solid #ffb7c5; color: #ff85a2;">网恋模拟</div>
 </div>
 
     </div>
@@ -778,6 +780,8 @@ function openApp() { showAppFrame("书书小红书.html"); }
 // 新增：打开扭蛋机函数
 function openGacha() { showAppFrame("扭蛋机.html"); }
 function openSelfApp() { showAppFrame("自律.html"); }
+// 新增：打开网恋模拟器
+function openWlApp() { showAppFrame("网恋.html"); }
 
 // --- 新增：左右滑动逻辑 ---
 let startX = 0;
@@ -1242,7 +1246,7 @@ function applyCustomBallCss(cssText) {
         const appNames = {
     'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
     'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡',
-    'item-gacha': '扭蛋机', 'item-checkphone': '查手机'
+    'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器'
 };
         function showAppListModal() {
             const container = document.getElementById('app-items-container');
