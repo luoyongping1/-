@@ -360,25 +360,24 @@ window.onload = () => {
         async function callAI(prompt) {
     if (!state.config.key) { toggleSettings(); return null; }
     
-    // 心理提速：立即显示加载状态
-    document.getElementById('story-text').innerHTML = `<div style="color:var(--dark-pink); text-align:center;">（${state.currentTarget} 正在认真聆听并飞快地给你写回信，请稍等片刻...）</div>`;
+    document.getElementById('story-text').innerHTML = `<div style="color:var(--dark-pink); text-align:center;">（${state.currentTarget} 正在认真思索，指尖轻敲键盘给你回信中...）</div>`;
     
-    // 把背包里的物品名字拿出来，变成一个字符串交给 AI
     const inventoryList = state.inventory.map(i => i.name).join('、') || '空';
 
     const systemMsg = {
         role: 'system',
-        content: `你是一个深情小说家。当前角色：${state.currentTarget}。
-        关系：${state.relationStage}。
-        玩家背包里的物品有：${inventoryList}。
-        要求：
-        1. 对用户极致宠溺，永远温柔，绝对偏爱。
-        2. 文本量极大（1000字），描写细腻，包含心理、环境、连麦细节。直接输出内容，不使用括号。
-        3. 严格禁止输出任何#号、*号或[剧情正文]之类的标题标签。
-        4. 结尾必须提供4个选项，格式：[选项1]内容|[选项2]内容|[选项3]内容|[选项4]内容。
-        5. 【重要】：如果玩家背包里有合适的物品，请务必在4个选项中，设计至少一个选项是关于“使用”或“展示”背包内某个物品的。
-        6. 随机触发奖励：[获得物品:物品名]。
-        直接开始正文，不要说任何废话。`
+        content: `【设定】你是一位擅长描写极致浪漫、细腻情感的深情小说作家。
+        【当前对象】${state.currentTarget}。
+        【当前关系】${state.relationStage}。
+        【背包物品】玩家目前拥有的物品：${inventoryList}。
+        
+        【写作要求】
+        1. 沉浸式叙事：请像连载小说一样，通过细腻的心理活动、环境氛围渲染（如：屏幕微光、连麦时轻微的呼吸声、窗外的夜色）、动作细节来推进剧情。
+        2. 极致宠溺：${state.currentTarget} 对用户有着无法掩饰的偏爱，言语间温柔至极，即使是打游戏时的指挥也充满了保护欲。
+        3. 文本量：生成约 1000-1500 字的高质量小说剧情。严禁使用任何括号，严禁输出 #、* 等 Markdown 符号。
+        4. 背包互动：请观察【背包物品】，如果剧情合适，必须在选项中引导玩家使用或赠送包里的物品。
+        5. 随机奖励：如果剧情中提到他送了你东西，请在文末加上 [获得物品: 物品名]。
+        6. 选项规范：正文结束后，另起一行提供4个互动选项，格式为：[选项1]内容|[选项2]内容|[选项3]内容|[选项4]内容。`
     };
 
     try {
@@ -392,7 +391,7 @@ window.onload = () => {
         });
         const data = await resp.json();
         return data.choices[0].message.content;
-    } catch (e) { return "（信号似乎有些波动，他正焦急地尝试重新连接你...请检查API配置）"; }
+    } catch (e) { return "（连麦频道里传来一阵杂音，他似乎正焦急地寻找信号，请检查设置。错误：" + e + "）"; }
 }
 
     async function startNewDay() {
@@ -547,22 +546,35 @@ async function handleUseItem(id) {
     if(content) displayStory(content);
 }
 
-// 打开赠送弹窗
+// 全局变量，记录当前要送的是哪一个物品
 let currentGiftingItemId = null;
+
+// 点击“赠送”按钮时触发
 function openGiftModal(itemId) {
     currentGiftingItemId = itemId;
     const listContainer = document.getElementById('gift-friend-list');
-    listContainer.innerHTML = ''; // 清空旧列表
+    listContainer.innerHTML = ''; // 先清空
 
+    // 关键点：如果还没同步过 QQ 好友，先尝试重新同步一次
+    if (state.friends.length === 0) {
+        loadFriends();
+    }
+
+    if (state.friends.length === 0) {
+        alert("你的 QQ 里似乎还没有好友可以送礼哦。");
+        return;
+    }
+
+    // 循环生成所有好友的按钮
     state.friends.forEach(name => {
         const btn = document.createElement('button');
         btn.className = 'option-item';
-        btn.style.width = '100%';
-        btn.style.textAlign = 'center';
-        btn.textContent = name;
+        btn.style.cssText = 'width:100%; text-align:center; padding:12px; margin-bottom:10px; cursor:pointer;';
+        btn.textContent = "送给 " + name;
         btn.onclick = () => executeGift(name);
         listContainer.appendChild(btn);
     });
+
     document.getElementById('gift-modal').classList.remove('hidden');
 }
 
@@ -570,26 +582,34 @@ function closeGiftModal() {
     document.getElementById('gift-modal').classList.add('hidden');
 }
 
-// 真正执行赠送动作
+// 选中某个好友后执行赠送
 async function executeGift(friendName) {
+    // 找到这个物品的数据
     const item = state.inventory.find(i => i.id === currentGiftingItemId);
     if (!item) return;
 
-    // 从背包移除
+    // 1. 把它从你的背包里拿走
     state.inventory = state.inventory.filter(i => i.id !== currentGiftingItemId);
-    closeGiftModal();
-    renderInventory();
-    
-    // 如果送给的人不是当前正在聊的人，自动切换视角
+    renderInventory(); // 刷新背包显示
+    closeGiftModal(); // 关闭好友列表
+
+    // 2. 核心逻辑：自动切换到这个人的对话线
     if (state.currentTarget !== friendName) {
-        loadCharacterProgress(friendName);
+        const hasProgress = loadCharacterProgress(friendName);
+        if(!hasProgress) {
+            state.currentTarget = friendName;
+            state.day = 1;
+            state.history = [];
+            state.relationStage = '陌生人 (刚在竞技场匹配到)';
+        }
     }
 
-    saveAllProgress(); // 保存
+    // 3. 立即去请求 AI 生成一段他收到礼物的深情对白
+    switchTab('event'); // 跳回故事页面
+    const content = await callAI(`玩家跨越屏幕送给了 ${friendName} 一个惊喜礼物：【${item.name}】。请描写他在摄像头另一端或连麦中看到礼物时的神态变化、由于感动而变得沙哑的嗓音，以及他如何温柔地对玩家表达谢意并承诺回馈更多爱意的长篇互动。`);
     
-    const content = await callAI(`玩家特意送给 ${friendName} 一个礼物：${item.name}。请描写 ${friendName} 收到这个礼物时的惊喜、感动和对玩家极致宠溺的言语回应。`);
-    switchTab('event');
     if(content) displayStory(content);
+    saveAllProgress(); // 保存最新的记忆
 }
 </script>
 
