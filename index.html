@@ -357,6 +357,32 @@
 /* 指示灯动画 */
 .dot { transition: opacity 0.3s; }
 .dot.active { opacity: 1 !important; transform: scale(1.2); }
+/* --- iOS 风格底栏 Dock 样式 --- */
+.dock {
+    position: absolute;
+    bottom: calc(25px + env(safe-area-inset-bottom));
+    left: 15px;
+    right: 15px;
+    height: 95px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 35px;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-sizing: border-box;
+    padding: 0 10px;
+}
+.dock .icon-btn {
+    width: 65px !important;
+    height: 65px !important;
+    margin: 0 !important;
+    border-radius: 18px;
+    font-size: 0; /* 隐藏底栏图标的文字，更像 iOS */
+}
     </style>
 </head>
 <body>
@@ -368,23 +394,21 @@
     <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
         
         <!-- 第一页桌面 -->
-        <div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
-            <div id="item-time" class="grid-item time-widget">
-                <div id="date-display" class="date-str">正在加载日期...</div>
-                <div id="clock-display" class="clock-str">00:00</div>
-            </div>
-            <div id="item-widget" class="grid-item left-widget">
-                <svg class="heart-icon" viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                <div class="battery-container">
-                    <div id="battery-fill"></div>
-                </div>
-            </div>
-            <div id="item-wb" class="grid-item icon-btn" onclick="openWorldBook()">世界书</div>
-            <div id="item-qq" class="grid-item icon-btn" onclick="openQQ()">QQ</div>
-            <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
-            <div id="item-progress" class="grid-item progress-widgets">
+<div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
+    <div id="item-time" class="grid-item time-widget">
+        <div id="date-display" class="date-str">正在加载日期...</div>
+        <div id="clock-display" class="clock-str">00:00</div>
+    </div>
+    <div id="item-widget" class="grid-item left-widget">
+        <svg class="heart-icon" viewBox="0 0 24 24">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        <div class="battery-container">
+            <div id="battery-fill"></div>
+        </div>
+    </div>
+    <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
+    <div id="item-progress" class="grid-item progress-widgets">
                 <div class="progress-item">
                     今年剩余 <span id="year-days">0</span> 天
                     <div class="bar-bg"><div id="year-bar" class="bar-fill"></div></div>
@@ -396,21 +420,26 @@
             </div>
         </div>
 
-        <!-- 第二页桌面 (放置扭蛋机和其他图标) -->
-        <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
-            <!-- 扭蛋机图标 -->
-            <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
-            
-            <!-- 把原来的设置和外观搬到第二页，显得不拥挤 -->
-            <div id="item-face" class="grid-item icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
-            <div id="item-set" class="grid-item icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
-            <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
-<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()" style="background: rgba(180, 199, 231, 0.2); border: 1px solid #B4C7E7; color: #8D6E63;">自律打卡</div>
-        </div>
+<!-- 第二页桌面 (放置扭蛋机和其他图标) -->
+<div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
+    <!-- 扭蛋机图标 -->
+    <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
+    <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
+    <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()" style="background: rgba(180, 199, 231, 0.2); border: 1px solid #B4C7E7; color: #8D6E63;">自律打卡</div>
+</div>
 
     </div>
-    <!-- 页面指示灯 (可选) -->
-    <div id="page-dots" style="position: absolute; bottom: calc(120px + env(safe-area-inset-bottom)); width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;">
+
+<!-- 新增：iOS 风格底栏 Dock -->
+<div class="dock">
+    <div id="item-wb" class="icon-btn" onclick="openWorldBook()">世界书</div>
+    <div id="item-qq" class="icon-btn" onclick="openQQ()">QQ</div>
+    <div id="item-face" class="icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
+    <div id="item-set" class="icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
+</div>
+
+<!-- 页面指示灯 (向下挪动了一点位置，防止被底栏遮挡) -->
+<div id="page-dots" style="position: absolute; bottom: calc(135px + env(safe-area-inset-bottom)); width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;">
         <div class="dot active" style="width: 8px; height: 8px; border-radius: 50%; background: white; opacity: 1;"></div>
         <div class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: white; opacity: 0.3;"></div>
     </div>
