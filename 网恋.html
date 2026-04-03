@@ -198,6 +198,17 @@
         <button class="btn-primary" style="width:100%; margin-top:15px;" onclick="closeGiftModal()">取消</button>
     </div>
 </div>
+
+<!-- 新增：选择网恋对象弹窗 -->
+<div id="target-selector-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="text-align:center; color: var(--dark-pink);">你想和谁网恋？</h3>
+        <div id="target-list-container" style="max-height: 300px; overflow-y: auto;">
+            <!-- 这里会动态显示你的 QQ 好友名字 -->
+        </div>
+        <button class="btn-primary" style="width:100%; margin-top:15px; background:#ccc;" onclick="document.getElementById('target-selector-modal').classList.add('hidden')">返回</button>
+    </div>
+</div>
     </div>
 </div>
 
@@ -266,13 +277,19 @@ function loadCharacterProgress(name) {
 
     // --- 初始化 ---
 window.onload = () => {
-    // 加载 API 配置
-    const savedConfig = localStorage.getItem('sweet_sim_config');
+    // 加载 API 配置 (同步主页面设置)
+    const savedConfig = localStorage.getItem('ai_config');
     if (savedConfig) {
         state.config = JSON.parse(savedConfig);
-        document.getElementById('api-url').value = state.config.url;
-        document.getElementById('api-key').value = state.config.key;
+        document.getElementById('api-url').value = state.config.url || "";
+        document.getElementById('api-key').value = state.config.key || "";
+        // 自动选择主页面选好的模型
+        const select = document.getElementById('model-select');
+        select.innerHTML = `<option value="${state.config.model}">${state.config.model}</option>`;
     }
+
+    // 自动从 QQ 获取好友
+    loadFriends();
 
     // 尝试加载上一次玩的对象
     const lastTarget = localStorage.getItem('last_target');
@@ -318,27 +335,26 @@ window.onload = () => {
     }
 
     function saveSettings() {
-        state.config.url = document.getElementById('api-url').value;
-        state.config.key = document.getElementById('api-key').value;
-        state.config.model = document.getElementById('model-select').value;
-        localStorage.setItem('sweet_sim_config', JSON.stringify(state.config));
-        toggleSettings();
-    }
+    state.config.url = document.getElementById('api-url').value;
+    state.config.key = document.getElementById('api-key').value;
+    state.config.model = document.getElementById('model-select').value;
+    // 保存到主页面通用的配置里
+    localStorage.setItem('ai_config', JSON.stringify(state.config));
+    toggleSettings();
+}
 
     async function loadFriends() {
-        try {
-            const response = await fetch('qq.html');
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const nodes = doc.querySelectorAll('.nickname, .name, span'); 
-            const found = Array.from(nodes).map(n => n.textContent.trim()).filter(n => n.length > 1 && n.length < 12);
-            if(found.length > 0) {
-                state.friends = [...new Set(found)];
-                document.getElementById('friend-status').textContent = `成功导入 ${state.friends.length} 位好友`;
-            }
-        } catch (e) { alert('未找到 qq.html，继续使用内置测试角色'); }
+    // 直接从本地存储读取 QQ 的好友列表
+    const qqFriendsData = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+    
+    if(qqFriendsData.length > 0) {
+        // 只提取名字
+        state.friends = qqFriendsData.map(f => f.name);
+        document.getElementById('friend-status').textContent = `已同步 QQ 好友：${state.friends.length} 位`;
+    } else {
+        document.getElementById('friend-status').textContent = `QQ 暂无好友，请先去 QQ 添加`;
     }
+}
 
     // --- 核心逻辑 ---
         async function callAI(prompt) {
@@ -380,16 +396,35 @@ window.onload = () => {
 }
 
     async function startNewDay() {
-    // 随机抽一个角色
-    let nextTarget = state.friends[Math.floor(Math.random() * state.friends.length)];
+    const listContainer = document.getElementById('target-list-container');
+    listContainer.innerHTML = ''; // 清空旧列表
+
+    if (state.friends.length === 0) {
+        alert("QQ里还没有好友哦，快去QQ添加几个帅哥吧！");
+        return;
+    }
+
+    state.friends.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'option-item';
+        btn.style.width = '100%';
+        btn.style.textAlign = 'center';
+        btn.textContent = name;
+        btn.onclick = () => selectAndStartLove(name);
+        listContainer.appendChild(btn);
+    });
     
-    // 如果抽到的是新角色，尝试加载他的存档
+    document.getElementById('target-selector-modal').classList.remove('hidden');
+}
+
+// 新增：选中角色后的启动逻辑
+async function selectAndStartLove(nextTarget) {
+    document.getElementById('target-selector-modal').classList.add('hidden');
+    
+    // 尝试加载存档
     let hasSave = loadCharacterProgress(nextTarget);
     
-    if (hasSave) {
-        // 如果有存档，直接提示已经切换
-        alert('已切换到 ' + nextTarget + ' 的故事进度');
-    } else {
+    if (!hasSave) {
         // 如果没有存档，才开启全新的故事
         state.currentTarget = nextTarget;
         state.day = 1;
@@ -399,6 +434,8 @@ window.onload = () => {
         
         const content = await callAI("开始新的一天，我们在游戏的连麦频道里相遇了，他正在等我。");
         if(content) displayStory(content);
+    } else {
+        alert('已恢复与 ' + nextTarget + ' 的甜蜜进度');
     }
 }
 
