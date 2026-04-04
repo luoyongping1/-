@@ -451,9 +451,23 @@ gap: 15px;
 
         <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
 
-        <div id="app-overlay">
-            <iframe id="app-frame" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-            <div id="worldbook-app" style="display: none;">
+        <!-- 修改后的 App 容器：预先加载所有页面 -->
+<div id="app-overlay" style="display: none;">
+    <!-- QQ -->
+    <iframe id="iframe-qq" src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <!-- 小红书 -->
+    <iframe id="iframe-xhs" src="书书小红书.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <!-- 扭蛋机 -->
+    <iframe id="iframe-gacha" src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <!-- 自律打卡 -->
+    <iframe id="iframe-self" src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <!-- 网恋模拟器 -->
+    <iframe id="iframe-wl" src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <!-- 查手机 -->
+    <iframe id="iframe-checkphone" src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    
+    <!-- 世界书（原本就是 div 结构，保留即可） -->
+    <div id="worldbook-app" style="display: none;">
     <div class="wb-header">
         <!-- 新增的切换标签 -->
         <div class="wb-tabs">
@@ -774,100 +788,69 @@ gap: 15px;
             }
         }
 
-        // --- App 控制逻辑 ---
-function openQQ() { showAppFrame("qq.html"); }
-function openApp() { showAppFrame("书书小红书.html"); }
-// 新增：打开扭蛋机函数
-function openGacha() { showAppFrame("扭蛋机.html"); }
-function openSelfApp() { showAppFrame("自律.html"); }
-// 新增：打开网恋模拟器
-function openWlApp() { showAppFrame("网恋.html"); }
+        // --- 修改后的 App 控制逻辑（即时切换，无卡顿） ---
 
-// --- 新增：左右滑动逻辑 ---
-let startX = 0;
-let currentPageIndex = 0;
-const wrapper = document.getElementById('swiper-wrapper');
-const dots = document.querySelectorAll('.dot');
-
-document.getElementById('swiper-container').addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-}, {passive: true});
-
-document.getElementById('swiper-container').addEventListener('touchend', (e) => {
-    let endX = e.changedTouches[0].clientX;
-    let diff = startX - endX;
-
-    if (Math.abs(diff) > 50) { // 滑动超过50像素才翻页
-        if (diff > 0 && currentPageIndex === 0) {
-            // 向左划，去第二页
-            currentPageIndex = 1;
-        } else if (diff < 0 && currentPageIndex === 1) {
-            // 向右划，回第一页
-            currentPageIndex = 0;
-        }
-        updatePage();
-    }
-});
-
-function updatePage() {
-    wrapper.style.transform = `translateX(-${currentPageIndex * 50}%)`;
-    // 更新指示点
-    dots.forEach((dot, index) => {
-        dot.style.opacity = (index === currentPageIndex) ? "1" : "0.3";
+// 这个核心函数负责：隐藏所有App窗口，只显示指定的那个
+function switchAppWindow(targetId) {
+    // 1. 先把所有的 iframe 和世界书 div 都藏起来
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'worldbook-app'];
+    allApps.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.display = "none";
     });
-}
 
-// 新增：显示好友选择器
-function showFriendSelector() {
-    const friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
-    const container = document.getElementById('friend-list-for-check');
-    
-    if (friends.length === 0) {
-        container.innerHTML = '<p style="text-align:center;color:#666;">QQ里还没有好友哦</p>';
+    // 2. 显示大蒙层
+    document.getElementById('app-overlay').style.display = "block";
+
+    // 3. 显示我们想要的那一个
+    const target = document.getElementById(targetId);
+    if(targetId === 'worldbook-app') {
+        target.style.display = "flex"; // 世界书布局是 flex
     } else {
-        container.innerHTML = friends.map(f => `
-            <div onclick="startCheckPhone('${f.name}')" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:10px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center;">
-                <div style="width:30px; height:30px; border-radius:50%; background:#ccc; margin-right:10px; overflow:hidden;">
-                    ${f.avatarUrl ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}
-                </div>
-                <b>${f.name}</b>
-            </div>
-        `).join('');
+        target.style.display = "block"; // iframe 布局是 block
     }
-    document.getElementById('friend-selector-modal').style.display = 'flex';
+    
+    // 4. 显示悬浮球
+    showBall();
 }
 
-// 新增：进入选定角色的手机
+// 以下是各个图标点击时触发的函数
+function openQQ() { switchAppWindow("iframe-qq"); }
+function openApp() { switchAppWindow("iframe-xhs"); }
+function openGacha() { switchAppWindow("iframe-gacha"); }
+function openSelfApp() { switchAppWindow("iframe-self"); }
+function openWlApp() { switchAppWindow("iframe-wl"); }
+function openWorldBook() { 
+    switchAppWindow("worldbook-app"); 
+    renderWorldBook(); 
+}
+
+// 查手机比较特殊，因为它是从弹窗进入的
 function startCheckPhone(name) {
     document.getElementById('friend-selector-modal').style.display = 'none';
-    // 把选中的名字存入临时缓存，让查手机App能读到
     localStorage.setItem('target_check_name', name);
-    showAppFrame("查手机.html");
+    switchAppWindow("iframe-checkphone");
 }
-        function showAppFrame(url) {
-            document.getElementById('app-overlay').style.display = "block";
-            document.getElementById('app-frame').style.display = "block";
-            document.getElementById('app-frame').src = url;
-            showBall();
-        }
-        function openWorldBook() {
-            document.getElementById('app-overlay').style.display = "block";
-            document.getElementById('worldbook-app').style.display = "flex";
-            renderWorldBook();
-            showBall();
-        }
-        function showBall() {
-            ball.style.display = "block";
-            ball.style.left = "80%"; ball.style.top = "85%";
-        }
-        function closeApp() {
-            if(isDraggingBall) return;
-            document.getElementById('app-overlay').style.display = "none";
-            document.getElementById('app-frame').src = "";
-            document.getElementById('app-frame').style.display = "none";
-            document.getElementById('worldbook-app').style.display = "none";
-            ball.style.display = "none";
-        }
+
+function showBall() {
+    ball.style.display = "block";
+    ball.style.left = "80%"; ball.style.top = "85%";
+}
+
+function closeApp() {
+    if(isDraggingBall) return;
+    // 隐藏总蒙层
+    document.getElementById('app-overlay').style.display = "none";
+    // 隐藏悬浮球
+    ball.style.display = "none";
+    
+    // 为了省电/性能，隐藏蒙层时顺便把里面具体的 iframe 也藏了
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'worldbook-app'];
+    allApps.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.display = "none";
+    });
+}
 
         let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
 let currentWbMode = 'global';
