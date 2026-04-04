@@ -849,10 +849,62 @@ function closeApp() {
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
-    });
+        });
 }
 
-        let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
+// --- 重新找回：左右滑动逻辑 ---
+let swiperStartX = 0; 
+let currentPageIndex = 0;
+
+// 监听滑动开始
+document.getElementById('swiper-container').addEventListener('touchstart', (e) => {
+    swiperStartX = e.touches[0].clientX;
+}, {passive: true});
+
+// 监听滑动结束
+document.getElementById('swiper-container').addEventListener('touchend', (e) => {
+    let endX = e.changedTouches[0].clientX;
+    let diff = swiperStartX - endX;
+    const wrapper = document.getElementById('swiper-wrapper');
+    const dots = document.querySelectorAll('.dot');
+
+    if (Math.abs(diff) > 50) { // 滑动超过50像素才翻页
+        if (diff > 0 && currentPageIndex === 0) {
+            currentPageIndex = 1;
+        } else if (diff < 0 && currentPageIndex === 1) {
+            currentPageIndex = 0;
+        }
+        // 执行翻页动画
+        wrapper.style.transform = `translateX(-${currentPageIndex * 50}%)`;
+        // 更新小圆点状态
+        dots.forEach((dot, index) => {
+            dot.style.opacity = (index === currentPageIndex) ? "1" : "0.3";
+        });
+    }
+});
+
+// --- 重新找回：查手机的好友选择逻辑 ---
+function showFriendSelector() {
+    const friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
+    const container = document.getElementById('friend-list-for-check');
+    
+    if (friends.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#666;padding:20px;">QQ里还没有好友哦，请先去QQ添加好友</p>';
+    } else {
+        container.innerHTML = friends.map(f => `
+            <div onclick="startCheckPhone('${f.name}')" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:10px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center;">
+                <div style="width:30px; height:30px; border-radius:50%; background:#ccc; margin-right:10px; overflow:hidden;">
+                    ${f.avatarUrl ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+                </div>
+                <b style="color:#333;">${f.name}</b>
+            </div>
+        `).join('');
+    }
+    document.getElementById('friend-selector-modal').style.display = 'flex';
+}
+
+// 下面是你原本就有的 wbData 逻辑...
+let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
 let currentWbMode = 'global';
 let editingBookIndex = null; 
 let currentWbTab = 'global'; 
