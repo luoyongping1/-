@@ -621,14 +621,58 @@ input:checked + .slider:before {
     padding-top: 5px;
     margin-top: 5px;
 }
+/* 微信红包卡片样式 */
+.redpacket-bubble {
+    background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    width: 220px;
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+.redpacket-bubble.opened {
+    background: linear-gradient(135deg, #e74c3c88, #c0392b88) !important;
+}
+.rp-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.rp-icon {
+    font-size: 28px;
+}
+.rp-info {
+    flex: 1;
+}
+.rp-note {
+    font-size: 14px;
+    font-weight: 500;
+}
+.rp-amount {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+.rp-footer {
+    font-size: 11px;
+    border-top: 0.5px solid rgba(255,255,255,0.3);
+    padding-top: 5px;
+    margin-top: 5px;
+    opacity: 0.7;
+}
 </style>
 </head>
 <body>
 
     <!-- 1. 微信列表页 -->
     <div id="tab-chat" class="page active">
-        <div class="header">微信</div>
-        <div class="content" style="padding-bottom: 0;">
+    <div class="header">
+        <span>微信</span>
+        <span style="font-size:14px; color:var(--wechat-green); cursor:pointer;" onclick="openGroupListPage()">群聊</span>
+    </div>
+    <div class="content" style="padding-bottom: 0;">
             <div class="chat-search-wrap">
                 <div class="chat-search-box">
                     <span style="color:#999; font-size:14px;">🔍</span>
@@ -686,6 +730,18 @@ input:checked + .slider:before {
         </div>
     </div>
 
+<!-- 群聊列表页 -->
+<div id="group-list-page" class="page" style="z-index: 1000; background: var(--bg-gray);">
+    <div class="header">
+        <span onclick="document.getElementById('group-list-page').classList.remove('active')">〈 返回</span>
+        <span>群聊</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="createGroupChat()">⊕</span>
+    </div>
+    <div class="content" id="group-session-list">
+        <!-- 这里会动态生成群聊列表 -->
+    </div>
+</div>
+
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchTab('tab-chat', this)">💬<span>微信</span></div>
         <div class="tab-item" onclick="switchTab('tab-contacts', this)">👥<span>通讯录</span></div>
@@ -708,7 +764,7 @@ input:checked + .slider:before {
         <div class="input-bar">
             <div style="font-size: 24px; color: #333; cursor: pointer; padding: 0 5px;" onclick="toggleToolBox()">⊕</div>
             <input type="text" id="msg-input" placeholder="输入消息..." onkeydown="if(event.key==='Enter') sendMsg()">
-            <div style="font-size: 22px; cursor: pointer; padding: 0 5px;" onclick="getAiReply()">🎙️</div>
+            <div style="font-size: 22px; cursor: pointer; padding: 0 5px;" onclick="handleMicClick()">🎙️</div>
             <button class="btn-green" onclick="sendMsg()">发送</button>
         </div>
         <div id="tool-box" style="display:none; background:#f7f7f7; border-top:0.5px solid #ccc; padding:20px; grid-template-columns: repeat(4, 1fr); gap:20px; padding-bottom: calc(20px + env(safe-area-inset-bottom));">
@@ -724,6 +780,16 @@ input:checked + .slider:before {
     <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openTransferModal()">
         <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">💸</div>
         <div style="font-size:12px; color:#666;">转账</div>
+    </div>
+    <!-- 红包图标 -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openRedPacketModal()">
+        <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🧧</div>
+        <div style="font-size:12px; color:#666;">红包</div>
+    </div>
+    <!-- 修罗场图标 -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="toggleShuraMode()">
+        <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🔥</div>
+        <div style="font-size:12px; color:#666;">修罗场</div>
     </div>
 </div>
     </div>
@@ -1031,9 +1097,12 @@ function applyGlobalStyles() {
 applyGlobalStyles();
         let currentFriendName = "";
         let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '' }];
-        let groups = JSON.parse(localStorage.getItem('qq_groups')) || ['我的好友'];
-        let collapsedGroups = JSON.parse(localStorage.getItem('qq_collapsed_groups')) || [];
-        let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
+let groups = JSON.parse(localStorage.getItem('qq_groups')) || ['我的好友'];
+let collapsedGroups = JSON.parse(localStorage.getItem('qq_collapsed_groups')) || [];
+let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
+// 新增：群聊数据存储
+let groupChats = JSON.parse(localStorage.getItem('qq_group_chats')) || [];
+let isGroupMode = false; // 标记当前是否在群聊中
 // 新增：约会记录数据库
 let datingHistories = JSON.parse(localStorage.getItem('qq_dating_history')) || {};
 let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
@@ -1045,7 +1114,6 @@ function saveData() {
         localStorage.setItem('qq_groups', JSON.stringify(groups));
         localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
         localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-        // 新增：保存约会记录
         localStorage.setItem('qq_dating_history', JSON.stringify(datingHistories));
         localStorage.setItem('qq_moments', JSON.stringify(moments));
         localStorage.setItem('ai_config', JSON.stringify(aiConfig));
@@ -1053,6 +1121,7 @@ function saveData() {
         localStorage.setItem('wallet_data', JSON.stringify(walletData));
         localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
         localStorage.setItem('qq_stickers', JSON.stringify(stickers));
+        localStorage.setItem('qq_group_chats', JSON.stringify(groupChats));
     } catch (e) { console.error("Save Error"); }
 }
         let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
@@ -1068,19 +1137,21 @@ function saveData() {
         let quotedText = "";
         
         function saveData() {
-            try {
-                localStorage.setItem('qq_friends', JSON.stringify(friends));
-                localStorage.setItem('qq_groups', JSON.stringify(groups));
-                localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
-                localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-                localStorage.setItem('qq_moments', JSON.stringify(moments));
-                localStorage.setItem('ai_config', JSON.stringify(aiConfig));
-                localStorage.setItem('my_info', JSON.stringify(myInfo));
-                localStorage.setItem('wallet_data', JSON.stringify(walletData));
-                localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
-                localStorage.setItem('qq_stickers', JSON.stringify(stickers));
-            } catch (e) { console.error("Save Error"); }
-        }
+    try {
+        localStorage.setItem('qq_friends', JSON.stringify(friends));
+        localStorage.setItem('qq_groups', JSON.stringify(groups));
+        localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
+        localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+        localStorage.setItem('qq_moments', JSON.stringify(moments));
+        localStorage.setItem('ai_config', JSON.stringify(aiConfig));
+        localStorage.setItem('my_info', JSON.stringify(myInfo));
+        localStorage.setItem('wallet_data', JSON.stringify(walletData));
+        localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
+        localStorage.setItem('qq_stickers', JSON.stringify(stickers));
+        // 新增：保存群聊列表
+        localStorage.setItem('qq_group_chats', JSON.stringify(groupChats));
+    } catch (e) { console.error("Save Error"); }
+}
 
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-bar .tab-item').forEach(t => t.classList.remove('active'));
@@ -1125,30 +1196,61 @@ function saveData() {
         }
 
         function renderMessages() {
-            const friend = friends.find(f => f.name === currentFriendName);
-            if(!friend) return;
-            const container = document.getElementById('message-container');
-            container.style.backgroundImage = friend.chatBg ? `url("${friend.chatBg.replace(/(\r\n|\n|\r)/gm, "")}")` : 'none';
+    // 1. 获取基本信息（区分群或个人）
+    let chatTitle = "";
+    let chatBg = "none";
+    
+    if (isGroupMode) {
+        const group = groupChats.find(g => g.id === currentFriendName);
+        if (!group) return;
+        chatTitle = group.name;
+    } else {
+        const friend = friends.find(f => f.name === currentFriendName);
+        if (!friend) return;
+        chatTitle = friend.name;
+        chatBg = friend.chatBg ? `url("${friend.chatBg.replace(/(\r\n|\n|\r)/gm, "")}")` : 'none';
+    }
 
-            const history = chatHistories[currentFriendName] || [];
-            const displayHistory = history.slice(-20);
-            let htmlArr = [];
-            
-            for(let i = 0; i < displayHistory.length; i++){
-                const m = displayHistory[i];
-                const realIndex = history.length - displayHistory.length + i;
-                const isSelf = m.type === 'self';
-                
-                let avHtml = "";
-                if (isSelf) {
-                    avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我';
+    const container = document.getElementById('message-container');
+    container.style.backgroundImage = chatBg;
+
+    const history = chatHistories[currentFriendName] || [];
+    const displayHistory = history.slice(-20);
+    let htmlArr = [];
+    
+    for(let i = 0; i < displayHistory.length; i++){
+        const m = displayHistory[i];
+const realIndex = history.length - displayHistory.length + i;
+const isSelf = m.type === 'self';
+
+// 系统通知（修罗场开启/退出等）
+if (m.isSystemNotice) {
+    htmlArr.push(`<div style="text-align:center; margin:10px 0;"><span style="background:#dadada; color:#666; font-size:12px; padding:4px 12px; border-radius:4px;">${m.text}</span></div>`);
+    continue;
+}
+        
+        let avHtml = "";
+        if (isSelf) {
+            avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我';
+        } else {
+            // 关键修改：如果是群聊，从消息本身获取发送者头像，否则从好友列表找
+            if (isGroupMode) {
+                const senderObj = friends.find(f => f.name === m.sender);
+                if (senderObj && senderObj.avatarUrl) {
+                    avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
                 } else {
-                    if (friend.avatarUrl) {
-                        avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
-                    } else {
-                        avHtml = `<div onclick="showHeartbeat(${realIndex})">${friend.initial}</div>`;
-                    }
+                    avHtml = `<div>${m.initial || '匿'}</div>`;
                 }
+            } else {
+                const friend = friends.find(f => f.name === currentFriendName);
+                if (friend.avatarUrl) {
+                    avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                } else {
+                    avHtml = `<div onclick="showHeartbeat(${realIndex})">${friend.initial}</div>`;
+                }
+            }
+        }
+        // ... (后面渲染气泡的代码保持不变，我就不重复贴了，只需要改上面获取 avHtml 的逻辑)
 
                 let contentHtml = m.text;
 // 强化判断：如果标记了是剧场，或者文本以 < 开头且包含 html/doctype/div，则渲染为卡片
@@ -1189,6 +1291,19 @@ let useBubble = true;
                 </div>
             </div>
             <div class="transfer-footer">${footerText}</div>
+        </div>`;
+    useBubble = false;
+} else if (m.isRedPacket) {
+    contentHtml = `
+        <div class="redpacket-bubble ${m.rpOpened ? 'opened' : ''}" ${!m.rpOpened && m.type === 'friend' ? `onclick="openRedPacket(${realIndex})"` : ''}>
+            <div class="rp-top">
+                <div class="rp-icon">🧧</div>
+                <div class="rp-info">
+                    <div class="rp-note">${m.rpNote || '恭喜发财'}</div>
+                    <div class="rp-amount">￥${parseFloat(m.text).toFixed(2)}${m.rpTarget ? ' · 指定给'+m.rpTarget : ''}</div>
+                </div>
+            </div>
+            <div class="rp-footer">${m.rpOpened ? '红包已被领取' : '微信红包'}</div>
         </div>`;
     useBubble = false;
 } else if (m.isRealImage) {
@@ -1311,8 +1426,13 @@ targets.forEach((b) => {
                 如果你不写这些标签，则默认不处理（钱会一直挂着）。`;
             }
 
+                                    let shuraPromptDM = "";
+                                    if (shuraActive && shuraScenario) {
+                                        shuraPromptDM = `\n【🔥 修罗场剧情背景】：${shuraScenario}\n请基于此背景做出符合人设的反应。`;
+                                    }
+                                    
                                     let sys = `# Role
-你现在化身为[${friend.persona}]，进行真实的即时聊天。${timePrompt}${moneyPrompt}
+你现在化身为[${friend.persona}]，进行真实的即时聊天。${timePrompt}${moneyPrompt}${shuraPromptDM}
 【转账特殊指令】：如果你想主动给用户转账或发零花钱，请务必在回复文字的最后加上标签：[SEND_MONEY]金额|备注（例如：[SEND_MONEY]50.00|拿去买奶茶）。注意：金额必须是数字。
 
 【世界书最高指令】
@@ -1758,29 +1878,45 @@ renderChatList();
         function showContextMenu(x, y, i) { if(isMultiSelecting) return; menuTargetIndex = i; const m = document.getElementById('msg-context-menu'); m.style.display = 'block'; m.style.left = Math.min(x, window.innerWidth - 110) + 'px'; m.style.top = y + 'px'; setTimeout(() => document.addEventListener('click', function c(){ m.style.display = 'none'; document.removeEventListener('click', c); }), 100); }
         function deleteSingleMsg() {
     if (menuTargetIndex === -1) return;
-    // 1. 从历史记录中删除这一条
     chatHistories[currentFriendName].splice(menuTargetIndex, 1);
     
-    // 2. 找到这个朋友，更新他的最后一条消息预览
-    const friend = friends.find(f => f.name === currentFriendName);
     const history = chatHistories[currentFriendName] || [];
-    
+    let lastPreview = "";
     if (history.length > 0) {
         const last = history[history.length - 1];
-        if (last.isSticker) friend.lastMsg = "[表情]";
-        else if (last.isRealImage) friend.lastMsg = "[图片]";
-        else if (last.isDescribeCard) friend.lastMsg = "[便签]";
-        else friend.lastMsg = last.text;
-    } else {
-        friend.lastMsg = "";
+        lastPreview = last.isSticker ? "[表情]" : (last.isRealImage ? "[图片]" : (last.isDescribeCard ? "[便签]" : last.text));
     }
 
-    // 3. 保存数据并刷新所有显示
+    if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        if (g) g.lastMsg = lastPreview;
+    } else {
+        const f = friends.find(f => f.name === currentFriendName);
+        if (f) f.lastMsg = lastPreview;
+    }
+
     saveData();
     renderMessages();
     renderChatList();
 }
-        function redoReply() { const h = chatHistories[currentFriendName]; let i = h.length - 1; while(i >= 0 && h[i].type === 'friend') { h.splice(i, 1); i--; } saveData(); renderMessages(); getAiReply(); }
+        function redoReply() { 
+    const h = chatHistories[currentFriendName]; 
+    if (!h) return;
+    let i = h.length - 1; 
+    // 删除最后所有的 AI 回复
+    while(i >= 0 && h[i].type === 'friend') { 
+        h.splice(i, 1); 
+        i--; 
+    } 
+    saveData(); 
+    renderMessages(); 
+    // 修复：根据模式触发不同的回复函数
+    if (isGroupMode) {
+        getGroupAiReply();
+    } else {
+        getAiReply(); 
+    }
+}
         function quoteMsg() { quotedText = chatHistories[currentFriendName][menuTargetIndex].text; const p = document.getElementById('quote-preview'); p.innerHTML = `引用：${quotedText.substring(0,10)}... <span onclick="clearQuote()">×</span>`; p.style.display = 'block'; }
         function clearQuote() { quotedText = ""; document.getElementById('quote-preview').style.display = 'none'; }
         function enterMultiSelect() { isMultiSelecting = true; document.getElementById('multi-select-bar').style.display = 'flex'; renderMessages(); }
@@ -1926,14 +2062,188 @@ function executeTransfer() {
         transferNote: note
     });
 
-    friends.find(f => f.name === currentFriendName).lastMsg = "[微信转账] ￥" + amount.toFixed(2);
+        if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        g.lastMsg = "我: [微信转账] ￥" + amount.toFixed(2);
+    } else {
+        friends.find(f => f.name === currentFriendName).lastMsg = "[微信转账] ￥" + amount.toFixed(2);
+    }
+    
     updateWalletUI();
     saveData();
     renderMessages();
     closeTransferModal();
-    getAiReply();
+    
+    if (isGroupMode) {
+        getGroupAiReply();
+    } else {
+        getAiReply();
+    }
 }
-        function sendMsg() { const val = document.getElementById('msg-input').value.trim(); if(!val) return; if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); friends.find(f => f.name === currentFriendName).lastMsg = val; document.getElementById('msg-input').value = ''; clearQuote(); saveData(); renderMessages(); getAiReply(); }
+                // 1. 修改后的发送消息函数（不再嵌套回复逻辑）
+        function sendMsg() { 
+            const val = document.getElementById('msg-input').value.trim(); 
+            if(!val) return; 
+            if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; 
+            
+            chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); 
+            
+            if (isGroupMode) {
+                const g = groupChats.find(x => x.id === currentFriendName);
+                g.lastMsg = "我: " + val;
+            } else {
+                friends.find(f => f.name === currentFriendName).lastMsg = val; 
+            }
+            
+            document.getElementById('msg-input').value = ''; 
+            clearQuote(); 
+            saveData(); 
+            renderMessages(); 
+            
+            // 发送后自动判断是调人回复还是调群回复
+            if (isGroupMode) {
+                getGroupAiReply(); 
+            } else {
+                getAiReply(); 
+            }
+        }
+
+        // 2. 新增：专门处理小话筒点击的函数
+        function handleMicClick() {
+            if (isGroupMode) {
+                getGroupAiReply();
+            } else {
+                getAiReply();
+            }
+        }
+
+        // 3. 独立出来的群聊回复逻辑（包含输入状态显示）
+                                async function getGroupAiReply() {
+            if (!aiConfig.key) return alert("请先配置 API 设置");
+            const group = groupChats.find(g => g.id === currentFriendName);
+            if (!group) return;
+
+            for (const memberName of group.members) {
+                const friend = friends.find(f => f.name === memberName);
+                if (!friend) continue;
+
+                // --- 极其核心的修复：重塑 AI 视角 ---
+                // 对于此刻正在思考的 AI 来说：只有它自己发的消息才算 `assistant`
+                // 你（用户）和其他 AI 发的消息，全都是抛给它的问题，统统算作 `user`
+                const freshHistory = (chatHistories[currentFriendName] || []).slice(-20).map(m => {
+                    const isMyOwnMsg = (m.type === 'friend' && m.sender === friend.name);
+                    const role = isMyOwnMsg ? 'assistant' : 'user';
+                    const prefixName = m.type === 'self' ? '用户' : (m.sender || '某人');
+                    
+                    return {
+                        role: role,
+                        content: isMyOwnMsg ? m.text : `[${prefixName} 说]: ${m.text}`
+                    };
+                });
+
+                const typingEl = document.getElementById('chat-typing');
+                typingEl.innerText = `${friend.name} 正在输入...`;
+                typingEl.style.display = 'block';
+
+                await new Promise(r => setTimeout(r, 1200 + Math.random() * 1800));
+
+                let longMemoryPrompt = friend.longMemory ? "\n你的长期记忆：\n" + friend.longMemory : "";
+
+                let shuraPrompt = "";
+                if (shuraActive && shuraScenario) {
+                    shuraPrompt = `\n\n【🔥 修罗场剧情背景（当前正在发生）】：
+${shuraScenario}
+请基于以上剧情背景，结合你的人设性格，立刻做出反应！你可以质问、吃醋、生气、委屈、阴阳怪气等。`;
+                }
+
+                let sys = `你是微信群聊里的一个真人，名叫[${friend.name}]。
+你的性格设定：${friend.persona}
+群内成员有：用户, ${group.members.join(', ')}
+
+## 强制规则（严格遵守）：
+1. 这是一个"修罗场"群聊，随时处于吃醋、争宠和修罗场氛围。看到用户被别人撩，必须根据你的性格作出反应！
+2. 绝对不能替别人回答！你只代表你自己。
+3. 你的回复绝对不能带任何名字前缀（禁用 "${friend.name}：" 等）。
+4. 像真实微信聊天，你可以分段发，一条消息最多拆分为 1~3 行（使用换行符）。
+5. 口语化，不必文绉绉，拒绝AI礼貌用语。
+${shuraPrompt}
+${longMemoryPrompt}`;
+
+                try {
+                    const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: aiConfig.model,
+                            messages: [{ role: "system", content: sys }, ...freshHistory],
+                            temperature: 0.85,
+                            presence_penalty: 0.6
+                        })
+                    });
+                    const data = await res.json();
+                    
+                    // 防止 AI 出现 400 或 抛错，安全获取内容
+                    if (!data.choices || !data.choices[0]) {
+                        throw new Error("API 返回异常");
+                    }
+                    
+                    let reply = data.choices[0].message.content.trim();
+
+                    // 双重清洗：去掉可能生成的烦人前缀
+                    group.members.forEach(name => {
+                        const pattern = new RegExp(`^\\[?${name}\\]?[:：\\s]*`, 'gim');
+                        reply = reply.replace(pattern, "");
+                    });
+                    reply = reply.replace(/^\[?用户\]?[:：\s]*/gim, "");
+
+                    // 限制只发前三行气泡
+                    let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, 3);
+
+                    for (let line of lines) {
+                        await new Promise(r => setTimeout(r, 600));
+                        let cleanText = line.trim();
+                        
+                        chatHistories[currentFriendName].push({
+                            type: 'friend',
+                            text: cleanText,
+                            sender: friend.name,
+                            initial: friend.initial || friend.name[0]
+                        });
+
+                        if (group.memorySync && !shuraActive) {
+    const ts = new Date().toLocaleString();
+    const friendInList = friends.find(ff => ff.name === friend.name);
+    if (friendInList) {
+        friendInList.longMemory = (friendInList.longMemory ? friendInList.longMemory + "\n" : "") + `[${ts} 群聊同步-${group.name}]: ${cleanText}`;
+    }
+}
+group.lastMsg = `${friend.name}: ${cleanText}`;
+saveData();
+                        renderMessages();
+                    }
+
+                    // 表情包机制（50%概率发送）
+if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
+                        await new Promise(r => setTimeout(r, 800));
+                        const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+                        chatHistories[currentFriendName].push({
+                            type: 'friend',
+                            text: randomSticker.url,
+                            isSticker: true,
+                            sender: friend.name,
+                            initial: friend.initial || friend.name[0]
+                        });
+                        group.lastMsg = `${friend.name}: [表情]`;
+                        saveData();
+                        renderMessages();
+                    }
+                } catch (e) {
+                    console.error("【群聊轮次错误】", friend.name, "失败原因:", e);
+                }
+                typingEl.style.display = 'none';
+            }
+        }
+        
         function renderMePage() { document.getElementById('my-name-display').innerText = myInfo.name; document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid; document.getElementById('my-avatar-display').innerHTML = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : 'ME'; }
         // --- 约会功能逻辑 ---
 
@@ -2110,21 +2420,150 @@ async function getDatingAiReply() {
         renderDatingMessages();
     } catch (e) { alert("约会互动失败"); }
 }
+
+// 打开群聊列表页
+function openGroupListPage() {
+    document.getElementById('group-list-page').classList.add('active');
+    renderGroupList();
+}
+
+// 渲染群聊列表
+function renderGroupList() {
+    const list = document.getElementById('group-session-list');
+    if (groupChats.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:#999;margin-top:50px;">暂无群聊，点击右上角创建</div>';
+        return;
+    }
+    list.innerHTML = groupChats.map(g => `
+        <div class="wechat-chat-item" onclick="openGroupChat('${g.id}')">
+            <div class="chat-avatar" style="background:#ddd">👥</div>
+            <div class="chat-body">
+                <div class="chat-top"><div class="chat-nickname">${g.name} (${g.members.length}人)</div></div>
+                <div class="chat-preview">${g.lastMsg || '[新群聊]'}</div>
+            </div>
+        </div>`).join('');
+}
+
+// 创建群聊逻辑
+function createGroupChat() {
+    const groupName = prompt("请输入群聊名称：");
+    if (!groupName) return;
+
+    // 创建一个临时选择列表
+    let html = `<div id="group-sel-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:white;width:80%;max-height:70%;border-radius:15px;padding:20px;overflow-y:auto;">
+            <h3 style="margin-top:0;">选择群成员</h3>
+            ${friends.map(f => `
+                <div style="display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #eee;">
+                    <input type="checkbox" class="group-member-checkbox" value="${f.name}" style="transform:scale(1.2);">
+                    <div class="avatar" style="width:30px;height:30px;font-size:12px;">${f.avatarUrl?`<img src="${f.avatarUrl}">`:f.initial}</div>
+                    <span>${f.name}</span>
+                </div>
+            `).join('')}
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button onclick="confirmCreateGroup('${groupName}')" style="flex:1;background:#07c160;color:white;border:none;padding:10px;border-radius:8px;">确定</button>
+                <button onclick="document.getElementById('group-sel-modal').remove()" style="flex:1;background:#eee;border:none;padding:10px;border-radius:8px;">取消</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 配合勾选框的辅助函数
+function confirmCreateGroup(groupName) {
+    const checkboxes = document.querySelectorAll('.group-member-checkbox:checked');
+    const selectedMembers = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (selectedMembers.length < 1) {
+        alert("请至少选择一个成员！");
+        return;
+    }
+
+    const newGroup = {
+        id: 'group_' + Date.now(),
+        name: groupName,
+        members: selectedMembers,
+        lastMsg: '大家快出来聊天吧！'
+    };
+
+    groupChats.push(newGroup);
+    chatHistories[newGroup.id] = []; 
+    saveData();
+    renderGroupList();
+    document.getElementById('group-sel-modal').remove();
+    alert("群聊创建成功！");
+}
+
+// 进入群聊界面
+function openGroupChat(groupId) {
+    const g = groupChats.find(x => x.id === groupId);
+    if (!g) return;
+    isGroupMode = true; 
+    currentFriendName = groupId; 
+    
+    // 关键修改：隐藏群聊列表页面
+    document.getElementById('group-list-page').classList.remove('active');
+    
+    document.getElementById('chat-title').innerText = g.name;
+    document.getElementById('chat-page').classList.add('active');
+    renderMessages();
+}
+
+// 拦截原有的返回函数
+const originalCloseChat = closeChat;
+closeChat = function() {
+    isGroupMode = false;
+    originalCloseChat();
+};
+
         function openChat(n) { currentFriendName = n; document.getElementById('chat-title').innerText = n; document.getElementById('chat-page').classList.add('active'); if(window.pendingRecharge) { if(!chatHistories[n]) chatHistories[n] = []; chatHistories[n].push({ type: 'self', isCard: true, text: `[充值申请] ￥${window.pendingRecharge.toFixed(2)}` }); window.pendingRecharge = null; saveData(); } setTimeout(renderMessages, 50); }
         function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; setTimeout(renderChatList, 10); }
-        function openSettings() { 
-    const f = friends.find(f => f.name === currentFriendName); 
-    document.getElementById('settings-avatar').innerHTML = f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial; 
-    document.getElementById('settings-name').innerText = f.name; 
-    document.getElementById('settings-nick-display').innerText = f.name; 
-    document.getElementById('settings-sticker-display').innerText = f.allowStickers ? '允许' : '不允许'; 
-    document.getElementById('settings-group-display').innerText = f.group || '我的好友'; 
-    document.getElementById('settings-voice-display').innerText = f.voiceId || '默认(cherry)'; 
+        function openSettings() {
+    const listGroup = document.querySelector('#settings-page .list-group:nth-child(2)');
     
-    // 新增：设置时间感知开关的状态
-    document.getElementById('time-awareness-toggle').checked = f.timeAwareness || false;
-    
-    document.getElementById('settings-page').classList.add('active'); 
+    if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        document.getElementById('settings-avatar').innerHTML = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
+        document.getElementById('settings-name').innerText = g.name;
+        
+        // 动态生成群聊专属菜单
+listGroup.innerHTML = `
+    <div class="list-item" onclick="addMoreMembersToGroup()">
+        <div class="info">添加群成员</div><span>></span>
+    </div>
+    <div class="list-item">
+        <div class="info">允许群角色发送表情包</div>
+        <label class="wx-switch">
+            <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="list-item">
+        <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
+        <label class="wx-switch">
+            <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+`;
+    } else {
+        const f = friends.find(f => f.name === currentFriendName);
+        document.getElementById('settings-avatar').innerHTML = f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial;
+        document.getElementById('settings-name').innerText = f.name;
+        
+        // 恢复私聊菜单
+        listGroup.innerHTML = `
+            <div class="list-item"><div class="info">时间感知</div><label class="wx-switch"><input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)"><span class="slider"></span></label></div>
+            <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
+            <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
+            <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
+            <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
+            <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
+            <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+        `;
+    }
+    document.getElementById('settings-page').classList.add('active');
 }
 
 // 新增：保存开关状态的函数
@@ -2144,14 +2583,29 @@ function toggleTimeAwareness(val) {
         function openDescribeInputModal() { closeImageChoiceModal(); document.getElementById('describe-input-modal').style.display = 'flex'; }
         function closeDescribeInputModal() { document.getElementById('describe-input-modal').style.display = 'none'; }
         function sendDescribeMsg() {
-            const text = document.getElementById('describe-textarea').value.trim();
-            if (!text) return;
-            if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-            chatHistories[currentFriendName].push({ type: 'self', text: text, isDescribeCard: true, expanded: false });
-            friends.find(f => f.name === currentFriendName).lastMsg = "[图片描述便签]";
-            document.getElementById('describe-textarea').value = '';
-            saveData(); renderMessages(); closeDescribeInputModal(); getAiReply();
-        }
+    const text = document.getElementById('describe-textarea').value.trim();
+    if (!text) return;
+    if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    chatHistories[currentFriendName].push({ type: 'self', text: text, isDescribeCard: true, expanded: false });
+    
+    if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        g.lastMsg = "我: [图片描述便签]";
+    } else {
+        friends.find(f => f.name === currentFriendName).lastMsg = "[图片描述便签]";
+    }
+    
+    document.getElementById('describe-textarea').value = '';
+    saveData(); 
+    renderMessages(); 
+    closeDescribeInputModal(); 
+    
+    if (isGroupMode) {
+        getGroupAiReply();
+    } else {
+        getAiReply();
+    }
+}
 
         document.getElementById('real-image-upload').onchange = function() {
             if (this.files[0]) {
@@ -2446,6 +2900,196 @@ function receiveAiTransfer(msgIndex) {
     
     alert("已成功领取 " + currentFriendName + " 的转账 ￥" + amount.toFixed(2));
 }
+// 记忆互通开关逻辑
+function toggleMemorySync(val) {
+    const g = groupChats.find(x => x.id === currentFriendName);
+    if (g) {
+        g.memorySync = val;
+        saveData();
+    }
+}
+
+// 群聊表情包开关
+function toggleGroupStickers(val) {
+    const g = groupChats.find(x => x.id === currentFriendName);
+    if (g) {
+        g.allowStickers = val;
+        saveData();
+    }
+}
+
+// 在群聊内再次添加成员
+function addMoreMembersToGroup() {
+    const g = groupChats.find(x => x.id === currentFriendName);
+    let html = `<div id="group-add-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:white;width:80%;max-height:70%;border-radius:15px;padding:20px;overflow-y:auto;">
+            <h3 style="margin-top:0;">邀请新成员</h3>
+            ${friends.map(f => {
+                const isMember = g.members.includes(f.name);
+                return `
+                <div style="display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #eee;">
+                    <input type="checkbox" class="add-member-checkbox" value="${f.name}" ${isMember ? 'checked disabled' : ''} style="transform:scale(1.2);">
+                    <div class="avatar" style="width:30px;height:30px;font-size:12px;">${f.avatarUrl ? `<img src="${f.avatarUrl}">` : f.initial}</div>
+                    <span>${f.name} ${isMember ? '(已在群)' : ''}</span>
+                </div>`;
+            }).join('')}
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button onclick="confirmAddToGroup()" style="flex:1;background:#07c160;color:white;border:none;padding:10px;border-radius:8px;">确认添加</button>
+                <button onclick="document.getElementById('group-add-modal').remove()" style="flex:1;background:#eee;border:none;padding:10px;border-radius:8px;">取消</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function confirmAddToGroup() {
+    const g = groupChats.find(x => x.id === currentFriendName);
+    const checkboxes = document.querySelectorAll('.add-member-checkbox:checked');
+    const selectedMembers = Array.from(checkboxes).map(cb => cb.value);
+    
+    g.members = selectedMembers;
+    saveData();
+    document.getElementById('group-add-modal').remove();
+    alert("成员更新成功！");
+}
+// === 红包功能 ===
+function openRedPacketModal() {
+    document.getElementById('tool-box').style.display = 'none';
+    const select = document.getElementById('redpacket-target');
+    select.innerHTML = '<option value="">所有人</option>';
+    if (isGroupMode) {
+        const group = groupChats.find(g => g.id === currentFriendName);
+        if (group) {
+            group.members.forEach(name => {
+                select.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+    } else {
+        const f = friends.find(f => f.name === currentFriendName);
+        if (f) select.innerHTML += `<option value="${f.name}">${f.name}</option>`;
+    }
+    document.getElementById('redpacket-modal').style.display = 'flex';
+}
+
+function closeRedPacketModal() {
+    document.getElementById('redpacket-modal').style.display = 'none';
+    document.getElementById('redpacket-amount-input').value = '';
+    document.getElementById('redpacket-note-input').value = '';
+}
+
+function sendRedPacket() {
+    const amount = parseFloat(document.getElementById('redpacket-amount-input').value);
+    const note = document.getElementById('redpacket-note-input').value || '恭喜发财，大吉大利';
+    const target = document.getElementById('redpacket-target').value;
+
+    if (isNaN(amount) || amount <= 0) return alert("请输入正确的金额");
+    if (walletData.balance < amount) return alert("余额不足，当前余额：￥" + walletData.balance.toFixed(2));
+
+    walletData.balance -= amount;
+    walletData.history.push({
+        title: '发红包' + (target ? '-给' + target : '-群红包'),
+        amount: '-' + amount.toFixed(2),
+        time: new Date().toLocaleString()
+    });
+
+    if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    chatHistories[currentFriendName].push({
+        type: 'self',
+        text: amount.toFixed(2),
+        isRedPacket: true,
+        rpNote: note,
+        rpTarget: target,
+        rpOpened: false
+    });
+
+    if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        g.lastMsg = "我: [微信红包]";
+    } else {
+        friends.find(f => f.name === currentFriendName).lastMsg = "[微信红包]";
+    }
+
+    updateWalletUI();
+    saveData();
+    renderMessages();
+    closeRedPacketModal();
+
+    if (isGroupMode) {
+        getGroupAiReply();
+    } else {
+        getAiReply();
+    }
+}
+
+function openRedPacket(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg || msg.rpOpened) return;
+    
+    // 指定角色的检查逻辑：如果指定了人，但是当前不是私聊对方拿小号领，我们就不让他领太多复杂性
+    // 这里简单处理：让它直接变成已领取，并退回钱（如果是AI的话）
+    msg.rpOpened = true;
+    saveData();
+    renderMessages();
+    alert("红包已被成功领取！￥" + msg.text);
+}
+// === 修罗场功能 ===
+let shuraActive = false;
+let shuraScenario = "";
+
+function toggleShuraMode() {
+    document.getElementById('tool-box').style.display = 'none';
+    
+    if (shuraActive) {
+        // 如果已经在修罗场中，则退出
+        shuraActive = false;
+        shuraScenario = "";
+        
+        // 插入灰色提示框
+        if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+        chatHistories[currentFriendName].push({
+            type: 'system',
+            text: '🔥 修罗场剧情已退出',
+            isSystemNotice: true
+        });
+        saveData();
+        renderMessages();
+    } else {
+        // 打开编辑弹窗
+        document.getElementById('shura-scenario-input').value = '';
+        document.getElementById('shura-modal').style.display = 'flex';
+    }
+}
+
+function closeShuraModal() {
+    document.getElementById('shura-modal').style.display = 'none';
+}
+
+function startShuraMode() {
+    const scenario = document.getElementById('shura-scenario-input').value.trim();
+    if (!scenario) return alert("请输入修罗场剧情背景！");
+    
+    shuraActive = true;
+    shuraScenario = scenario;
+    
+    closeShuraModal();
+    
+    // 插入灰色提示框
+    if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    chatHistories[currentFriendName].push({
+        type: 'system',
+        text: '🔥 修罗场剧情已开启',
+        isSystemNotice: true
+    });
+    saveData();
+    renderMessages();
+    
+    // 立即触发所有角色回复
+    if (isGroupMode) {
+        getGroupAiReply();
+    } else {
+        getAiReply();
+    }
+}
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -2581,6 +3225,48 @@ function receiveAiTransfer(msgIndex) {
         <div style="display: flex; gap: 10px;">
             <button class="wx-btn" style="flex: 1; background: #eee; color: #666; margin-bottom: 0;" onclick="closeTransferModal()">取消</button>
             <button class="wx-btn wx-btn-recharge" style="flex: 1; margin-bottom: 0;" onclick="executeTransfer()">发送转账</button>
+        </div>
+    </div>
+</div>
+<!-- 红包输入弹窗 -->
+<div id="redpacket-modal" class="glass-modal" style="z-index: 9000;">
+    <div class="glass-card" style="width: 280px; padding: 20px; border-radius: 15px; background: linear-gradient(135deg, #e74c3c, #c0392b);">
+        <h3 style="text-align: center; margin-bottom: 20px; font-size: 17px; color: white;">🧧 发红包</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 12px; color: rgba(255,255,255,0.8);">红包金额</label>
+            <input type="number" id="redpacket-amount-input" style="width: 100%; border: none; border-bottom: 1px solid rgba(255,255,255,0.3); padding: 10px 0; font-size: 24px; outline: none; background: transparent; color: white;" placeholder="0.00">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 12px; color: rgba(255,255,255,0.8);">祝福语</label>
+            <input type="text" id="redpacket-note-input" style="width: 100%; border: none; border-bottom: 1px solid rgba(255,255,255,0.3); padding: 10px 0; font-size: 14px; outline: none; background: transparent; color: white;" placeholder="恭喜发财，大吉大利">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; color: rgba(255,255,255,0.8);">指定角色（留空则所有人可领）</label>
+            <select id="redpacket-target" style="width: 100%; padding: 8px; border-radius: 8px; border: none; margin-top: 5px; font-size: 14px;">
+                <option value="">所有人</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; background: rgba(255,255,255,0.2); color: white; margin-bottom: 0;" onclick="closeRedPacketModal()">取消</button>
+            <button class="wx-btn" style="flex: 1; background: #f1c40f; color: #c0392b; font-weight: bold; margin-bottom: 0;" onclick="sendRedPacket()">塞钱进红包</button>
+        </div>
+    </div>
+</div>
+<!-- 修罗场编辑弹窗 -->
+<div id="shura-modal" class="glass-modal" style="z-index: 9000;">
+    <div class="glass-card" style="width: 90%; padding: 25px; border-radius: 20px; background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #e94560;">
+        <h3 style="text-align: center; margin-bottom: 5px; font-size: 18px; color: #e94560;">🔥 修罗场剧本编辑器</h3>
+        <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">设定一个情景，所有角色将基于此背景进行互动</p>
+        
+        <textarea id="shura-scenario-input" style="width: 100%; height: 200px; border: 1px solid #e94560; border-radius: 12px; padding: 15px; font-size: 15px; outline: none; box-sizing: border-box; background: rgba(255,255,255,0.05); color: white; resize: none; line-height: 1.6;" placeholder="例如：&#10;你和角色A偷偷去约会，结果在商场被角色B撞见了，角色B当场质问你们...&#10;&#10;又例如：&#10;角色A在你面前对你撒娇，角色B刚好推门进来看到了这一幕..."></textarea>
+
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="wx-btn" style="flex: 1; background: rgba(255,255,255,0.1); color: #ccc; margin-bottom: 0;" onclick="closeShuraModal()">取消</button>
+            <button class="wx-btn" style="flex: 1; background: #e94560; color: white; font-weight: bold; margin-bottom: 0;" onclick="startShuraMode()">🔥 开启修罗场</button>
         </div>
     </div>
 </div>
