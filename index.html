@@ -489,7 +489,10 @@ gap: 15px;
     <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
 <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
 <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
-<div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
+    <!-- 新增：网恋模拟器图标 -->
+    <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
+    <!-- 新增：购物商城图标 -->
+    <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()" style="background: rgba(255, 68, 0, 0.2); border: 1px solid #FF4400;"><span>购物商城</span></div>
 </div>
 
     </div>
@@ -524,7 +527,9 @@ gap: 15px;
     <!-- 网恋模拟器 -->
     <iframe id="iframe-wl" src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     <!-- 查手机 -->
-    <iframe id="iframe-checkphone" src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-checkphone" src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<!-- 购物商城 -->
+<iframe id="iframe-shop" src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     
     <!-- 世界书（原本就是 div 结构，保留即可） -->
     <div id="worldbook-app" style="display: none;">
@@ -853,7 +858,7 @@ gap: 15px;
 // 这个核心函数负责：隐藏所有App窗口，只显示指定的那个
 function switchAppWindow(targetId) {
     // 1. 先把所有的 iframe 和世界书 div 都藏起来
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -880,6 +885,7 @@ function openApp() { switchAppWindow("iframe-xhs"); }
 function openGacha() { switchAppWindow("iframe-gacha"); }
 function openSelfApp() { switchAppWindow("iframe-self"); }
 function openWlApp() { switchAppWindow("iframe-wl"); }
+function openShopApp() { switchAppWindow("iframe-shop"); }
 function openWorldBook() { 
     switchAppWindow("worldbook-app"); 
     renderWorldBook(); 
@@ -905,7 +911,7 @@ function closeApp() {
     ball.style.display = "none";
     
     // 为了省电/性能，隐藏蒙层时顺便把里面具体的 iframe 也藏了
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -1341,7 +1347,8 @@ function applyCustomBallCss(cssText) {
         const appNames = {
     'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
     'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡',
-    'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器'
+    'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器',
+    'item-shop': '购物商城'
 };
         function showAppListModal() {
             const container = document.getElementById('app-items-container');
