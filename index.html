@@ -1479,37 +1479,7 @@ async function toggleKeepAlive(enabled) {
         localStorage.setItem('background_keep_alive', 'false');
     }
 }
-async function toggleNotifications(enabled) {
-    if (enabled) {
-        if (!("Notification" in window)) {
-            alert("您的浏览器不支持系统通知");
-            document.getElementById('notification-toggle').checked = false;
-            return;
-        }
 
-        // 核心：显式请求权限
-        const permission = await Notification.requestPermission();
-        
-        if (permission === "granted") {
-            localStorage.setItem('allow_notifications', 'true');
-            // 通过 SW 发送测试通知，确认为后台弹窗模式
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: '通知已开启',
-                    body: '当你处于桌面或锁屏时，将收到消息弹窗'
-                });
-            }
-        } else {
-            alert("权限被拒绝！请点击Edge浏览器地址栏左侧的“锁头”或“设置”按钮，手动允许“通知”权限。");
-            document.getElementById('notification-toggle').checked = false;
-            localStorage.setItem('allow_notifications', 'false');
-        }
-    } else {
-        localStorage.setItem('allow_notifications', 'false');
-        alert("已关闭后台通知");
-    }
-}
         window.onload = function() {
             loadGridOrder(); 
             initGridSortable(); 
@@ -1556,34 +1526,42 @@ if(savedBallCss) {
         };
 async function toggleNotifications(enabled) {
     if (enabled) {
+        // 1. 检查浏览器支持情况
         if (!("Notification" in window)) {
-            alert("您的浏览器不支持桌面通知");
+            alert("抱歉，您的浏览器不支持系统通知。");
             document.getElementById('notification-toggle').checked = false;
             return;
         }
 
-        // 核心：强制触发浏览器权限弹窗
+        // 2. 申请权限
         const permission = await Notification.requestPermission();
         
         if (permission === "granted") {
             localStorage.setItem('allow_notifications', 'true');
-            // 确保 Service Worker 已就绪后再发测试消息
-            navigator.serviceWorker.ready.then(registration => {
-                registration.active.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: '通知权限已激活',
-                    body: '现在你处于后台时，角色说话会像App一样弹窗提醒你。',
-                    icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+            
+            // 3. 核心：立即触发订阅流程，确保获取 Web Push 所需的 Key
+            await subscribeUser(); 
+            
+            // 4. 发送一条即时的测试通知，确认管道通畅
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification('系统提示', {
+                    body: '后台消息通知已成功开启！即使关闭网页，AI回复时也会弹窗提醒。',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
+                    badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
+                    vibrate: [200, 100, 200]
                 });
             });
+            console.log("通知功能已完全激活");
         } else {
-            alert("权限被拒绝！请点击地址栏左侧按钮手动开启“通知”权限，或在系统设置中允许Edge显示横幅通知。");
+            alert("权限被拒绝！请点击地址栏左侧的设置按钮，手动允许“通知”权限，否则无法接收离线消息。");
             document.getElementById('notification-toggle').checked = false;
             localStorage.setItem('allow_notifications', 'false');
         }
     } else {
+        // 关闭逻辑
         localStorage.setItem('allow_notifications', 'false');
-        alert("已关闭后台通知功能");
+        localStorage.removeItem('web_push_subscription'); // 清除订阅信息
+        alert("已关闭后台通知。");
     }
 }
     </script>
