@@ -1583,18 +1583,18 @@ friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述
 saveData(); 
 
 // --- 核心修复：更强力的后台通知触发逻辑 ---
-// 只要开启了通知开关，且当前你没在看这个QQ页面（切到了后台或桌面）
 if (localStorage.getItem('allow_notifications') === 'true' && document.visibilityState !== 'visible') {
-    // 尝试通过 Service Worker 发送弹窗
-    const sw = navigator.serviceWorker.controller || (window.parent && window.parent.navigator.serviceWorker.controller);
-    if (sw) {
-        sw.postMessage({
-            type: 'SHOW_NOTIFICATION',
-            title: currentFriendName + ' 发来QQ消息',
-            body: isTheaterMsg ? "[小剧场]" : cleanText,
-            icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
-        });
-    }
+    // 获取 Service Worker 注册对象，无论是在主页还是 iframe 都能更稳妥地发送
+    navigator.serviceWorker.ready.then(registration => {
+        if (registration.active) {
+            registration.active.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                title: currentFriendName + ' 发来QQ消息',
+                body: isTheaterMsg ? "[发送了一个小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText),
+                icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+            });
+        }
+    });
 }
 // --- 修复结束 ---
 
@@ -1602,6 +1602,20 @@ if (localStorage.getItem('allow_notifications') === 'true' && document.visibilit
 renderMessages();
 renderChatList();
 
+// --- 新增：离线弹窗推送逻辑 ---
+const sub = JSON.parse(localStorage.getItem('web_push_subscription'));
+if (sub && document.visibilityState !== 'visible') {
+    fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            subscription: sub,
+            title: currentFriendName + ' 发来QQ消息',
+            body: isTheaterMsg ? "[发送了一个小剧场]" : cleanText 
+        })
+    }).catch(err => console.error("推送失败:", err));
+}
+// ----------------------------
 // 自动记忆总结逻辑
                     const curHist = chatHistories[currentFriendName] || [];
                     if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
@@ -1898,23 +1912,7 @@ renderChatList();
     saveData();
     renderMessages();
     renderChatList();
-        // --- 新增：Web Push 离线推送 ---
-    const sub = JSON.parse(localStorage.getItem('web_push_subscription'));
-    
-    // 判断条件：1.有订阅凭证 2.网页不可见(在后台或锁屏) 3.不是剧场(可选)
-    if (sub && document.visibilityState !== 'visible') {
-        fetch('/api/push', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                subscription: sub,
-                title: currentFriendName + ' 发来QQ消息',
-                body: isTheaterMsg ? "[发送了一个小剧场]" : cleanText 
-            })
-        }).catch(err => console.error("推送请求失败", err));
-    }
-    // ----------------------------
-} // 这里是 for 循环的右括号
+}
         function redoReply() { 
     const h = chatHistories[currentFriendName]; 
     if (!h) return;
