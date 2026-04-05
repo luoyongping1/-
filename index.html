@@ -186,24 +186,35 @@ gap: 15px;
     grid-column: span 1;
     grid-row: span 1;
     width: 100%;
-    aspect-ratio: 1 / 1; /* 强制宽高相等，变成正方形 */
+    aspect-ratio: 1 / 1; 
     background: var(--glass-bg);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 22px; /* 增加圆角度数，更加圆润 */
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 22px; 
     display: flex; 
     justify-content: center;
     align-items: center; 
-    font-size: 12px; 
     backdrop-filter: blur(10px);
     cursor: pointer; 
-    text-align: center; 
-    line-height: 1.2;
-    color: white; 
-    font-weight: 500;
-    background-size: cover; /* 背景图铺满 */
+    background-size: cover; 
     background-position: center;
     background-repeat: no-repeat;
     box-sizing: border-box;
+    /* 以下是新增的定位规矩 */
+    position: relative;
+    overflow: visible; /* 允许文字溢出到图标外面 */
+    margin-bottom: 25px; /* 给图标下方的文字留出空位 */
+}
+
+/* 专门为图标下方的文字设置样式 */
+.icon-btn span {
+    position: absolute;
+    bottom: -22px; /* 把文字推到图标底部下方 */
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8); /* 给文字加点阴影，防止背景太亮看不清 */
+    white-space: nowrap; /* 防止文字长了自动换行 */
 }
         .icon-btn:active { transform: scale(0.9); }
 
@@ -412,7 +423,7 @@ gap: 15px;
     bottom: calc(25px + env(safe-area-inset-bottom));
     left: 15px;
     right: 15px;
-    height: 95px;
+    height: 110px; /* 高度从 95px 增加到 110px */
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
@@ -424,13 +435,16 @@ gap: 15px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-sizing: border-box;
     padding: 0 10px;
+    padding-bottom: 15px; /* 新增：让内部图标整体向上挪 15px，给文字腾位置 */
 }
 .dock .icon-btn {
     width: 65px !important;
     height: 65px !important;
     margin: 0 !important;
+    margin-bottom: 0 !important; /* 确保不继承之前设置的 25px 底边距 */
     border-radius: 18px;
-    font-size: 0; /* 隐藏底栏图标的文字，更像 iOS */
+    font-size: 12px;
+    position: relative; /* 保持相对定位 */
 }
     </style>
 </head>
@@ -456,7 +470,7 @@ gap: 15px;
             <div id="battery-fill"></div>
         </div>
     </div>
-    <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()" style="background: rgba(255, 36, 66, 0.2); border: 1px solid #ff2442;">小红书</div>
+    <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>
     <div id="item-progress" class="grid-item progress-widgets">
                 <div class="progress-item">
                     今年剩余 <span id="year-days">0</span> 天
@@ -472,21 +486,20 @@ gap: 15px;
 <!-- 第二页桌面 (放置扭蛋机和其他图标) -->
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
     <!-- 扭蛋机图标 -->
-    <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()" style="background: rgba(255, 117, 143, 0.2); border: 1px solid #ff758f; color: #ff758f;">扭蛋机</div>
-    <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()" style="background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: #555;">查手机</div>
-    <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()" style="background: rgba(180, 199, 231, 0.2); border: 1px solid #B4C7E7; color: #8D6E63;">自律打卡</div>
-    <!-- 新增：网恋模拟器图标 -->
-    <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()" style="background: rgba(255, 183, 197, 0.2); border: 1px solid #ffb7c5; color: #ff85a2;">网恋模拟</div>
+    <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
+<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
+<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
+<div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
 </div>
 
     </div>
 
 <!-- 新增：iOS 风格底栏 Dock -->
 <div class="dock">
-    <div id="item-wb" class="icon-btn" onclick="openWorldBook()">世界书</div>
-    <div id="item-qq" class="icon-btn" onclick="openQQ()">QQ</div>
-    <div id="item-face" class="icon-btn" onclick="openSettings('appearance')" style="background: rgba(79, 172, 254, 0.2); border: 1px solid #ddd; color: #555;">外观</div>
-    <div id="item-set" class="icon-btn" onclick="openSettings('api')" style="background: rgba(255, 255, 255, 0.1); border: 1px solid #ddd; color: #555;">设置</div>
+    <div id="item-wb" class="icon-btn" onclick="openWorldBook()"><span>世界书</span></div>
+    <div id="item-qq" class="icon-btn" onclick="openQQ()"><span>QQ</span></div>
+    <div id="item-face" class="icon-btn" onclick="openSettings('appearance')"><span>外观</span></div>
+<div id="item-set" class="icon-btn" onclick="openSettings('api')"><span>设置</span></div>
 </div>
 
 <!-- 页面指示灯 (向下挪动了一点位置，防止被底栏遮挡) -->
