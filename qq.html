@@ -809,6 +809,11 @@ input:checked + .slider:before {
         <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🔥</div>
         <div style="font-size:12px; color:#666;">修罗场</div>
     </div>
+    <!-- 新增：沉浸式追剧图标 -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:8px;" onclick="openTheaterModal()">
+        <div style="width:55px; height:55px; background:white; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">🍿</div>
+        <div style="font-size:12px; color:#666;">追剧</div>
+    </div>
 </div>
     </div>
 
@@ -1097,6 +1102,41 @@ input:checked + .slider:before {
     <input type="file" id="moment-image-upload" style="display:none" accept="image/*" multiple>
 
     <script>
+    // 桌宠拖拽逻辑
+let theaterPet = null;
+function initTheaterPetDrag() {
+    const pet = document.getElementById('theater-pet');
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    pet.addEventListener('touchstart', function(e) {
+        isDragging = false; // 重置，用于判断是点击还是拖拽
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        const rect = pet.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+    }, {passive: true});
+
+    pet.addEventListener('touchmove', function(e) {
+        isDragging = true;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        pet.style.left = (initialLeft + dx) + 'px';
+        pet.style.top = (initialTop + dy) + 'px';
+        pet.style.bottom = 'auto'; // 拖动后取消原有的 bottom 约束
+        pet.style.right = 'auto';  // 拖动后取消原有的 right 约束
+    }, {passive: false});
+
+    pet.addEventListener('touchend', function(e) {
+        if (isDragging) {
+            // 如果发生了拖拽，阻止点击事件触发输入框
+            e.stopPropagation();
+        }
+    }, true);
+}
+// 在页面加载后启动
+window.addEventListener('DOMContentLoaded', initTheaterPetDrag);
         // --- 数据定义 ---
         // 自动应用来自主页面的全局美化样式
 function applyGlobalStyles() {
@@ -1428,6 +1468,196 @@ targets.forEach((b) => {
 });
         }
 
+let theaterSource = 'online';
+let localVideoUrl = '';
+
+function openTheaterModal() {
+    document.getElementById('tool-box').style.display = 'none';
+    document.getElementById('theater-config-modal').style.display = 'flex';
+}
+
+function closeTheaterModal() {
+    document.getElementById('theater-config-modal').style.display = 'none';
+}
+
+function switchTheaterTab(type) {
+    theaterSource = type;
+    document.getElementById('tab-btn-online').style.background = (type === 'online' ? 'white' : 'none');
+    document.getElementById('tab-btn-local').style.background = (type === 'local' ? 'white' : 'none');
+    document.getElementById('theater-online-input').style.display = (type === 'online' ? 'block' : 'none');
+    document.getElementById('theater-local-input').style.display = (type === 'local' ? 'block' : 'none');
+}
+
+function handleTheaterFile(input) {
+    const file = input.files[0];
+    if (file) {
+        // 关键技术：生成本地临时链接，不占服务器空间
+        localVideoUrl = URL.createObjectURL(file);
+        document.getElementById('file-name-display').innerText = "已就绪: " + file.name;
+    }
+}
+
+// 新增：设置在线观看类型
+function setTheaterType(type) {
+    document.getElementById('selected-online-type').value = type;
+    const input = document.getElementById('theater-video-url');
+    if(type === 'bili') {
+        input.placeholder = "可选：粘贴B站视频链接，或直接点开播去搜索";
+    } else {
+        input.placeholder = "必填：请粘贴123网盘等MP4直链";
+    }
+}
+
+async function startTheater() {
+    const name = document.getElementById('theater-video-name').value.trim();
+    const onlineUrl = document.getElementById('theater-video-url').value.trim();
+    const onlineType = document.getElementById('selected-online-type').value;
+    let finalUrl = (theaterSource === 'online' ? onlineUrl : localVideoUrl);
+
+    if (!name && theaterSource === 'local') return alert("请填写剧名");
+
+    isWatching = true;
+    currentVideoName = name || "精彩视频";
+
+    const videoPlayer = document.getElementById('theater-video-player');
+    const biliPlayer = document.getElementById('theater-bili-player');
+    const overlay = document.getElementById('full-theater-overlay');
+    
+    videoPlayer.style.display = 'none';
+    biliPlayer.style.display = 'none';
+    biliPlayer.src = '';
+
+    if (theaterSource === 'local') {
+        if (!localVideoUrl) return alert("请先选择本地文件");
+        videoPlayer.src = localVideoUrl;
+        videoPlayer.style.display = 'block';
+        videoPlayer.play();
+    } else if (onlineType === 'bili') {
+    // 改用嵌入式播放器地址，这样视频就会乖乖待在底层，不会遮挡桌宠
+    let targetBiliUrl = "https://www.bilibili.com";
+    if (onlineUrl) {
+        let bvidMatch = onlineUrl.match(/BV[a-zA-Z0-9]+/);
+        let aidMatch = onlineUrl.match(/av\d+/);
+        
+        if (bvidMatch) {
+            // 拼接嵌入式播放器链接
+            targetBiliUrl = `https://player.bilibili.com/player.html?bvid=${bvidMatch[0]}&high_quality=1&danmaku=1&autoplay=1`;
+        } else if (aidMatch) {
+            targetBiliUrl = `https://player.bilibili.com/player.html?aid=${aidMatch[0].replace('av','')}&high_quality=1&danmaku=1&autoplay=1`;
+        } else {
+            // 如果没有BV号，才退而求其次使用手机版
+            targetBiliUrl = onlineUrl.replace('www.bilibili.com', 'm.bilibili.com');
+        }
+    }
+    biliPlayer.src = targetBiliUrl;
+    biliPlayer.style.display = 'block';
+} else {
+        if (!onlineUrl) return alert("请粘贴直链地址");
+        videoPlayer.src = onlineUrl;
+        videoPlayer.style.display = 'block';
+        videoPlayer.play();
+    }
+    
+    const friend = friends.find(f => f.name === currentFriendName);
+    document.querySelector('#pet-avatar img').src = friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png';
+
+    overlay.style.display = 'block';
+    document.getElementById('theater-config-modal').style.display = 'none';
+
+    // 尝试进入全屏并强制锁定横屏
+const requestFullScreen = overlay.requestFullscreen || overlay.webkitRequestFullscreen || overlay.mozRequestFullScreen || overlay.msRequestFullscreen;
+if (requestFullScreen) {
+    requestFullScreen.call(overlay).then(() => {
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(err => {
+                console.log("自动横屏失败，请手动旋转手机并打开系统的自动旋转开关");
+            });
+        }
+    }).catch(err => {
+        console.log("全屏请求被拒绝，请点击屏幕重试");
+    });
+} else {
+    alert("您的浏览器不支持全屏功能，建议将手机横过来观看");
+}
+
+    chatHistories[currentFriendName].push({ type: 'system', text: '🍿 开启沉浸式追剧模式：《' + currentVideoName + '》', isSystemNotice: true });
+}
+
+function exitTheater() {
+    if(confirm("确定退出放映厅吗？")) {
+        const player = document.getElementById('theater-video-player');
+        player.pause();
+        document.getElementById('full-theater-overlay').style.display = 'none';
+        isWatching = false;
+        renderMessages(); // 刷新一下，就能看到刚才在里面聊天的记录了
+    }
+}
+
+function showPetChat() {
+    const box = document.getElementById('pet-chat-box');
+    // 如果是隐藏的就显示，如果是显示的就隐藏
+    if (box.style.display === 'none' || box.style.display === '') {
+        box.style.display = 'flex';
+        document.getElementById('pet-input').focus(); // 自动聚焦方便输入
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+// 配套新增：逐条显示气泡的逻辑
+async function displayPetBubbles(msgs) {
+    const bubble = document.getElementById('pet-bubble');
+    bubble.style.display = 'block';
+    bubble.style.transition = 'opacity 0.5s';
+    
+    for (let m of msgs) {
+        // 核心修改：利用正则删除所有 [ ] 及其内部的提示内容
+        let cleanText = m.text.replace(/\[.*?\]/g, '').trim();
+        
+        // 如果清理完没剩什么文字（比如原本就是纯动作描述），就跳过不显示
+        if (!cleanText) continue;
+
+        bubble.innerText = cleanText;
+        bubble.style.opacity = '1';
+        
+        let showTime = Math.max(3000, cleanText.length * 200);
+        await new Promise(r => setTimeout(r, showTime));
+        
+        bubble.style.opacity = '0';
+        await new Promise(r => setTimeout(r, 500));
+    }
+    bubble.style.display = 'none';
+}
+
+async function sendPetMsg() {
+    const input = document.getElementById('pet-input');
+    const val = input.value.trim();
+    if(!val) return;
+
+    // --- 新增这一行：点击发送后立刻隐藏输入框 ---
+    document.getElementById('pet-chat-box').style.display = 'none';
+    // ----------------------------------------
+
+    if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    const historyBefore = chatHistories[currentFriendName].length;
+
+    chatHistories[currentFriendName].push({ type: 'self', text: val });
+    input.value = '';
+    
+    const bubble = document.getElementById('pet-bubble');
+    bubble.style.display = 'block';
+    bubble.style.opacity = '1';
+    bubble.innerText = "对方正在输入...";
+
+    await getAiReply();
+
+    const newMsgs = chatHistories[currentFriendName].slice(historyBefore + 1);
+    const aiReplies = newMsgs.filter(m => m.type === 'friend');
+
+    bubble.style.display = 'none';
+    await displayPetBubbles(aiReplies);
+}
+
                 async function getAiReply() {
             if(!aiConfig.key) return alert("配置错误");
             const friend = friends.find(f => f.name === currentFriendName);
@@ -1445,7 +1675,7 @@ targets.forEach((b) => {
                 "\n指令：只要用户提到触发词，[REPLY]内必须且只能原样输出对应的HTML代码，严禁输出任何多余的文字、解释或标点，严禁对HTML进行换行拆分发送。";
             }
             
-            let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
+                        let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
             
             // 新增：时间感知逻辑
             let timePrompt = "";
@@ -1455,7 +1685,7 @@ targets.forEach((b) => {
                 timePrompt = `\n【当前现实时间】：${timeStr}\n请在聊天中参考此时间（例如：如果现在是深夜，你可以表现得困倦或说晚安）。`;
             }
 
-                        // 新增：金钱感知逻辑
+            // 新增：金钱感知逻辑
             let moneyPrompt = "";
             const lastMsgObj = chatHistories[currentFriendName][chatHistories[currentFriendName].length - 1];
             if (lastMsgObj && lastMsgObj.isTransfer && !lastMsgObj.status) {
@@ -1466,14 +1696,35 @@ targets.forEach((b) => {
                 如果你不写这些标签，则默认不处理（钱会一直挂着）。`;
             }
 
-                                    let shuraPromptDM = "";
-                                    if (shuraActive && shuraScenario) {
-                                        shuraPromptDM = `\n【🔥 修罗场剧情背景】：${shuraScenario}\n请基于此背景做出符合人设的反应。`;
-                                    }
+// --- 修改后的追剧感知逻辑：适配 B 站网页版 ---
+let watchPrompt = "";
+if (typeof isWatching !== 'undefined' && isWatching && currentVideoName) {
+    const videoEl = document.getElementById('theater-video-player');
+    const biliPlayer = document.getElementById('theater-bili-player');
+    
+    watchPrompt = `\n【🎬 沉浸式追剧感知】：你正坐在用户身边和他一起看《${currentVideoName}》。请表现出你也在盯着屏幕看。`;
+
+    if (videoEl && videoEl.style.display !== 'none') {
+        // 直链或本地文件：有精准进度
+        const currentTime = Math.floor(videoEl.currentTime);
+        const minutes = Math.floor(currentTime / 60);
+        const seconds = currentTime % 60;
+        watchPrompt += `当前画面精准进度：${minutes}分${seconds}秒。请结合具体剧情互动。`;
+    } else {
+        // B站网页版：AI 只能通过剧名和对话感知
+        watchPrompt += `当前正在通过B站网页版观看。你无法看到精准进度条，请根据【剧名】和【用户发送的吐槽内容】来推断剧情并热情互动。`;
+    }
+}
+            // ----------------------------
+
+            let shuraPromptDM = "";
+            if (shuraActive && shuraScenario) {
+                shuraPromptDM = `\n【🔥 修罗场剧情背景】：${shuraScenario}\n请基于此背景做出符合人设的反应。`;
+            }
                                     
-                                    
+            // 在下面这一行中，我们将 watchPrompt 加入了 sys
             let sys = `# Role
-你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}
+你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}
 
 【找我代付指令】：
 如果用户向你发送了代付请求卡片，你可以看到他买了什么（payItems）和金额。
@@ -1707,21 +1958,21 @@ if (sub && document.visibilityState !== 'visible') {
                     }
                 }
 
-                // 表情包逻辑：如果允许使用表情包且库中有表情，则必须且仅发送1个
-                if (friend.allowStickers && stickers.length > 0) {
-                    await new Promise(r => setTimeout(r, 800));
-                    const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
-                    chatHistories[currentFriendName].push({
-                        type: 'friend',
-                        text: randomSticker.url,
-                        isSticker: true,
-                        action: actionPart,
-                        thoughts: thoughtsPart
-                    });
-                    friend.lastMsg = "[表情]";
-                    saveData();
-                                renderMessages();
-        }
+                // 表情包逻辑：如果允许使用表情包且库中有表情，且【不在追剧模式】下，才发送
+        if (typeof isWatching !== 'undefined' && !isWatching && friend.allowStickers && stickers.length > 0) {
+            await new Promise(r => setTimeout(r, 800));
+            const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+            chatHistories[currentFriendName].push({
+                type: 'friend',
+                text: randomSticker.url,
+                isSticker: true,
+                action: actionPart,
+                thoughts: thoughtsPart
+            });
+            friend.lastMsg = "[表情]";
+            saveData();
+                        renderMessages();
+}
     } catch (e) { 
     console.error("AI流程中断:", e);
     // 隐藏加载状态
@@ -3369,6 +3620,74 @@ function startShuraMode() {
             <button class="wx-btn" style="flex: 1; background: #e94560; color: white; font-weight: bold; margin-bottom: 0;" onclick="startShuraMode()">🔥 开启修罗场</button>
         </div>
     </div>
+</div>
+<!-- 1. 追剧配置弹窗 -->
+<div id="theater-config-modal" class="glass-modal" style="z-index: 9500;">
+    <div class="glass-card" style="width: 300px; padding: 20px; border-radius: 20px;">
+        <h3 style="text-align: center; margin-bottom: 15px;">影院配置</h3>
+        
+        <!-- 选项卡按钮 -->
+        <div style="display:flex; background:#eee; border-radius:10px; padding:3px; margin-bottom:15px;">
+            <div id="tab-btn-online" style="flex:1; text-align:center; padding:8px; border-radius:8px; background:white; cursor:pointer;" onclick="switchTheaterTab('online')">在线直链</div>
+            <div id="tab-btn-local" style="flex:1; text-align:center; padding:8px; border-radius:8px; cursor:pointer;" onclick="switchTheaterTab('local')">本地文件</div>
+        </div>
+
+        <input type="text" id="theater-video-name" style="width: 100%; border: none; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 14px; outline: none; margin-bottom:10px;" placeholder="输入剧名（如：甄嬛传）">
+
+        <!-- 在线链接输入框：增加了类型选择 -->
+<div id="theater-online-input">
+    <div style="font-size: 11px; color: #999; margin-bottom: 8px;">请选择观看方式：</div>
+    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button class="wx-btn" style="flex: 1; height: 35px; font-size: 12px; background: #fb7299; color: white;" onclick="setTheaterType('bili')">B站网页登录看</button>
+        <button class="wx-btn" style="flex: 1; height: 35px; font-size: 12px; background: #00aeec; color: white;" onclick="setTheaterType('link')">网盘/MP4直链看</button>
+    </div>
+    <input type="text" id="theater-video-url" style="width: 100%; border: none; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 14px; outline: none; margin-bottom:20px;" placeholder="粘贴视频地址或点击上方按钮">
+    <input type="hidden" id="selected-online-type" value="link">
+</div>
+
+        <!-- 本地上传按钮 -->
+        <div id="theater-local-input" style="display:none; text-align:center; margin-bottom:20px;">
+            <button class="wx-btn" style="width:100%; background:#f2f2f2; color:#333; font-size:13px;" onclick="document.getElementById('theater-file-picker').click()">选择本地视频文件</button>
+            <input type="file" id="theater-file-picker" accept="video/*" style="display:none" onchange="handleTheaterFile(this)">
+            <div id="file-name-display" style="font-size:10px; color:#07c160; margin-top:5px;"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; background: #eee; color: #666; margin-bottom: 0;" onclick="closeTheaterModal()">取消</button>
+            <button class="wx-btn wx-btn-recharge" style="flex: 1; margin-bottom: 0;" onclick="startTheater()">开播</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. 全屏影院大蒙层 -->
+<div id="full-theater-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:black; z-index:9999; overflow:hidden;">
+    <!-- 123云盘/本地视频播放器 -->
+    <video id="theater-video-player" style="width:100%; height:100%; display:none;" controls playsinline></video>
+    
+    <!-- 新增：B站专用播放器容器 (增加了 position 和 z-index) -->
+<iframe id="theater-bili-player" style="width:100%; height:100%; display:none; border:none; position:absolute; top:0; left:0; z-index:1;" allowfullscreen="true" sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"></iframe>
+    
+    <!-- 退出按钮 -->
+    <div style="position:absolute; top:20px; left:20px; color:white; font-size:24px; text-shadow:0 0 5px black; cursor:pointer;" onclick="exitTheater()">✕</div>
+
+<!-- 桌宠角色：调整了层级和位置 -->
+<!-- 将 z-index 提高到 10005，确保绝对压住视频 -->
+<div id="theater-pet" style="position:absolute; bottom:80px; right:20px; width:65px; height:65px; cursor:pointer; z-index:10005; touch-action: none; transform: translateZ(1000px); -webkit-transform: translateZ(1000px);" onclick="showPetChat()">
+    <!-- AI 回复气泡：现在固定在头像上方，不会被遮挡 -->
+    <div id="pet-bubble" style="display:none; position:absolute; bottom:75px; right:0; background:rgba(255,255,255,0.95); padding:10px 14px; border-radius:15px 15px 2px 15px; width:180px; font-size:13px; color:#333; line-height:1.4; box-shadow:0 4px 15px rgba(0,0,0,0.3); pointer-events:none; word-break:break-all;">
+        正在加载...
+    </div>
+    
+    <div id="pet-avatar" style="width:60px; height:60px; border-radius:50%; border:2px solid white; overflow:hidden; box-shadow:0 0 15px rgba(0,0,0,0.5);">
+        <img src="" style="width:100%; height:100%; object-fit:cover;">
+    </div>
+
+    <!-- 影院专用简易输入框：现在短小精悍，出现在头像左侧 -->
+    <div id="pet-chat-box" style="display:none; position:absolute; top:5px; right:75px; width:200px; height:50px; background:rgba(0,0,0,0.6); padding:5px; border-radius:30px; align-items:center; gap:5px;" onclick="event.stopPropagation()">
+        <input type="text" id="pet-input" style="flex:1; border-radius:20px; border:none; padding:8px 12px; outline:none; font-size:12px; background:#fff;" placeholder="聊聊剧情...">
+        <button style="background:#07c160; color:white; border:none; width:50px; height:32px; border-radius:20px; font-size:12px; flex-shrink:0;" onclick="sendPetMsg()">发送</button>
+    </div>
+</div>
 </div>
 </body>
 </html>
