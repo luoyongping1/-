@@ -1491,22 +1491,33 @@ if (rawContent.includes("[MONEY_ACTION]RECEIVE")) {
 // 清洗Markdown和干扰符
                 let processedContent = rawContent.replace(/```html|```/g, '').trim();
 
-                // 尝试解析 [REPLY] 标签
-let replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim();
+                // --- 核心修复：更严谨的解析逻辑 ---
+// 1. 提取各个部分内容
+let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
+let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "（...）";
+let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/)?.[1]?.trim() || "平静";
+let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)/)?.[1]?.trim() || "0";
 
-// 如果解析不到 [REPLY]，说明 AI 可能没按格式输出，则直接把除掉标签后的全文当作回复
-if (!replyPart) {
-    replyPart = processedContent.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]/g, "").trim();
+// 2. 专门提取回复内容 [REPLY]
+let replyPart = "";
+if (processedContent.includes("[REPLY]")) {
+    replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim();
+} else {
+    // 如果AI没写[REPLY]，则通过删除所有其他标签的方式获得纯回复内容
+    replyPart = processedContent
+        .replace(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/g, "")
+        .replace(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|$)/g, "")
+        .replace(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/g, "")
+        .replace(/\[JEALOUSY\]\d+/g, "")
+        .replace(/\[REPLY\]/g, "")
+        .trim();
 }
 
 // 如果最后还是空的，报错提示
 if (!replyPart) {
     throw new Error("AI 返回内容为空");
 }
-                let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
-                let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|$)/)?.[1]?.trim() || "（...）";
-                let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/)?.[1]?.trim() || "平静";
-                let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)/)?.[1]?.trim() || "0";
+// --- 修复结束 ---
 
                 let msgs = [];
 // 只要内容里包含 html 标签特征，就严禁按换行符拆分，确保代码完整性
@@ -2201,17 +2212,29 @@ ${longMemoryPrompt}`;
                         throw new Error("API 返回异常");
                     }
                     
-                    let reply = data.choices[0].message.content.trim();
+                    let rawReply = data.choices[0].message.content.trim();
 
-                    // 双重清洗：去掉可能生成的烦人前缀
-                    group.members.forEach(name => {
-                        const pattern = new RegExp(`^\\[?${name}\\]?[:：\\s]*`, 'gim');
-                        reply = reply.replace(pattern, "");
-                    });
-                    reply = reply.replace(/^\[?用户\]?[:：\s]*/gim, "");
+// --- 核心修复：过滤掉群聊回复中的心声标签 ---
+let reply = rawReply;
+if (rawReply.includes("[REPLY]")) {
+    reply = rawReply.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || rawReply;
+}
 
-                    // 限制只发前三行气泡
-                    let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, 3);
+// 彻底删除内容中可能混入的零散标签
+reply = reply.replace(/\[REPLY\]|\[ACTION\][\s\S]*?(\[|$)|\[THOUGHTS\][\s\S]*?(\[|$)|\[EMOTION\][\s\S]*?(\[|$)|\[JEALOUSY\]\d+/g, (match) => {
+    return match.startsWith('[REPLY]') ? "" : (match.endsWith('[') ? "[" : "");
+}).trim();
+
+// 双重清洗：去掉可能生成的烦人前缀
+group.members.forEach(name => {
+    const pattern = new RegExp(`^\\[?${name}\\]?[:：\\s]*`, 'gim');
+    reply = reply.replace(pattern, "");
+});
+reply = reply.replace(/^\[?用户\]?[:：\s]*/gim, "");
+
+// 限制只发前三行气泡
+let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, 3);
+// --- 修复结束 ---
 
                     for (let line of lines) {
                         await new Promise(r => setTimeout(r, 600));
