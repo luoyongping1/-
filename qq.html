@@ -1898,7 +1898,23 @@ renderChatList();
     saveData();
     renderMessages();
     renderChatList();
-}
+        // --- 新增：Web Push 离线推送 ---
+    const sub = JSON.parse(localStorage.getItem('web_push_subscription'));
+    
+    // 判断条件：1.有订阅凭证 2.网页不可见(在后台或锁屏) 3.不是剧场(可选)
+    if (sub && document.visibilityState !== 'visible') {
+        fetch('/api/push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subscription: sub,
+                title: currentFriendName + ' 发来QQ消息',
+                body: isTheaterMsg ? "[发送了一个小剧场]" : cleanText 
+            })
+        }).catch(err => console.error("推送请求失败", err));
+    }
+    // ----------------------------
+} // 这里是 for 循环的右括号
         function redoReply() { 
     const h = chatHistories[currentFriendName]; 
     if (!h) return;

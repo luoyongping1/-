@@ -7,10 +7,57 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 <script>
+    const PUBLIC_VAPID_KEY = 'BCukyNwnBw2K1QOkCzYIo4PECO9IBh-PTAH6XkBzsGo9yVjKkd2rMNq5FBOGrrT1wd36rOIFTnOP44uh6fG1GPU';
+
+    // 1. 注册 Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js').then(registration => {
+                console.log('SW 注册成功');
+                // 注册成功后尝试询问权限
+                askPermission();
+            });
         });
+    }
+
+    // 2. 转换密钥格式的工具函数
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    // 3. 申请通知权限
+    function askPermission() {
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('用户允许通知');
+                    subscribeUser();
+                }
+            });
+        }
+    }
+
+    // 4. 正式向推送服务器订阅
+    async function subscribeUser() {
+        const registration = await navigator.serviceWorker.ready;
+        try {
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+            });
+            // 保存订阅凭证到本地，以便 qq.html 调用
+            localStorage.setItem('web_push_subscription', JSON.stringify(subscription));
+            console.log('离线推送订阅成功');
+        } catch (e) {
+            console.error('订阅失败（可能是公钥不匹配）:', e);
+        }
     }
 </script>
     <title>书书小手机</title>
