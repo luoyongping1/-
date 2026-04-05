@@ -1213,9 +1213,13 @@ function saveData() {
             } catch (e) { alert("语音合成失败"); btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto"; }
         }
 
-        function renderMessages() {
+    function renderMessages() {
+    // 增加这一行：每次画消息前，先从存储里同步最新的聊天历史
+    chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
+
     // 1. 获取基本信息（区分群或个人）
     let chatTitle = "";
+    // ... 后面不需要改 ...
     let chatBg = "none";
     
     if (isGroupMode) {
@@ -1852,17 +1856,20 @@ if (sub && document.visibilityState !== 'visible') {
         function showCommentInput(idx, replyTo = null) { const txt = prompt(replyTo ? `回复 ${replyTo}:` : "评论:"); if(txt) { if(!moments[idx].comments) moments[idx].comments = []; moments[idx].comments.push({ name: myInfo.name, text: txt, replyTo: replyTo }); saveData(); renderMoments(); aiReactToMoment(idx, 'comment', txt, replyTo); } }
 
         function renderChatList() {
-            const list = document.getElementById('chat-session-list');
-            const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
-            list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => `
-                <div class="wechat-chat-item" onclick="openChat('${f.name}')">
-                    <div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial}</div>
-                    <div class="chat-body">
-                        <div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">刚刚</div></div>
-                        <div class="chat-preview">${f.lastMsg}</div>
-                    </div>
-                </div>`).join('');
-        }
+    // 增加这一行：每次画列表前，先从存储里同步最新的好友数据
+    friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
+    
+    const list = document.getElementById('chat-session-list');
+    const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
+    list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => `
+        <div class="wechat-chat-item" onclick="openChat('${f.name}')">
+            <div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial}</div>
+            <div class="chat-body">
+                <div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">刚刚</div></div>
+                <div class="chat-preview">${f.lastMsg}</div>
+            </div>
+        </div>`).join('');
+}
         function renderContactList() {
             const list = document.getElementById('contact-list');
             list.innerHTML = groups.map(gName => {

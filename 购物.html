@@ -773,36 +773,36 @@
 
         function sendPayRequest(id, name) {
     const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
-    const rawTotal = parseFloat(localStorage.getItem('rawTotal')) || 0;
-    // 准备商品清单描述，让 AI 知道买了什么
     const itemNames = cartList.map(item => item.name).join('、');
     
-    // 获取当前 QQ 聊天记录
-    let histories = JSON.parse(localStorage.getItem('qq_history')) || {};
+    // 1. 获取最新的聊天记录
+    let histories = JSON.parse(localStorage.getItem('qq_history') || '{}');
     if (!histories[name]) histories[name] = [];
     
-    // 存入一个特殊的代付卡片消息
+    // 2. 添加代付消息对象
     histories[name].push({
-        type: 'self',
+        type: 'self', 
         text: finalTotal.toFixed(2),
         isShoppingPay: true, 
         payItems: itemNames,
-        payStatus: 'pending' // pending: 待支付, paid: 已支付
+        payStatus: 'pending',
+        time: new Date().getTime()
     });
     
-    // 更新最后消息预览
-    let qqFriends = JSON.parse(localStorage.getItem('qq_friends')) || [];
-    const targetFriend = qqFriends.find(f => f.name === name);
-    if (targetFriend) targetFriend.lastMsg = "[找你代付] ￥" + finalTotal.toFixed(2);
+    // 3. 更新好友列表里的“最后一条消息”预览
+    let qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+    let targetFriend = qqFriends.find(f => f.name === name);
+    if (targetFriend) {
+        targetFriend.lastMsg = "[找你代付] ￥" + finalTotal.toFixed(2);
+    }
 
-    // 保存数据
+    // 4. 立即保存回存储
     localStorage.setItem('qq_history', JSON.stringify(histories));
     localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
 
+    // 5. 提示并跳转
     closeFriendPay();
-    alert('已将代付请求发送给 ' + name + '，请去聊天页面查看。');
-    
-    // 隐藏购物弹窗回到首页
+    alert('代付请求已发送给 ' + name + '！请切换到 QQ 窗口查看。');
     switchPage('home');
 }
 
