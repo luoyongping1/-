@@ -651,11 +651,12 @@ gap: 15px;
 </div>
                 </div>
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-                    <label>数据管理</label>
-                    <button class="action-btn" style="background: #341f97; margin-bottom: 10px;" onclick="exportFullData()">数据导出 (备份)</button>
-                    <button class="action-btn" style="background: #ee5253;" onclick="document.getElementById('import-file-input').click()">数据导入 (恢复)</button>
-                    <input type="file" id="import-file-input" style="display:none" accept=".json" onchange="importFullData(this)">
-                </div>
+    <label>数据管理</label>
+    <button class="action-btn" style="background: #341f97; margin-bottom: 10px;" onclick="exportFullData()">数据导出 (备份)</button>
+    <button class="action-btn" style="background: #9c88ff; margin-bottom: 10px;" onclick="document.getElementById('import-file-input').click()">数据导入 (恢复)</button>
+    <button class="action-btn" style="background: #ee5253;" onclick="clearAllData()">一键清除所有数据</button>
+    <input type="file" id="import-file-input" style="display:none" accept=".json" onchange="importFullData(this)">
+</div>
                 <button class="action-btn" style="margin-top:20px;" onclick="saveApiSettings()">保存当前配置并应用</button>
             </div>
             <div id="appearance-inputs" style="display:none">
@@ -1456,7 +1457,20 @@ function applyCustomBallCss(cssText) {
                 } catch (err) { alert("导入失败"); }
             };
             reader.readAsText(file);
+}
+
+// 新增的一键清除函数
+function clearAllData() {
+    const confirm1 = confirm("⚠️ 警告：这将永久删除所有设置、API Key、背景图片、QQ好友、聊天记录和世界书内容！");
+    if (confirm1) {
+        const confirm2 = confirm("确定要执行吗？此操作不可撤销！建议操作前先点击‘数据导出’备份。");
+        if (confirm2) {
+            localStorage.clear(); // 清空所有本地存储
+            alert("所有数据已清除，页面即将刷新还原初始状态。");
+            location.reload(); // 刷新页面
         }
+    }
+}
 
         let silentAudio = null;
 let wakeLock = null;

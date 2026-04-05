@@ -211,9 +211,9 @@ input:checked + .slider:before {
         #chat-page { z-index: var(--z-chat); }
         #settings-page { z-index: var(--z-settings); }
         #moments-page { z-index: var(--z-moments); background: white; }
-        #moments-config-page, #api-config-page, #editor-page, #worldbook-page, #wallet-page, #wallet-history-page, #favorites-page, #memory-page, #heartbeat-page, #theater-overlay { 
-            z-index: var(--z-sub-page); background: var(--bg-gray); position: absolute; width: 100%; height: 100%; top: 0; left: 0; 
-        }
+        #moments-config-page, #api-config-page, #editor-page, #worldbook-page, #wallet-page, #wallet-history-page, #favorites-page, #memory-page, #heartbeat-page, #theater-overlay, #stickers-page { 
+    z-index: var(--z-sub-page); background: var(--bg-gray); position: absolute; width: 100%; height: 100%; top: 0; left: 0; 
+}
 
         /* 手账风格心声页面 */
         .scrapbook-paper {
@@ -1061,10 +1061,10 @@ input:checked + .slider:before {
         <div class="content">
             <div id="sticker-list"></div>
         </div>
-        <div id="sticker-delete-bar" style="display:none; position:fixed; bottom:0; width:100%; height:60px; background:#f7f7f7; border-top:1px solid #ddd; z-index:1500; justify-content:space-around; align-items:center;">
-            <div onclick="exitStickerDeleteMode()">取消</div>
-            <div style="color: #fa5151; font-weight:bold;" onclick="confirmBatchDeleteStickers()">确认删除</div>
-        </div>
+        <div id="sticker-delete-bar" style="display:none; position:fixed; bottom:0; width:100%; height:auto; min-height:70px; background:#f7f7f7; border-top:1px solid #ddd; z-index:2500; display:flex; justify-content:space-around; align-items:center; padding-bottom: env(safe-area-inset-bottom);">
+    <div onclick="exitStickerDeleteMode()" style="padding: 10px 20px;">取消</div>
+    <div style="color: #fa5151; font-weight:bold; padding: 10px 20px;" onclick="confirmBatchDeleteStickers()">确认删除</div>
+</div>
     </div>
 
     <!-- 表情导入弹窗 -->
