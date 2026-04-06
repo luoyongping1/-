@@ -2064,7 +2064,13 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
                                         for (let mObj of msgs) {
 await new Promise(r => setTimeout(r, 100)); // 大幅缩短等待时间
 // 统一提取文本内容
-let cleanText = mObj.text.trim();
+let rawText = mObj.text.trim();
+
+// --- 核心修正：彻底屏蔽所有方括号提示词标签（如 [JEALOUSY], [ACTION] 等） ---
+let cleanText = rawText.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\].*?(\s|$)|\[.*?\]/g, "").trim();
+
+// 如果这行文字被屏蔽完后变空了（比如原本只有标签），就跳过不显示这个气泡
+if (!cleanText) continue;
 
 // --- 新增：解析 AI 主动转账指令 ---
 if (cleanText.includes("[SEND_MONEY]")) {
@@ -2782,10 +2788,9 @@ if (rawReply.includes("[REPLY]")) {
     reply = rawReply.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || rawReply;
 }
 
+
 // 彻底删除内容中可能混入的零散标签
-reply = reply.replace(/\[REPLY\]|\[ACTION\][\s\S]*?(\[|$)|\[THOUGHTS\][\s\S]*?(\[|$)|\[EMOTION\][\s\S]*?(\[|$)|\[JEALOUSY\]\d+/g, (match) => {
-    return match.startsWith('[REPLY]') ? "" : (match.endsWith('[') ? "[" : "");
-}).trim();
+reply = reply.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\].*?(\s|$)|\[.*?\]/g, "").trim();
 
 // 双重清洗：去掉可能生成的烦人前缀
 group.members.forEach(name => {
