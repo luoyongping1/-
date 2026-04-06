@@ -1310,13 +1310,12 @@ let datingHistories = JSON.parse(localStorage.getItem('qq_dating_history')) || {
 let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
 
 // 在 saveData 函数里也要加上这一行
-function saveData() {
+        async function saveData() {
     try {
         localStorage.setItem('qq_friends', JSON.stringify(friends));
         localStorage.setItem('qq_groups', JSON.stringify(groups));
         localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
         localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-        localStorage.setItem('qq_dating_history', JSON.stringify(datingHistories));
         localStorage.setItem('qq_moments', JSON.stringify(moments));
         localStorage.setItem('ai_config', JSON.stringify(aiConfig));
         localStorage.setItem('my_info', JSON.stringify(myInfo));
@@ -1324,7 +1323,25 @@ function saveData() {
         localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
         localStorage.setItem('qq_stickers', JSON.stringify(stickers));
         localStorage.setItem('qq_group_chats', JSON.stringify(groupChats));
-    } catch (e) { console.error("Save Error"); }
+
+        // --- 新增：同步数据到云服务器 ---
+        const subRaw = localStorage.getItem('web_push_subscription');
+        if (subRaw) {
+            const sub = JSON.parse(subRaw);
+            fetch('http://113.45.248.178:3000/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: myInfo.wxid || 'default_user', 
+                    friends: friends,
+                    aiConfig: aiConfig,
+                    subscription: sub
+                })
+            })
+            .then(res => console.log("✅ 云端同步指令已发出"))
+            .catch(e => console.warn("目前处于离线状态或服务器未响应"));
+        }
+    } catch (e) { console.error("Save Error", e); }
 }
         let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
         let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
