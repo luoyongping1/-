@@ -31,11 +31,20 @@
 
         /* 顶部装饰栏 */
         .top-nav {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 25px; background: var(--glass);
-            backdrop-filter: blur(10px); z-index: 10;
-            box-shadow: 0 4px 15px rgba(255, 183, 197, 0.2);
-        }
+    display: flex; 
+    justify-content: space-between; 
+    /* 改为底部对齐 */
+    align-items: flex-end;
+    /* 顶部留出状态栏高度，底部留15像素 */
+    padding: env(safe-area-inset-top) 25px 15px 25px; 
+    /* 自动计算总高度 */
+    height: calc(60px + env(safe-area-inset-top));
+    box-sizing: border-box;
+    background: var(--glass);
+    backdrop-filter: blur(10px); 
+    z-index: 10;
+    box-shadow: 0 4px 15px rgba(255, 183, 197, 0.2);
+}
 
         .target-info { font-weight: bold; color: var(--dark-pink); font-size: 1.1em; }
 
