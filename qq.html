@@ -152,7 +152,24 @@ input:checked + .slider:before {
 
         .page { display: none; flex-direction: column; height: 100%; position: absolute; width: 100%; top: 0; left: 0; background: var(--bg-gray); }
         .page.active { display: flex; }
-        .header { height: 50px; background: var(--bg-gray); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 17px; font-weight: 500; border-bottom: 0.5px solid var(--border-color); flex-shrink: 0; }
+        .header { 
+    /* 自动计算高度：基础50px + 手机状态栏高度 */
+    height: calc(50px + env(safe-area-inset-top)); 
+    background: var(--bg-gray); 
+    display: flex; 
+    /* 改为底部对齐，确保文字和加号始终在标题栏底部 */
+    align-items: flex-end; 
+    justify-content: space-between; 
+    /* 设置左右内边距，底部留出10px间距，顶部自动适配刘海高度 */
+    padding: 0 16px 10px 16px; 
+    padding-top: env(safe-area-inset-top);
+    /* 确保高度计算包含边框和内边距 */
+    box-sizing: border-box;
+    font-size: 17px; 
+    font-weight: 500; 
+    border-bottom: 0.5px solid var(--border-color); 
+    flex-shrink: 0; 
+}
         .content { flex: 1; overflow-y: auto; padding-bottom: 60px; -webkit-overflow-scrolling: touch; }
 
         .tab-bar { 
