@@ -1338,7 +1338,7 @@ function saveData() {
         let isMultiSelecting = false;
         let quotedText = "";
         
-        function saveData() {
+                async function saveData() {
     try {
         localStorage.setItem('qq_friends', JSON.stringify(friends));
         localStorage.setItem('qq_groups', JSON.stringify(groups));
@@ -1350,8 +1350,23 @@ function saveData() {
         localStorage.setItem('wallet_data', JSON.stringify(walletData));
         localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
         localStorage.setItem('qq_stickers', JSON.stringify(stickers));
-        // 新增：保存群聊列表
         localStorage.setItem('qq_group_chats', JSON.stringify(groupChats));
+
+        // --- 核心修改：同步给 Windows 云服务器 ---
+        const sub = JSON.parse(localStorage.getItem('web_push_subscription'));
+        if (sub) {
+            fetch('http://113.45.248.178:3000/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: myInfo.wxid || 'default_user', 
+                    friends: friends,
+                    aiConfig: aiConfig,
+                    subscription: sub
+                })
+            }).then(res => console.log("云端数据同步成功"))
+              .catch(e => console.warn("同步服务器暂未响应，请检查服务器3000端口是否放行"));
+        }
     } catch (e) { console.error("Save Error"); }
 }
 
