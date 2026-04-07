@@ -444,33 +444,30 @@ gap: 15px;
 }
 .edit-mode-controls {
     position: fixed;
-    top: calc(env(safe-area-inset-top) + 10px);
-    left: 0; right: 0;
+    top: calc(env(safe-area-inset-top) + 15px);
+    left: 0; 
+    right: 0; 
     display: none; 
-    justify-content: space-between;
+    justify-content: space-between; /* 关键：让第一个子元素加号在左，第二个子元素完成在右 */
     padding: 0 20px;
+    box-sizing: border-box;
     z-index: 2000;
 }
-.edit-btn {
-    width: 44px; height: 44px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white; font-size: 24px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+.edit-btn, .edit-done {
+    background: rgba(255, 255, 255, 0.7) !important; /* 调亮背景 */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 15px; /* 统一圆角 */
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #333 !important; /* 文字改为深色 */
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
 }
-.edit-done {
-    padding: 0 20px; height: 44px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white; font-weight: bold;
-    display: flex; align-items: center; justify-content: center;
-}
+.edit-btn { width: 44px; height: 44px; font-size: 24px; }
+.edit-done { padding: 0 20px; height: 44px; font-size: 14px; }
 
 #widget-picker {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -483,10 +480,25 @@ gap: 15px;
     max-height: 80vh; overflow-y: auto;
 }
 .picker-item {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 20px; padding: 15px;
-    text-align: center; color: white;
+    border-radius: 20px; 
+    padding: 20px 10px;
+    text-align: center; 
+    color: white;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+/* 给选择器里的预览加个小模拟图感 */
+.picker-item::before {
+    content: '';
+    width: 60px; height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    border: 1px dashed rgba(255,255,255,0.4);
 }
 
 .widget-minimal-clock { grid-column: span 4; padding: 20px; text-align: center; }
@@ -508,11 +520,12 @@ gap: 15px;
 }
 .editing .delete-widget-btn { display: flex; }
 
+/* 4x2 iOS 综合组件 */
 .widget-ios-info {
     grid-column: span 4;
     grid-row: span 2;
     width: 100%;
-    height: 245px; 
+    height: 245px; /* 增加了总高度，确保能放下更高的背景图 */
     background: rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -527,7 +540,7 @@ gap: 15px;
 }
 .ios-banner {
     width: 100%;
-    height: 150px; 
+    height: 150px; /* 增加了背景图高度 */
     background-size: cover;
     background-position: center;
     background-color: rgba(255,255,255,0.1);
@@ -541,7 +554,7 @@ gap: 15px;
     display: flex;
     align-items: flex-end;
     padding: 0 15px;
-    margin-top: -25px; 
+    margin-top: -25px; /* 头像向上偏移，压住背景图 */
     gap: 12px;
     z-index: 2;
 }
@@ -692,7 +705,6 @@ gap: 15px;
 <div id="widget-picker" onclick="this.style.display='none'">
 <div class="widget-grid" onclick="event.stopPropagation()">
     <div class="picker-item" onclick="addWidget('heart-widget')">灵动爱心 (2x2)</div>
-    <div class="picker-item" onclick="addWidget('todo')">待办清单 (2x2)</div>
     <div class="picker-item" onclick="addWidget('ios-info')">iOS综合信息 (4x2)</div>
     <div class="picker-item" onclick="addWidget('ios-photo')">拍立得相框 (2x2)</div>
 </div>
@@ -701,19 +713,11 @@ gap: 15px;
     <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
         
 <div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
-    <div id="item-time" class="grid-item time-widget">
-        <div id="date-display" class="date-str">正在加载日期...</div>
-        <div id="clock-display" class="clock-str">00:00</div>
-    </div>
-    <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>
-        </div>
+    <!-- 桌面初始为空 -->
+</div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
-    <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
-<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
-<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
-    <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
-<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
+    <!-- 桌面初始为空，原本图标可通过编辑模式加回 -->
 </div>
 
     </div>
@@ -980,9 +984,7 @@ gap: 15px;
         }
 
 function initGridSortable() {
-    // 禁用长按菜单
     window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
-    
     let draggingItem = null;
     let startX, startY;
     let moveDist = 0;
@@ -990,9 +992,11 @@ function initGridSortable() {
 
     document.addEventListener('touchstart', (e) => {
         const item = e.target.closest('.grid-item');
-        // 排除掉时间组件和非桌面图标
+        if (!item && e.target.classList.contains('content')) {
+            longPressTimer = setTimeout(() => { enterEditMode(); }, 800);
+            return;
+        }
         if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
-        
         draggingItem = item;
         initialRect = draggingItem.getBoundingClientRect();
         const touch = e.touches[0];
@@ -1002,31 +1006,26 @@ function initGridSortable() {
     }, {passive: false});
 
     document.addEventListener('touchmove', (e) => {
-        if (!draggingItem) return;
-        const touch = e.touches[0];
-        const dx = touch.clientX - startX;
+    // 只要手指开始移动（滑动），就说明不是长按，立刻取消进入编辑模式的倒计时
+    clearTimeout(longPressTimer); 
+
+    if (!draggingItem) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
         const dy = touch.clientY - startY;
         moveDist = Math.hypot(dx, dy);
-
         if (moveDist > 10) {
             e.preventDefault(); 
             draggingItem.classList.add('dragging');
-            
-            // 锁定原始宽高，防止变瘪
             draggingItem.style.width = initialRect.width + 'px';
             draggingItem.style.height = initialRect.height + 'px';
-            
-            // 跟随手指移动
             draggingItem.style.left = (touch.clientX - initialRect.width / 2) + 'px';
             draggingItem.style.top = (touch.clientY - initialRect.height / 2) + 'px';
-
             const screenWidth = window.innerWidth;
             const wrapper = document.getElementById('swiper-wrapper');
             const pageDots = document.querySelectorAll('.dot');
             const grid1 = document.getElementById('main-grid');
             const grid2 = document.getElementById('page-2');
-
-            // 跨页检测：灵敏度调整为距离边缘 40px
             if (touch.clientX > screenWidth - 40 && currentPageIndex === 0) {
                 currentPageIndex = 1;
                 wrapper.style.transform = `translateX(-50%)`; 
@@ -1039,75 +1038,41 @@ function initGridSortable() {
                 pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
                 grid1.appendChild(draggingItem); 
             }
-
-            // 寻找落点逻辑
             const currentContainer = draggingItem.parentElement;
             const siblings = Array.from(currentContainer.querySelectorAll('.grid-item:not(.dragging)'));
-            
-            // 找到距离当前手指位置最近的图标
             let closestItem = null;
             let minDistance = Infinity;
-
             siblings.forEach(sibling => {
-                if (sibling.id === 'item-time') return; // 不移动时间组件
+                if (sibling.id === 'item-time') return;
                 const rect = sibling.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
                 const distance = Math.hypot(touch.clientX - centerX, touch.clientY - centerY);
-                
-                if (distance < minDistance && distance < 50) { // 50px 为触发排序的阈值
+                if (distance < minDistance && distance < 50) {
                     minDistance = distance;
                     closestItem = sibling;
                 }
             });
-
             if (closestItem) {
                 const rect = closestItem.getBoundingClientRect();
-                // 判断是在图标的前半部分还是后半部分
                 const isAfter = touch.clientX > rect.left + rect.width / 2;
-                if (isAfter) {
-                    currentContainer.insertBefore(draggingItem, closestItem.nextSibling);
-                } else {
-                    currentContainer.insertBefore(draggingItem, closestItem);
-                }
+                if (isAfter) { currentContainer.insertBefore(draggingItem, closestItem.nextSibling); } 
+                else { currentContainer.insertBefore(draggingItem, closestItem); }
             }
         }
     }, {passive: false});
 
     document.addEventListener('touchend', (e) => {
+    // 只要手指抬起，立刻取消长按倒计时，防止在空白处点一下也弹出加号
+    clearTimeout(longPressTimer);
+
     if (!draggingItem) return;
-    
-    // 必须先移除特效属性和拉伸样式
     draggingItem.classList.remove('dragging');
-    draggingItem.style.left = ''; 
-    draggingItem.style.top = ''; 
-    draggingItem.style.width = '';
-    draggingItem.style.height = '';
-    draggingItem.style.visibility = '';
-    
-    // 状态清理干净后再进行保存！
+    draggingItem.style.left = ''; draggingItem.style.top = ''; draggingItem.style.width = ''; draggingItem.style.height = ''; draggingItem.style.visibility = '';
     if (moveDist > 10) { saveAllWidgets(); }
-    
     draggingItem = null;
 });
 }
-
-        function saveGridOrder() {
-            const items = Array.from(document.querySelectorAll('.grid-item'));
-            const order = items.map(el => el.id);
-            localStorage.setItem('grid_layout_order', JSON.stringify(order));
-        }
-
-        function loadGridOrder() {
-            const order = JSON.parse(localStorage.getItem('grid_layout_order'));
-            if (order) {
-                const container = document.getElementById('main-grid');
-                order.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) container.appendChild(el);
-                });
-            }
-        }
 
 function switchAppWindow(targetId) {
     const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
@@ -1621,53 +1586,49 @@ async function toggleKeepAlive(enabled) {
     }
 }
 
+function enterEditMode() {
+    isEditMode = true;
+    document.getElementById('edit-controls').style.display = 'flex';
+    document.getElementById('main-grid').classList.add('editing');
+    document.getElementById('page-2').classList.add('editing');
+}
+
+function exitEditMode() {
+    isEditMode = false;
+    document.getElementById('edit-controls').style.display = 'none';
+    document.getElementById('main-grid').classList.remove('editing');
+    document.getElementById('page-2').classList.remove('editing');
+    saveAllWidgets(); 
+}
+
+function showWidgetPicker() { document.getElementById('widget-picker').style.display = 'block'; }
+
 function addWidget(type) {
     const targetGridId = currentPageIndex === 0 ? 'main-grid' : 'page-2';
     const grid = document.getElementById(targetGridId);
     const widgetId = 'widget-' + Date.now();
     let html = '';
+
     if (type === 'heart-widget') {
-        html = `<div id="${widgetId}" class="grid-item left-widget">
-                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
-                    <svg class="heart-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    <div class="battery-container"><div class="battery-fill-inner" style="height: 100%; background: #4cd137; width: 50%; border-radius: 2px;"></div></div>
-                </div>`;
+        html = `<div id="${widgetId}" class="grid-item left-widget"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><svg class="heart-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><div class="battery-container"><div class="battery-fill-inner" style="height: 100%; background: #4cd137; width: 50%; border-radius: 2px;"></div></div></div>`;
     } else if (type === 'todo') {
-        html = `<div id="${widgetId}" class="grid-item widget-todo left-widget">
-                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
-                    <div style="font-weight:bold; margin-bottom:10px; font-size:14px;">待办清单</div>
-                    <div class="todo-item" onclick="toggleTodo(this)">○ 今天的计划</div>
-                    <div class="todo-item" onclick="toggleTodo(this)">○ 记得喝水</div>
-                </div>`;
+        html = `<div id="${widgetId}" class="grid-item widget-todo left-widget"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div style="font-weight:bold; margin-bottom:10px; font-size:14px;">待办清单</div><div class="todo-item" onclick="toggleTodo(this)">○ 今天的计划</div><div class="todo-item" onclick="toggleTodo(this)">○ 记得喝水</div></div>`;
     } else if (type === 'ios-info') {
-        html = `<div id="${widgetId}" class="grid-item widget-ios-info" onclick="handleIosInfoClick('${widgetId}', event)">
-                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
-                    <div class="ios-banner" id="${widgetId}-banner">点击更换背景图</div>
-                    <div class="ios-avatar-wrap">
-                        <div class="ios-avatar" id="${widgetId}-avatar">点此换头像</div>
-                        <div class="ios-nickname">恋するxのカタムシス...?</div>
-                    </div>
-                    <div class="ios-status-row">
-                        <div class="ios-pill-group"><span>🔋 15%</span><span>📶</span><span>🎧</span></div>
-                        <div class="ios-time-pill ios-dynamic-time">00:00:00</div>
-                    </div>
-                    <div class="ios-calendar-row">
-                        <div class="ios-cal-item">Sun<br>14</div><div class="ios-cal-item">Mon<br>15</div>
-                        <div class="ios-cal-item">Tue<br>16</div><div class="ios-cal-item">Wed<br>17</div>
-                        <div class="ios-cal-item active">Thu<br>18</div><div class="ios-cal-item">Fri<br>19</div>
-                        <div class="ios-cal-item">Sat<br>20</div>
-                    </div>
-                    <div class="widget-footer-label">Top Widgets*</div>
-                </div>`;
+        html = `<div id="${widgetId}" class="grid-item widget-ios-info" onclick="handleIosInfoClick('${widgetId}', event)"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div class="ios-banner" id="${widgetId}-banner">点击更换背景图</div><div class="ios-avatar-wrap"><div class="ios-avatar" id="${widgetId}-avatar">点此换头像</div><div class="ios-nickname">恋するxのカタムシス...?</div></div><div class="ios-status-row"><div class="ios-pill-group"><span>🔋 15%</span><span>📶</span><span>🎧</span></div><div class="ios-time-pill ios-dynamic-time">00:00:00</div></div><div class="ios-calendar-row"><div class="ios-cal-item">Sun<br>14</div><div class="ios-cal-item">Mon<br>15</div><div class="ios-cal-item">Tue<br>16</div><div class="ios-cal-item">Wed<br>17</div><div class="ios-cal-item active">Thu<br>18</div><div class="ios-cal-item">Fri<br>19</div><div class="ios-cal-item">Sat<br>20</div></div><div class="widget-footer-label">Top Widgets*</div></div>`;
     } else if (type === 'ios-photo') {
-        html = `<div id="${widgetId}" class="grid-item widget-ios-photo" onclick="handleIosPhotoClick('${widgetId}', event)">
-                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
-                    <div class="ios-photo-heart">🖤</div>
-                    <div class="ios-photo-content" id="${widgetId}-img">点击添加图片</div>
-                    <div class="ios-photo-stars">✨⭐</div>
-                    <div class="ios-photo-footer">Top Widgets*</div>
-                </div>`;
+        html = `<div id="${widgetId}" class="grid-item widget-ios-photo" onclick="handleIosPhotoClick('${widgetId}', event)"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div class="ios-photo-heart">🖤</div><div class="ios-photo-content" id="${widgetId}-img">点击添加图片</div><div class="ios-photo-stars">✨⭐</div><div class="ios-photo-footer">Top Widgets*</div></div>`;
+    } else if (type === 'minimal-clock') {
+        html = `<div id="${widgetId}" class="grid-item widget-minimal-clock"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div class="time">00:00</div><div class="info">加载中...</div></div>`;
+    } else if (type === 'weather') {
+        html = `<div id="${widgetId}" class="grid-item widget-weather left-widget" onclick="editWeather('${widgetId}')"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div class="weather-icon-sun"></div><div class="weather-temp">26°C</div><div style="font-size:12px">上海 · 晴</div></div>`;
+    } else if (type === 'countdown') {
+        html = `<div id="${widgetId}" class="grid-item widget-countdown left-widget"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div style="font-size:12px;">距离 生日 还有</div><div class="countdown-num">128</div><div style="font-size:12px;">DAYS</div></div>`;
+    } else if (type === 'muyu') {
+        html = `<div id="${widgetId}" class="grid-item icon-btn widget-muyu" onclick="hitMuyu('${widgetId}')"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div class="muyu-img"></div><div style="font-size:10px; margin-top:5px;">功德: <span class="muyu-count">0</span></div></div>`;
+    } else if (type === 'quote') {
+        html = `<div id="${widgetId}" class="grid-item widget-quote left-widget" onclick="changeQuote('${widgetId}')"><div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div><div class="quote-text">生活原本沉闷，但跑起来就有风。</div></div>`;
     }
+
     grid.insertAdjacentHTML('beforeend', html);
     document.getElementById('widget-picker').style.display = 'none';
     saveAllWidgets();
@@ -1765,26 +1726,16 @@ function saveAllWidgets() {
 }
 
 window.onload = function() {
-    // 1. 加载保存过的组件内容
     const savedGrid1 = localStorage.getItem('saved_grid_page_1');
     if (savedGrid1) { document.getElementById('main-grid').innerHTML = savedGrid1; }
     const savedGrid2 = localStorage.getItem('saved_grid_page_2');
     if (savedGrid2) { document.getElementById('page-2').innerHTML = savedGrid2; }
 
-    // --- 新增：强制清理错误保存在手机里的拖拽残影 ---
     document.querySelectorAll('.grid-item').forEach(el => {
         el.classList.remove('dragging');
-        el.style.left = '';
-        el.style.top = '';
-        el.style.width = '';
-        el.style.height = '';
-        el.style.visibility = '';
+        el.style.left = ''; el.style.top = ''; el.style.width = ''; el.style.height = ''; el.style.visibility = '';
     });
-    // 清理成功后重新覆盖保存一次干净的桌面
-    saveAllWidgets(); 
-    // ------------------------------------------------
 
-    // 2. 重新初始化拖拽逻辑（不需要 loadGridOrder）
     initGridSortable(); 
     const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
     Object.keys(customIcons).forEach(id => {
@@ -1857,6 +1808,9 @@ async function toggleNotifications(enabled) {
         localStorage.removeItem('web_push_subscription');
     }
 }
+
+let isEditMode = false;
+let longPressTimer;
     </script>
 
 <div id="friend-selector-modal" class="glass-modal">
