@@ -717,12 +717,12 @@ gap: 15px;
         <div class="date-str" id="date-display"></div>
         <div class="clock-str" id="clock-display">00:00</div>
     </div>
-    <div id="item-xhs" class="icon-btn" onclick="openApp()"><span>小红书</span></div>
-    <div id="item-gacha" class="icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
-    <div id="item-self" class="icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
-    <div id="item-checkphone" class="icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
-    <div id="item-wl" class="icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
-    <div id="item-shop" class="icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
+    <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>
+    <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
+    <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
+    <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
+    <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
+    <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
 </div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
@@ -1001,9 +1001,8 @@ function initGridSortable() {
 
     document.addEventListener('touchstart', (e) => {
         const item = e.target.closest('.grid-item');
-        if (!item && e.target.classList.contains('content')) {
+        if (item || e.target.classList.contains('content')) {
             longPressTimer = setTimeout(() => { enterEditMode(); }, 800);
-            return;
         }
         if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
         draggingItem = item;
@@ -1740,17 +1739,31 @@ window.onload = function() {
     const savedGrid2 = localStorage.getItem('saved_grid_page_2');
     if (savedGrid2) { document.getElementById('page-2').innerHTML = savedGrid2; }
 
-    // 修复重复图标问题
+    // 确保默认图标存在且不重复
     let needSave = false;
-    ['item-wl', 'item-shop'].forEach(itemId => {
-        const allInstances = document.querySelectorAll(`#${itemId}`);
-        if (allInstances.length > 1) {
-            for (let i = 1; i < allInstances.length; i++) {
-                allInstances[i].remove();
+    const defaultApps = [
+        { id: 'item-time', html: `<div id="item-time" class="grid-item time-widget"><div class="date-str" id="date-display"></div><div class="clock-str" id="clock-display">00:00</div></div>` },
+        { id: 'item-xhs', html: `<div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>` },
+        { id: 'item-gacha', html: `<div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>` },
+        { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>` },
+        { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>` },
+        { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>` },
+        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>` }
+    ];
+
+    defaultApps.forEach(app => {
+        const instances = document.querySelectorAll(`#${app.id}`);
+        if (instances.length === 0) {
+            document.getElementById('main-grid').insertAdjacentHTML('beforeend', app.html);
+            needSave = true;
+        } else if (instances.length > 1) {
+            for (let i = 1; i < instances.length; i++) {
+                instances[i].remove();
             }
             needSave = true;
         }
     });
+
     if (needSave) saveAllWidgets();
 
     document.querySelectorAll('.grid-item').forEach(el => {
