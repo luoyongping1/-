@@ -112,7 +112,7 @@ padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bot
 height: 100%;
 display: grid;
 grid-template-columns: repeat(4, 1fr);
-grid-auto-rows: min-content; /* 修改这一行，防止行高被无意义压缩 */
+grid-auto-rows: min-content; /* 改改这一行，防止行高被无意义压缩 */
 gap: 15px;
     box-sizing: border-box;
     align-content: start;
@@ -126,10 +126,11 @@ gap: 15px;
         }
 
         .grid-item {
-            position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
-            touch-action: none;
-        }
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    touch-action: none;
+    overflow: visible !important;
+}
 
         .grid-item.dragging {
     z-index: 9999 !important;
@@ -450,12 +451,305 @@ gap: 15px;
     font-size: 12px;
     position: relative; /* 保持相对定位 */
 }
+/* --- 新增：桌面编辑与组件库样式 --- */
+.edit-mode-controls {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: 0; right: 0;
+    display: none; /* 默认隐藏 */
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 2000;
+}
+.edit-btn {
+    width: 44px; height: 44px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.edit-done {
+    padding: 0 20px; height: 44px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* 组件选择弹窗 */
+#widget-picker {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(20px);
+    z-index: 3000; display: none;
+    padding: 60px 20px; box-sizing: border-box;
+}
+.widget-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+    max-height: 80vh; overflow-y: auto;
+}
+.picker-item {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; padding: 15px;
+    text-align: center; color: white;
+}
+
+/* --- 各个小组件的具体样式 --- */
+/* 极简数字时钟 (4x1) */
+.widget-minimal-clock { grid-column: span 4; padding: 20px; text-align: center; }
+.widget-minimal-clock .time { font-size: 48px; font-weight: bold; letter-spacing: -2px; }
+.widget-minimal-clock .info { font-size: 14px; opacity: 0.7; }
+
+/* 纯CSS天气组件 (2x2) */
+.widget-weather { 
+    grid-column: span 2; grid-row: span 2; 
+    padding: 15px; display: flex; flex-direction: column; justify-content: space-between;
+}
+.weather-icon-sun {
+    width: 40px; height: 40px; background: #ffce54;
+    border-radius: 50%; box-shadow: 0 0 20px #ffce54; margin: 10px auto;
+}
+.weather-temp { font-size: 32px; font-weight: bold; }
+
+/* 倒数日组件 (2x2) */
+.widget-countdown { grid-column: span 2; grid-row: span 2; padding: 15px; }
+.countdown-num { font-size: 36px; font-weight: bold; color: #ff6b6b; }
+
+/* 待办清单组件 (2x2) */
+.widget-todo { grid-column: span 2; grid-row: span 2; padding: 15px; text-align: left; }
+.todo-item { font-size: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+.todo-done { text-decoration: line-through; opacity: 0.5; }
+
+/* 木鱼组件 (1x1) */
+.widget-muyu { 
+    grid-column: span 1; aspect-ratio: 1/1; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer;
+}
+.muyu-img { width: 40px; height: 40px; background: #333; border-radius: 50%; border: 2px solid #555; }
+
+/* 语录便签 (4x1) */
+.widget-quote { 
+    grid-column: span 4; padding: 15px; font-style: italic; font-size: 13px; 
+    min-height: 60px; display: flex; align-items: center; justify-content: center;
+}
+
+/* 编辑模式下的震动效果 */
+.editing .grid-item { animation: wobble 0.3s infinite; }
+@keyframes wobble {
+    0% { transform: rotate(-1deg); }
+    50% { transform: rotate(1deg); }
+    100% { transform: rotate(-1deg); }
+}
+.delete-widget-btn {
+    position: absolute; top: 5px; left: 5px;
+    width: 24px; height: 24px; background: #ff4d4f;
+    border-radius: 50%; color: white; display: none;
+    align-items: center; justify-content: center; font-size: 14px;
+    z-index: 100;
+}
+.editing .delete-widget-btn { display: flex; }
+/* 新增组件样式 */
+/* 4x2 iOS 综合组件 */
+.widget-ios-info {
+    grid-column: span 4;
+    grid-row: span 2;
+    width: 100%;
+    height: 245px; /* 增加了总高度，确保能放下更高的背景图 */
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-sizing: border-box;
+    position: relative;
+}
+.ios-banner {
+    width: 100%;
+    height: 150px; /* 增加了背景图高度 */
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+}
+.ios-avatar-wrap {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 15px;
+    margin-top: -25px; /* 头像向上偏移，压住背景图 */
+    gap: 12px;
+    z-index: 2;
+}
+.ios-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    flex-shrink: 0;
+}
+.ios-nickname {
+    font-size: 13px;
+    font-weight: 500;
+    padding-bottom: 5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.ios-status-row {
+    display: flex;
+    padding: 10px 15px;
+    gap: 8px;
+    align-items: center;
+}
+.ios-pill-group {
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 4px 12px;
+    display: flex;
+    gap: 10px;
+    font-size: 11px;
+    align-items: center;
+}
+.ios-time-pill {
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: bold;
+}
+.ios-calendar-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 15px 5px;
+    font-size: 10px;
+}
+.ios-cal-item { text-align: center; opacity: 0.8; }
+.ios-cal-item.active { opacity: 1; font-weight: bold; position: relative; }
+.ios-cal-item.active::after {
+    content: '•';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.widget-footer-label {
+    text-align: center;
+    font-size: 9px;
+    opacity: 0.5;
+    padding-bottom: 6px;
+    margin-top: auto;
+}
+
+/* 2x2 拍立得相框 */
+.widget-ios-photo {
+    grid-column: span 2;
+    grid-row: span 2;
+    width: 155px; /* 固定宽高保持正方形 */
+    height: 155px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 10px 10px 25px 10px; /* 底部留白多一点做拍立得效果 */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    position: relative;
+}
+.ios-photo-content {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font-size: 11px;
+    overflow: hidden;
+}
+.ios-photo-stars {
+    position: absolute;
+    top: 5px; right: 5px; font-size: 14px;
+}
+.ios-photo-heart {
+    position: absolute;
+    top: 5px; left: 5px; font-size: 14px;
+}
+.ios-photo-footer {
+    position: absolute;
+    bottom: 6px;
+    width: 100%;
+    left: 0;
+    text-align: center;
+    font-size: 9px;
+    color: #999;
+    font-family: serif;
+}
+
+/* 专门为组件编辑设计的白色毛玻璃弹窗 */
+.widget-edit-modal {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(25px) !important;
+    -webkit-backdrop-filter: blur(25px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+.widget-edit-modal h3 { color: #333; margin-bottom: 20px; text-align: center; }
+.color-picker-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+.color-picker-container input[type="color"] {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    cursor: pointer;
+}
     </style>
 </head>
 <body>
 
     <div class="phone-container" id="phone-bg">
         <div class="overlay"></div>
+<!-- 新增：编辑模式顶部工具栏 -->
+<div class="edit-mode-controls" id="edit-controls">
+    <div class="edit-btn" onclick="showWidgetPicker()">+</div>
+    <div class="edit-done" onclick="exitEditMode()">完成</div>
+</div>
+
+<!-- 新增：组件选择弹窗 -->
+<div id="widget-picker" onclick="this.style.display='none'">
+<div class="widget-grid" onclick="event.stopPropagation()">
+    <div class="picker-item" onclick="addWidget('heart-widget')">灵动爱心 (2x2)</div>
+    <div class="picker-item" onclick="addWidget('todo')">待办清单 (2x2)</div>
+    <div class="picker-item" onclick="addWidget('ios-info')">iOS综合信息 (4x2)</div>
+    <div class="picker-item" onclick="addWidget('ios-photo')">拍立得相框 (2x2)</div>
+</div>
+</div>
         <!-- 新增了滑动容器包裹 -->
 <div id="swiper-container" style="width: 100%; height: 100%; overflow: hidden; position: relative; z-index: 2;">
     <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
@@ -466,25 +760,7 @@ gap: 15px;
         <div id="date-display" class="date-str">正在加载日期...</div>
         <div id="clock-display" class="clock-str">00:00</div>
     </div>
-    <div id="item-widget" class="grid-item left-widget">
-        <svg class="heart-icon" viewBox="0 0 24 24">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-        </svg>
-        <div class="battery-container">
-            <div id="battery-fill"></div>
-        </div>
-    </div>
     <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>
-    <div id="item-progress" class="grid-item progress-widgets">
-                <div class="progress-item">
-                    今年剩余 <span id="year-days">0</span> 天
-                    <div class="bar-bg"><div id="year-bar" class="bar-fill"></div></div>
-                </div>
-                <div class="progress-item">
-                    今日剩余 <span id="day-percent">0</span>%
-                    <div class="bar-bg"><div id="day-bar" class="bar-fill"></div></div>
-                </div>
-            </div>
         </div>
 
 <!-- 第二页桌面 (放置扭蛋机和其他图标) -->
@@ -496,7 +772,7 @@ gap: 15px;
     <!-- 新增：网恋模拟器图标 -->
     <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
     <!-- 新增：购物商城图标 -->
-    <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()" style="background: rgba(255, 68, 0, 0.2); border: 1px solid #FF4400;"><span>购物商城</span></div>
+<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
 </div>
 
     </div>
@@ -605,7 +881,7 @@ gap: 15px;
                     <input type="text" id="api-url" placeholder="https://api.openai.com/v1">
                 </div>
                 <div class="setting-group">
-                    <label>API 密钥</label>
+                    <label>API密钥</label>
                     <input type="password" id="api-key" placeholder="Key">
                 </div>
                 <div class="setting-group">
@@ -682,24 +958,6 @@ gap: 15px;
         </div>
     </div>
 
-    <!-- 组件背景设置 -->
-    <div class="setting-group">
-        <label>修改左侧组件背景图</label>
-        <div class="bg-tabs">
-            <div class="bg-tab-btn active" id="tab-widget-file" onclick="switchBgTab('widget', 'file')">本地上传</div>
-            <div class="bg-tab-btn" id="tab-widget-url" onclick="switchBgTab('widget', 'url')">图片 URL</div>
-        </div>
-        <div id="content-widget-file" class="tab-content active">
-            <input type="file" accept="image/*" onchange="previewImage(this, 'item-widget')">
-        </div>
-        <div id="content-widget-url" class="tab-content">
-            <div class="url-input-group">
-                <input type="text" id="url-widget-input" placeholder="输入图片直链 URL">
-                <button class="apply-btn" onclick="applyUrlBackground('url-widget-input', 'item-widget')">确定</button>
-            </div>
-        </div>
-    </div>
-
     <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
         <label>图标美化</label>
         <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
@@ -735,12 +993,12 @@ gap: 15px;
         </div>
 
         <div id="app-list-modal" class="glass-modal">
-            <div class="glass-modal-content">
-                <h3 style="margin-top:0">选择要修改的 App</h3>
-                <div id="app-items-container"></div>
-                <button class="action-btn" style="background:#ccc; color:#333; margin-top:15px;" onclick="closeAppListModal()">取消</button>
-            </div>
-        </div>
+    <div class="glass-modal-content" style="display: flex; flex-direction: column; max-height: 80%;">
+        <h3 style="margin-top:0; flex-shrink: 0;">选择要修改的 App</h3>
+        <div id="app-items-container" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
+        <button class="action-btn" style="background:#ff4d4f; color:white; margin-top:15px; flex-shrink: 0;" onclick="closeAppListModal()">退出图标编辑</button>
+    </div>
+</div>
 
         <div id="icon-choice-modal" class="glass-modal">
             <div class="glass-modal-content">
@@ -798,9 +1056,7 @@ gap: 15px;
 
         // --- 栅格图标拖拽排序逻辑 ---
         function initGridSortable() {
-    // 新增：全局禁止长按弹出右键菜单
     window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
-    
     const container = document.getElementById('main-grid');
     let draggingItem = null;
             let startX, startY;
@@ -814,25 +1070,46 @@ gap: 15px;
                 moveDist = 0;
             }, {passive: false});
             container.addEventListener('touchmove', (e) => {
-                if (!draggingItem) return;
-                const touch = e.touches[0];
-                const dx = touch.clientX - startX;
-                const dy = touch.clientY - startY;
-                moveDist = Math.hypot(dx, dy);
-                if (moveDist > 15) {
-                    e.preventDefault(); 
-                    draggingItem.classList.add('dragging');
-                    draggingItem.style.left = touch.clientX - (draggingItem.offsetWidth/2) + 'px';
-                    draggingItem.style.top = touch.clientY - (draggingItem.offsetHeight/2) + 'px';
-                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const overItem = target ? target.closest('.grid-item') : null;
-                    if (overItem && overItem !== draggingItem) {
-                        const rect = overItem.getBoundingClientRect();
-                        const next = (touch.clientX > rect.left + rect.width / 2);
-                        container.insertBefore(draggingItem, next ? overItem.nextSibling : overItem);
-                    }
-                }
-            }, {passive: false});
+    if (!draggingItem) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    moveDist = Math.hypot(dx, dy);
+    if (moveDist > 15) {
+        e.preventDefault(); 
+        draggingItem.classList.add('dragging');
+        draggingItem.style.left = touch.clientX - (draggingItem.offsetWidth/2) + 'px';
+        draggingItem.style.top = touch.clientY - (draggingItem.offsetHeight/2) + 'px';
+
+        const screenWidth = window.innerWidth;
+        const wrapper = document.getElementById('swiper-wrapper');
+        const pageDots = document.querySelectorAll('.dot');
+        const grid1 = document.getElementById('main-grid');
+        const grid2 = document.getElementById('page-2');
+
+        if (touch.clientX > screenWidth - 30 && currentPageIndex === 0) {
+            currentPageIndex = 1;
+            wrapper.style.transform = `translateX(-50%)`; 
+            pageDots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
+            grid2.appendChild(draggingItem); 
+        } 
+        else if (touch.clientX < 30 && currentPageIndex === 1) {
+            currentPageIndex = 0;
+            wrapper.style.transform = `translateX(0%)`; 
+            pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
+            grid1.appendChild(draggingItem); 
+        }
+
+        const currentContainer = draggingItem.parentElement;
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        const overItem = target ? target.closest('.grid-item') : null;
+        if (overItem && overItem !== draggingItem && overItem.parentElement === currentContainer) {
+            const rect = overItem.getBoundingClientRect();
+            const next = (touch.clientX > rect.left + rect.width / 2);
+            currentContainer.insertBefore(draggingItem, next ? overItem.nextSibling : overItem);
+        }
+    }
+}, {passive: false});
             container.addEventListener('touchend', (e) => {
                 if (!draggingItem) return;
                 if (moveDist > 15) { e.preventDefault(); saveGridOrder(); }
@@ -858,45 +1135,26 @@ gap: 15px;
             }
         }
 
-        // --- 修改后的 App 控制逻辑（即时切换，无卡顿） ---
-
-// 这个核心函数负责：隐藏所有App窗口，只显示指定的那个
 function switchAppWindow(targetId) {
-    // 1. 先把所有的 iframe 和世界书 div 都藏起来
     const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
     });
-
-    // 2. 显示大蒙层
     document.getElementById('app-overlay').style.display = "block";
-
-    // 3. 显示我们想要的那一个
     const target = document.getElementById(targetId);
-    if(targetId === 'worldbook-app') {
-        target.style.display = "flex"; // 世界书布局是 flex
-    } else {
-        target.style.display = "block"; // iframe 布局是 block
-    }
-    
-    // 4. 显示悬浮球
+    if(targetId === 'worldbook-app') { target.style.display = "flex"; } else { target.style.display = "block"; }
     showBall();
 }
 
-// 以下是各个图标点击时触发的函数
 function openQQ() { switchAppWindow("iframe-qq"); }
 function openApp() { switchAppWindow("iframe-xhs"); }
 function openGacha() { switchAppWindow("iframe-gacha"); }
 function openSelfApp() { switchAppWindow("iframe-self"); }
 function openWlApp() { switchAppWindow("iframe-wl"); }
 function openShopApp() { switchAppWindow("iframe-shop"); }
-function openWorldBook() { 
-    switchAppWindow("worldbook-app"); 
-    renderWorldBook(); 
-}
+function openWorldBook() { switchAppWindow("worldbook-app"); renderWorldBook(); }
 
-// 查手机比较特殊，因为它是从弹窗进入的
 function startCheckPhone(name) {
     document.getElementById('friend-selector-modal').style.display = 'none';
     localStorage.setItem('target_check_name', name);
@@ -910,55 +1168,38 @@ function showBall() {
 
 function closeApp() {
     if(isDraggingBall) return;
-    // 隐藏总蒙层
     document.getElementById('app-overlay').style.display = "none";
-    // 隐藏悬浮球
     ball.style.display = "none";
-    
-    // 为了省电/性能，隐藏蒙层时顺便把里面具体的 iframe 也藏了
     const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
-        });
+    });
 }
 
-// --- 重新找回：左右滑动逻辑 ---
 let swiperStartX = 0; 
 let currentPageIndex = 0;
 
-// 监听滑动开始
 document.getElementById('swiper-container').addEventListener('touchstart', (e) => {
     swiperStartX = e.touches[0].clientX;
 }, {passive: true});
 
-// 监听滑动结束
 document.getElementById('swiper-container').addEventListener('touchend', (e) => {
     let endX = e.changedTouches[0].clientX;
     let diff = swiperStartX - endX;
     const wrapper = document.getElementById('swiper-wrapper');
     const dots = document.querySelectorAll('.dot');
-
-    if (Math.abs(diff) > 50) { // 滑动超过50像素才翻页
-        if (diff > 0 && currentPageIndex === 0) {
-            currentPageIndex = 1;
-        } else if (diff < 0 && currentPageIndex === 1) {
-            currentPageIndex = 0;
-        }
-        // 执行翻页动画
+    if (Math.abs(diff) > 50) { 
+        if (diff > 0 && currentPageIndex === 0) { currentPageIndex = 1; } 
+        else if (diff < 0 && currentPageIndex === 1) { currentPageIndex = 0; }
         wrapper.style.transform = `translateX(-${currentPageIndex * 50}%)`;
-        // 更新小圆点状态
-        dots.forEach((dot, index) => {
-            dot.style.opacity = (index === currentPageIndex) ? "1" : "0.3";
-        });
+        dots.forEach((dot, index) => { dot.style.opacity = (index === currentPageIndex) ? "1" : "0.3"; });
     }
 });
 
-// --- 重新找回：查手机的好友选择逻辑 ---
 function showFriendSelector() {
     const friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
     const container = document.getElementById('friend-list-for-check');
-    
     if (friends.length === 0) {
         container.innerHTML = '<p style="text-align:center;color:#666;padding:20px;">QQ里还没有好友哦，请先去QQ添加好友</p>';
     } else {
@@ -974,13 +1215,12 @@ function showFriendSelector() {
     document.getElementById('friend-selector-modal').style.display = 'flex';
 }
 
-// 下面是你原本就有的 wbData 逻辑...
 let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
 let currentWbMode = 'global';
 let editingBookIndex = null; 
 let currentWbTab = 'global'; 
 
-        function switchWbTab(scope) {
+function switchWbTab(scope) {
     currentWbTab = scope;
     document.getElementById('tab-scope-global').classList.toggle('active', scope === 'global');
     document.getElementById('tab-scope-local').classList.toggle('active', scope === 'local');
@@ -994,17 +1234,13 @@ function renderWorldBook() {
     wbData.groups.forEach(group => {
         const groupDiv = document.createElement('div');
         groupDiv.className = "wb-group";
-        
-        // 修改这里：增加了一个 b.scope === currentWbTab 的判断
         const filteredBooks = wbData.books.map((b, index) => ({...b, originalIndex: index}))
             .filter(b => {
-                const matchScope = (b.scope === currentWbTab) || (!b.scope && currentWbTab === 'local'); // 兼容旧数据
+                const matchScope = (b.scope === currentWbTab) || (!b.scope && currentWbTab === 'local');
                 const matchSearch = b.title.toLowerCase().includes(searchTerm);
                 return b.group === group && matchScope && matchSearch;
             });
-        
-        if (filteredBooks.length === 0) return; // 如果这个分组下没书就不显示分组名
-
+        if (filteredBooks.length === 0) return;
         groupDiv.innerHTML = `
             <div class="wb-group-title" onclick="toggleGroup(this)">
                 <span>📁 ${group}</span><span>${filteredBooks.length}</span>
@@ -1020,45 +1256,34 @@ function renderWorldBook() {
     });
 }
 
-        function toggleGroup(el) { el.nextElementSibling.classList.toggle('collapsed'); }
-        
-        function showWbModal() {
-    editingBookIndex = null; // 重置为新建模式
+function toggleGroup(el) { el.nextElementSibling.classList.toggle('collapsed'); }
+function showWbModal() {
+    editingBookIndex = null; 
     document.getElementById('wb-modal').style.display = "block";
     document.getElementById('wb-group-select').innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
-    
-    // 清空输入框
     document.getElementById('new-wb-title').value = "";
     document.getElementById('new-wb-content').value = "";
     document.getElementById('new-wb-keyword').value = "";
     switchWbMode('global');
 }
 
-// 新增：编辑函数
 function editBook(index) {
     editingBookIndex = index;
     const book = wbData.books[index];
-    
     document.getElementById('wb-modal').style.display = "block";
     document.getElementById('wb-group-select').innerHTML = wbData.groups.map(g => `<option value="${g}">${g}</option>`).join('');
-    
-    // 填入已有数据
     document.getElementById('new-wb-title').value = book.title;
     document.getElementById('new-wb-content').value = book.content;
     document.getElementById('new-wb-keyword').value = book.keyword || "";
     document.getElementById('wb-group-select').value = book.group;
-    
-    // 这一步很重要：如果是编辑，我们需要暂时让当前标签页匹配这本书的属性
     if(book.scope) {
         currentWbTab = book.scope;
         document.getElementById('tab-scope-global').classList.toggle('active', book.scope === 'global');
         document.getElementById('tab-scope-local').classList.toggle('active', book.scope === 'local');
     }
-    
     switchWbMode(book.mode || 'global');
 }
 
-// 新增：删除函数（如果你想顺便加个删除功能，可以加个按钮调用这个）
 function deleteBook() {
     if(editingBookIndex !== null) {
         if(confirm("确定要删除这本书吗？")) {
@@ -1070,162 +1295,122 @@ function deleteBook() {
     }
 }
 
-        function closeWbModal() { document.getElementById('wb-modal').style.display = "none"; }
+function closeWbModal() { document.getElementById('wb-modal').style.display = "none"; }
+function switchWbMode(mode) {
+    currentWbMode = mode;
+    document.getElementById('mode-global').classList.toggle('active', mode === 'global');
+    document.getElementById('mode-keyword').classList.toggle('active', mode === 'keyword');
+    document.getElementById('keyword-input-wrap').style.display = mode === 'keyword' ? 'block' : 'none';
+}
 
-        function switchWbMode(mode) {
-            currentWbMode = mode;
-            document.getElementById('mode-global').classList.toggle('active', mode === 'global');
-            document.getElementById('mode-keyword').classList.toggle('active', mode === 'keyword');
-            document.getElementById('keyword-input-wrap').style.display = mode === 'keyword' ? 'block' : 'none';
-        }
+function previewHtmlContent() {
+    const content = document.getElementById('new-wb-content').value;
+    if(!content) return alert("内容为空");
+    document.getElementById('html-preview-container').style.display = "block";
+    const frame = document.getElementById('html-preview-frame');
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open(); doc.write(content); doc.close();
+}
 
-        function previewHtmlContent() {
-            const content = document.getElementById('new-wb-content').value;
-            if(!content) return alert("内容为空");
-            document.getElementById('html-preview-container').style.display = "block";
-            const frame = document.getElementById('html-preview-frame');
-            const doc = frame.contentDocument || frame.contentWindow.document;
-            doc.open();
-            doc.write(content);
-            doc.close();
-        }
+function closeHtmlPreview() { document.getElementById('html-preview-container').style.display = "none"; }
+function addNewGroup() {
+    const name = prompt("请输入新分组名称:");
+    if(name && !wbData.groups.includes(name)) { wbData.groups.push(name); showWbModal(); }
+}
 
-        function closeHtmlPreview() {
-            document.getElementById('html-preview-container').style.display = "none";
-        }
-
-        function addNewGroup() {
-            const name = prompt("请输入新分组名称:");
-            if(name && !wbData.groups.includes(name)) { wbData.groups.push(name); showWbModal(); }
-        }
-
-        function saveNewBook() {
+function saveNewBook() {
     const title = document.getElementById('new-wb-title').value;
     const content = document.getElementById('new-wb-content').value;
     const group = document.getElementById('wb-group-select').value;
     const keyword = document.getElementById('new-wb-keyword').value;
-    
     if(!title) return alert("请输入标题");
     if(currentWbMode === 'keyword' && !keyword) return alert("请填写触发关键词");
-
-    const bookData = { 
-        title, 
-        content, 
-        group, 
-        mode: currentWbMode, 
-        keyword: currentWbMode === 'keyword' ? keyword : null,
-        scope: currentWbTab // 新增：保存当前属于哪个选项卡（全局/局部）
-    };
-
-    if(editingBookIndex !== null) {
-        wbData.books[editingBookIndex] = bookData;
-    } else {
-        wbData.books.push(bookData);
-    }
-
+    const bookData = { title, content, group, mode: currentWbMode, keyword: currentWbMode === 'keyword' ? keyword : null, scope: currentWbTab };
+    if(editingBookIndex !== null) { wbData.books[editingBookIndex] = bookData; } else { wbData.books.push(bookData); }
     localStorage.setItem('wb_data', JSON.stringify(wbData));
-    closeWbModal(); 
-    renderWorldBook();
+    closeWbModal(); renderWorldBook();
 }
 
-        function updateTime() {
-            const now = new Date();
-            const weeks = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-            document.getElementById('date-display').innerText = `${now.getMonth()+1}月${now.getDate()}日 ${weeks[now.getDay()]}`;
-            document.getElementById('clock-display').innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            const start = new Date(now.getFullYear(), 0, 1);
-            const end = new Date(now.getFullYear() + 1, 0, 1);
-            const totalDays = (end - start) / 86400000;
-            const remainDays = Math.ceil((end - now) / 86400000);
-            document.getElementById('year-days').innerText = remainDays;
-            document.getElementById('year-bar').style.width = (remainDays / totalDays * 100) + "%";
-            const passedSecs = (now.getHours() * 3600) + (now.getMinutes() * 60) + now.getSeconds();
-            const dayPercent = Math.floor(((86400 - passedSecs) / 86400) * 100);
-            document.getElementById('day-percent').innerText = dayPercent;
-            document.getElementById('day-bar').style.width = dayPercent + "%";
-        }
+function updateTime() {
+    const now = new Date();
+    const weeks = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    document.getElementById('date-display').innerText = `${now.getMonth()+1}月${now.getDate()}日 ${weeks[now.getDay()]}`;
+    document.getElementById('clock-display').innerText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
 
-        function openSettings(type) {
-            document.getElementById('settings-panel').classList.add('active');
-            if(type === 'api') {
-                document.getElementById('panel-title').innerText = "系统设置";
-                document.getElementById('api-inputs').style.display = "block";
-                document.getElementById('appearance-inputs').style.display = "none";
-            } else {
-                document.getElementById('panel-title').innerText = "外观美化";
-                document.getElementById('api-inputs').style.display = "none";
-                document.getElementById('appearance-inputs').style.display = "block";
-            }
-        }
-        function closeSettings() { document.getElementById('settings-panel').classList.remove('active'); }
+function openSettings(type) {
+    document.getElementById('settings-panel').classList.add('active');
+    if(type === 'api') {
+        document.getElementById('panel-title').innerText = "系统设置";
+        document.getElementById('api-inputs').style.display = "block";
+        document.getElementById('appearance-inputs').style.display = "none";
+    } else {
+        document.getElementById('panel-title').innerText = "外观美化";
+        document.getElementById('api-inputs').style.display = "none";
+        document.getElementById('appearance-inputs').style.display = "block";
+    }
+}
+function closeSettings() { document.getElementById('settings-panel').classList.remove('active'); }
 
-        function previewImage(input, targetId) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const cleanBase64 = e.target.result;
-                    const target = document.getElementById(targetId);
-                    target.style.backgroundImage = 'url("' + cleanBase64 + '")';
-                    target.dataset.tempBg = cleanBase64;
-                }
-                reader.readAsDataURL(file);
-            }
+function previewImage(input, targetId) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const cleanBase64 = e.target.result;
+            const target = document.getElementById(targetId);
+            target.style.backgroundImage = 'url("' + cleanBase64 + '")';
+            target.dataset.tempBg = cleanBase64;
         }
+        reader.readAsDataURL(file);
+    }
+}
 
-// 切换背景设置的选项卡
 function switchBgTab(target, mode) {
-    // target 是 'phone' 或 'widget'，mode 是 'file' 或 'url'
     const tabFile = document.getElementById(`tab-${target}-file`);
     const tabUrl = document.getElementById(`tab-${target}-url`);
     const contentFile = document.getElementById(`content-${target}-file`);
     const contentUrl = document.getElementById(`content-${target}-url`);
-
     if (mode === 'file') {
-        tabFile.classList.add('active');
-        tabUrl.classList.remove('active');
-        contentFile.classList.add('active');
-        contentUrl.classList.remove('active');
+        tabFile.classList.add('active'); tabUrl.classList.remove('active');
+        contentFile.classList.add('active'); contentUrl.classList.remove('active');
     } else {
-        tabFile.classList.remove('active');
-        tabUrl.classList.add('active');
-        contentFile.classList.remove('active');
-        contentUrl.classList.add('active');
+        tabFile.classList.remove('active'); tabUrl.classList.add('active');
+        contentFile.classList.remove('active'); contentUrl.classList.add('active');
     }
 }
 
-// 应用输入的 URL 背景
 function applyUrlBackground(inputId, targetId) {
     const url = document.getElementById(inputId).value.trim();
     if (!url) return alert("请输入有效的图片 URL");
-    
     const target = document.getElementById(targetId);
-    // 立即预览效果
     target.style.backgroundImage = `url("${url}")`;
-    // 存入临时变量，以便点击“保存外观”时存入本地存储
     target.dataset.tempBg = url;
     alert("预览成功，请点击下方的“保存外观”永久生效");
 }
 
-        function saveAppearance() {
+function saveAppearance() {
     try {
         const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
-        const widgetBg = document.getElementById('item-widget').dataset.tempBg;
         const ballCss = document.getElementById('custom-ball-css').value;
 
-        if(phoneBg) localStorage.setItem('phone_bg_data', phoneBg);
-        if(widgetBg) localStorage.setItem('widget_bg_data', widgetBg);
+        // 如果有新背景图才存，没改就不动，节省空间
+        if(phoneBg) {
+            localStorage.setItem('phone_bg_data', phoneBg);
+            // 存完后删掉临时数据，释放网页内存
+            delete document.getElementById('phone-bg').dataset.tempBg;
+        }
+        
         localStorage.setItem('custom_ball_css', ballCss);
 
         applyCustomBallCss(ballCss);
         alert('外观已成功保存！');
         closeSettings();
     } catch (e) { 
-        alert("保存失败，可能是存储空间已满"); 
+        alert("保存失败！\n\n原因：由于浏览器限制，无法存储太大的本地照片。\n\n解决办法：\n1. 请使用压缩软件缩小图片体积后再上传。\n2. 或者使用【图片URL】功能，这种方式不占空间且支持高清图。"); 
     }
 }
 
-// 新增：应用悬浮球样式的辅助函数
 function applyCustomBallCss(cssText) {
     let styleTag = document.getElementById('dynamic-ball-style');
     if (!styleTag) {
@@ -1236,281 +1421,233 @@ function applyCustomBallCss(cssText) {
     styleTag.innerHTML = cssText;
 }
 
-        async function fetchModels() {
-            const url = document.getElementById('api-url').value.replace(/\/$/, "");
-            const key = document.getElementById('api-key').value;
-            const modelSelect = document.getElementById('model-select');
-            if(!url || !key) { alert("请先填写 URL 和密钥"); return; }
-            modelSelect.innerHTML = '<option>拉取中...</option>';
-            try {
-                const response = await fetch(`${url}/models`, {
-                    headers: { 'Authorization': `Bearer ${key}` }
-                });
-                const data = await response.json();
-                modelSelect.innerHTML = '';
-                const modelList = data.data || data;
-                modelList.forEach(m => {
-                    let opt = document.createElement('option');
-                    opt.value = m.id; opt.innerText = m.id;
-                    modelSelect.appendChild(opt);
-                });
-            } catch (err) { alert("拉取失败"); modelSelect.innerHTML = '<option value="">拉取失败</option>'; }
-        }
+async function fetchModels() {
+    const url = document.getElementById('api-url').value.replace(/\/$/, "");
+    const key = document.getElementById('api-key').value;
+    const modelSelect = document.getElementById('model-select');
+    if(!url || !key) { alert("请先填写 URL 和密钥"); return; }
+    modelSelect.innerHTML = '<option>拉取中...</option>';
+    try {
+        const response = await fetch(`${url}/models`, { headers: { 'Authorization': `Bearer ${key}` } });
+        const data = await response.json();
+        modelSelect.innerHTML = '';
+        const modelList = data.data || data;
+        modelList.forEach(m => {
+            let opt = document.createElement('option');
+            opt.value = m.id; opt.innerText = m.id;
+            modelSelect.appendChild(opt);
+        });
+    } catch (err) { alert("拉取失败"); modelSelect.innerHTML = '<option value="">拉取失败</option>'; }
+}
 
-        function saveApiSettings() {
-            const config = {
-                url: document.getElementById('api-url').value,
-                key: document.getElementById('api-key').value,
-                model: document.getElementById('model-select').value
-            };
-            localStorage.setItem('ai_config', JSON.stringify(config));
-            alert('配置已保存并应用！'); closeSettings();
-        }
+function saveApiSettings() {
+    const config = {
+        url: document.getElementById('api-url').value,
+        key: document.getElementById('api-key').value,
+        model: document.getElementById('model-select').value
+    };
+    localStorage.setItem('ai_config', JSON.stringify(config));
+    alert('配置已保存并应用！'); closeSettings();
+}
 
-        function saveMiniMaxSettings() {
-            const config = {
-                groupId: document.getElementById('minimax-group-id').value,
-                url: 'https://shushuxsj.xyz/v1/text_to_speech',
-                key: document.getElementById('minimax-api-key').value,
-                model: document.getElementById('minimax-model').value
-            };
-            localStorage.setItem('minimax_config', JSON.stringify(config));
-            alert('MiniMax 语音配置已保存！');
-        }
+function saveMiniMaxSettings() {
+    const config = {
+        groupId: document.getElementById('minimax-group-id').value,
+        url: 'https://shushuxsj.xyz/v1/text_to_speech',
+        key: document.getElementById('minimax-api-key').value,
+        model: document.getElementById('minimax-model').value
+    };
+    localStorage.setItem('minimax_config', JSON.stringify(config));
+    alert('MiniMax 语音配置已保存！');
+}
 
-        let apiPresets = JSON.parse(localStorage.getItem('api_presets') || '[]');
-        function showPresetNameModal() {
-            const url = document.getElementById('api-url').value;
-            const key = document.getElementById('api-key').value;
-            if(!url || !key) return alert("请先填写 API URL 和密钥后再保存预设");
-            document.getElementById('preset-name-modal').style.display = "flex";
-        }
-        function closePresetNameModal() {
-            document.getElementById('preset-name-modal').style.display = "none";
-            document.getElementById('preset-name-input').value = "";
-        }
-        function confirmSavePreset() {
-            const name = document.getElementById('preset-name-input').value;
-            if(!name) return alert("请输入预设名称");
-            const newPreset = {
-                name: name,
-                url: document.getElementById('api-url').value,
-                key: document.getElementById('api-key').value,
-                model: document.getElementById('model-select').value
-            };
-            apiPresets.push(newPreset);
-            localStorage.setItem('api_presets', JSON.stringify(apiPresets));
-            alert("预设保存成功！");
-            closePresetNameModal();
-        }
-        function showPresetListModal() {
-            const container = document.getElementById('preset-items-container');
-            container.innerHTML = "";
-            if(apiPresets.length === 0) {
-                container.innerHTML = "<p style='text-align:center; color:#999;'>暂无预设</p>";
-            } else {
-                apiPresets.forEach((p, index) => {
-                    const div = document.createElement('div');
-                    div.style = "background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
-                    div.innerHTML = `
-                        <div style="flex:1; cursor:pointer;" onclick="usePreset(${index})">
-                            <div style="font-weight:bold; font-size:14px;">${p.name}</div>
-                            <div style="font-size:10px; color:#666;">${p.model || '未选模型'}</div>
-                        </div>
-                        <button style="background:#ff4d4f; border:none; color:white; border-radius:6px; padding:5px 10px; font-size:12px;" onclick="deletePreset(${index})">删除</button>`;
-                    container.appendChild(div);
-                });
-            }
-            document.getElementById('preset-list-modal').style.display = "flex";
-        }
-        function closePresetListModal() { document.getElementById('preset-list-modal').style.display = "none"; }
-        function usePreset(index) {
-            const p = apiPresets[index];
-            document.getElementById('api-url').value = p.url;
-            document.getElementById('api-key').value = p.key;
-            const modelSelect = document.getElementById('model-select');
-            modelSelect.innerHTML = "";
-            if(p.model) {
-                const opt = document.createElement('option');
-                opt.value = p.model; opt.innerText = p.model; opt.selected = true;
-                modelSelect.appendChild(opt);
-            } else {
-                modelSelect.innerHTML = '<option value="">请先拉取</option>';
-            }
-            alert(`已切换到预设：${p.name}`);
-            closePresetListModal();
-        }
-        function deletePreset(index) {
-            if(confirm("确定删除该预设吗？")) {
-                apiPresets.splice(index, 1);
-                localStorage.setItem('api_presets', JSON.stringify(apiPresets));
-                showPresetListModal();
-            }
-        }
+let apiPresets = JSON.parse(localStorage.getItem('api_presets') || '[]');
+function showPresetNameModal() {
+    const url = document.getElementById('api-url').value;
+    const key = document.getElementById('api-key').value;
+    if(!url || !key) return alert("请先填写 API URL 和密钥后再保存预设");
+    document.getElementById('preset-name-modal').style.display = "flex";
+}
+function closePresetNameModal() {
+    document.getElementById('preset-name-modal').style.display = "none";
+    document.getElementById('preset-name-input').value = "";
+}
+function confirmSavePreset() {
+    const name = document.getElementById('preset-name-input').value;
+    if(!name) return alert("请输入预设名称");
+    const newPreset = {
+        name: name,
+        url: document.getElementById('api-url').value,
+        key: document.getElementById('api-key').value,
+        model: document.getElementById('model-select').value
+    };
+    apiPresets.push(newPreset);
+    localStorage.setItem('api_presets', JSON.stringify(apiPresets));
+    alert("预设保存成功！"); closePresetNameModal();
+}
+function showPresetListModal() {
+    const container = document.getElementById('preset-items-container');
+    container.innerHTML = "";
+    if(apiPresets.length === 0) {
+        container.innerHTML = "<p style='text-align:center; color:#999;'>暂无预设</p>";
+    } else {
+        apiPresets.forEach((p, index) => {
+            const div = document.createElement('div');
+            div.style = "background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
+            div.innerHTML = `
+                <div style="flex:1; cursor:pointer;" onclick="usePreset(${index})">
+                    <div style="font-weight:bold; font-size:14px;">${p.name}</div>
+                    <div style="font-size:10px; color:#666;">${p.model || '未选模型'}</div>
+                </div>
+                <button style="background:#ff4d4f; border:none; color:white; border-radius:6px; padding:5px 10px; font-size:12px;" onclick="deletePreset(${index})">删除</button>`;
+            container.appendChild(div);
+        });
+    }
+    document.getElementById('preset-list-modal').style.display = "flex";
+}
+function closePresetListModal() { document.getElementById('preset-list-modal').style.display = "none"; }
+function usePreset(index) {
+    const p = apiPresets[index];
+    document.getElementById('api-url').value = p.url;
+    document.getElementById('api-key').value = p.key;
+    const modelSelect = document.getElementById('model-select');
+    modelSelect.innerHTML = "";
+    if(p.model) {
+        const opt = document.createElement('option');
+        opt.value = p.model; opt.innerText = p.model; opt.selected = true;
+        modelSelect.appendChild(opt);
+    } else { modelSelect.innerHTML = '<option value="">请先拉取</option>'; }
+    alert(`已切换到预设：${p.name}`); closePresetListModal();
+}
+function deletePreset(index) {
+    if(confirm("确定删除该预设吗？")) {
+        apiPresets.splice(index, 1);
+        localStorage.setItem('api_presets', JSON.stringify(apiPresets));
+        showPresetListModal();
+    }
+}
 
-        let currentEditingAppId = null;
-        const appNames = {
+let currentEditingAppId = null;
+const appNames = {
     'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
     'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡',
     'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器',
     'item-shop': '购物商城'
 };
-        function showAppListModal() {
-            const container = document.getElementById('app-items-container');
-            container.innerHTML = "";
-            Object.keys(appNames).forEach(id => {
-                const div = document.createElement('div');
-                div.style = "background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; align-items:center; cursor:pointer;";
-                div.onclick = () => showIconChoiceModal(id);
-                const currentImg = document.getElementById(id).style.backgroundImage;
-                div.innerHTML = `
-                    <div style="width:40px; height:40px; border-radius:10px; background:${currentImg || 'var(--glass-bg)'}; background-size:cover; background-position:center; margin-right:15px; border:1px solid #ddd;"></div>
-                    <div style="font-weight:bold;">${appNames[id]}</div>`;
-                container.appendChild(div);
-            });
-            document.getElementById('app-list-modal').style.display = "flex";
+function showAppListModal() {
+    const container = document.getElementById('app-items-container');
+    container.innerHTML = "";
+    Object.keys(appNames).forEach(id => {
+        const div = document.createElement('div');
+        div.style = "background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; align-items:center; cursor:pointer;";
+        div.onclick = () => showIconChoiceModal(id);
+        const currentImg = document.getElementById(id).style.backgroundImage;
+        div.innerHTML = `
+            <div style="width:40px; height:40px; border-radius:10px; background:${currentImg || 'var(--glass-bg)'}; background-size:cover; background-position:center; margin-right:15px; border:1px solid #ddd;"></div>
+            <div style="font-weight:bold;">${appNames[id]}</div>`;
+        container.appendChild(div);
+    });
+    document.getElementById('app-list-modal').style.display = "flex";
+}
+function closeAppListModal() { document.getElementById('app-list-modal').style.display = "none"; }
+function showIconChoiceModal(appId) {
+    currentEditingAppId = appId;
+    document.getElementById('choice-app-title').innerText = `修改 ${appNames[appId]} 图标`;
+    document.getElementById('icon-choice-modal').style.display = "flex";
+}
+function closeIconChoiceModal() { document.getElementById('icon-choice-modal').style.display = "none"; }
+function triggerLocalFile() { document.getElementById('icon-file-input').click(); }
+function handleIconUpload(input) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            saveAndApplyIcon(e.target.result);
+            closeIconChoiceModal(); showAppListModal();
         }
-        function closeAppListModal() { document.getElementById('app-list-modal').style.display = "none"; }
-        function showIconChoiceModal(appId) {
-            currentEditingAppId = appId;
-            document.getElementById('choice-app-title').innerText = `修改 ${appNames[appId]} 图标`;
-            document.getElementById('icon-choice-modal').style.display = "flex";
-        }
-        function closeIconChoiceModal() { document.getElementById('icon-choice-modal').style.display = "none"; }
-        function triggerLocalFile() { document.getElementById('icon-file-input').click(); }
-        function handleIconUpload(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    saveAndApplyIcon(e.target.result);
-                    closeIconChoiceModal(); showAppListModal();
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-        function showUrlInputModal() { document.getElementById('icon-url-modal').style.display = "flex"; }
-        function closeUrlInputModal() { document.getElementById('icon-url-modal').style.display = "none"; }
-        function saveIconUrl() {
-            const url = document.getElementById('icon-url-input').value;
-            if(!url) return alert("请输入 URL");
-            saveAndApplyIcon(url);
-            closeUrlInputModal(); closeIconChoiceModal(); showAppListModal();
-            document.getElementById('icon-url-input').value = "";
-        }
-                function saveAndApplyIcon(imgData) {
+        reader.readAsDataURL(file);
+    }
+}
+function showUrlInputModal() { document.getElementById('icon-url-modal').style.display = "flex"; }
+function closeUrlInputModal() { document.getElementById('icon-url-modal').style.display = "none"; }
+function saveIconUrl() {
+    const url = document.getElementById('icon-url-input').value;
+    if(!url) return alert("请输入 URL");
+    saveAndApplyIcon(url);
+    closeUrlInputModal(); closeIconChoiceModal(); showAppListModal();
+    document.getElementById('icon-url-input').value = "";
+}
+function saveAndApplyIcon(imgData) {
     const appEl = document.getElementById(currentEditingAppId);
-    // 设置当前的显示效果
     appEl.style.background = `url("${imgData}")`;
     appEl.style.backgroundSize = "cover";
     appEl.style.backgroundPosition = "center";
     appEl.style.backgroundRepeat = "no-repeat";
-    
-    // 保存到本地存储
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-    customIcons[currentEditingAppId] = imgData; // 修正了这里的保存逻辑
+    customIcons[currentEditingAppId] = imgData;
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
 }
-        function resetIcon() {
+function resetIcon() {
     const appEl = document.getElementById(currentEditingAppId);
-    // 彻底清除自定义样式，恢复 HTML 默认的背景色
     appEl.style.backgroundImage = "none";
     appEl.style.background = ""; 
-    
-    // 从本地存储中删掉这条记录
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-    if (customIcons[currentEditingAppId]) {
-        delete customIcons[currentEditingAppId];
-    }
+    if (customIcons[currentEditingAppId]) { delete customIcons[currentEditingAppId]; }
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
-    
-    closeIconChoiceModal(); 
-    showAppListModal();
+    closeIconChoiceModal(); showAppListModal();
 }
 
-        function exportFullData() {
-            const data = {};
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                data[key] = localStorage.getItem(key);
+function exportFullData() {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        data[key] = localStorage.getItem(key);
+    }
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `shushu_phone_backup.json`; a.click();
+}
+
+function importFullData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if(confirm("导入将覆盖当前所有数据，确定吗？")) {
+                localStorage.clear();
+                Object.keys(data).forEach(key => { localStorage.setItem(key, data[key]); });
+                location.reload();
             }
-            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const date = new Date().toISOString().slice(0, 10);
-            a.href = url;
-            a.download = `shushu_phone_backup_${date}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function importFullData(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if(confirm("导入将覆盖当前所有数据，确定吗？")) {
-                        localStorage.clear();
-                        Object.keys(data).forEach(key => {
-                            localStorage.setItem(key, data[key]);
-                        });
-                        location.reload();
-                    }
-                } catch (err) { alert("导入失败"); }
-            };
-            reader.readAsText(file);
+        } catch (err) { alert("导入失败"); }
+    };
+    reader.readAsText(file);
 }
 
-// 新增的一键清除函数
 function clearAllData() {
-    const confirm1 = confirm("⚠️ 警告：这将永久删除所有设置、API Key、背景图片、QQ好友、聊天记录和世界书内容！");
-    if (confirm1) {
-        const confirm2 = confirm("确定要执行吗？此操作不可撤销！建议操作前先点击‘数据导出’备份。");
-        if (confirm2) {
-            localStorage.clear(); // 清空所有本地存储
-            alert("所有数据已清除，页面即将刷新还原初始状态。");
-            location.reload(); // 刷新页面
+    if (confirm("⚠️ 警告：这将永久删除所有数据！")) {
+        if (confirm("确定要执行吗？此操作不可撤销！")) {
+            localStorage.clear(); location.reload();
         }
     }
 }
 
-        let silentAudio = null;
+let silentAudio = null;
 let wakeLock = null;
-
 async function toggleKeepAlive(enabled) {
     if (enabled) {
         try {
-            // 1. 开启静音音频保活
             if (!silentAudio) {
                 const silentData = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
                 silentAudio = new Audio(silentData);
                 silentAudio.loop = true;
             }
             await silentAudio.play();
-
-            // 2. 开启屏幕/CPU唤醒锁定 (Wake Lock)
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-            }
-
-            // 3. 注册媒体卡片
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: '书书小手机 - 后台守护中',
-                    artist: 'AI 聊天运行中',
-                    album: '请勿在多任务界面划掉浏览器',
-                    artwork: [{ src: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png', sizes: '512x512', type: 'image/png' }]
-                });
-            }
-
+            if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
             localStorage.setItem('background_keep_alive', 'true');
-            console.log("高级保活已开启");
-        } catch (err) {
-            alert("保活开启失败，请确保您点击过屏幕后再打开开关。");
-            document.getElementById('keep-alive-toggle').checked = false;
-        }
+        } catch (err) { alert("保活开启失败"); document.getElementById('keep-alive-toggle').checked = false; }
     } else {
         if (silentAudio) silentAudio.pause();
         if (wakeLock) wakeLock.release().then(() => wakeLock = null);
@@ -1518,99 +1655,363 @@ async function toggleKeepAlive(enabled) {
     }
 }
 
-        window.onload = function() {
-            loadGridOrder(); 
-            initGridSortable(); 
-                        const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
-Object.keys(customIcons).forEach(id => {
-    const el = document.getElementById(id);
-    // 修改点：加载时同样使用 background 综合属性覆盖原色
-    if(el) el.style.background = `url("${customIcons[id]}") center/100% 100% no-repeat`;
+let isEditMode = false;
+let longPressTimer;
+document.getElementById('swiper-container').addEventListener('touchstart', (e) => {
+    if (e.target.id === 'swiper-wrapper' || e.target.classList.contains('content')) {
+        longPressTimer = setTimeout(() => { enterEditMode(); }, 800);
+    }
 });
-            const savedPhoneBg = localStorage.getItem('phone_bg_data');
-            if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
-            const savedWidgetBg = localStorage.getItem('widget_bg_data');
-            if(savedWidgetBg) document.getElementById('item-widget').style.backgroundImage = 'url("' + savedWidgetBg + '")';
-            const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
-            if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
-            if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;
-            if(savedConfig.model) {
-                const opt = document.createElement('option');
-                opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
-                document.getElementById('model-select').appendChild(opt);
-            }
-            const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
-            if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
-            if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
-            if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
-            const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
-document.getElementById('keep-alive-toggle').checked = isKeepAlive;
+document.getElementById('swiper-container').addEventListener('touchend', () => { clearTimeout(longPressTimer); });
 
-// 新增：初始化通知开关
-const isNotify = localStorage.getItem('allow_notifications') === 'true';
-document.getElementById('notification-toggle').checked = isNotify;
-            setInterval(updateTime, 1000); updateTime();
-            // 加载自定义悬浮球样式
-const savedBallCss = localStorage.getItem('custom_ball_css');
-if(savedBallCss) {
-    document.getElementById('custom-ball-css').value = savedBallCss;
-    applyCustomBallCss(savedBallCss);
+function enterEditMode() {
+    isEditMode = true;
+    document.getElementById('edit-controls').style.display = 'flex';
+    document.getElementById('main-grid').classList.add('editing');
+    document.getElementById('page-2').classList.add('editing');
 }
-            // 加载 QQ 美化输入框的内容
 
-            if (navigator.getBattery) {
-                navigator.getBattery().then(b => { document.getElementById('battery-fill').style.width = (b.level * 100) + "%"; });
+function exitEditMode() {
+    isEditMode = false;
+    document.getElementById('edit-controls').style.display = 'none';
+    document.getElementById('main-grid').classList.remove('editing');
+    document.getElementById('page-2').classList.remove('editing');
+    saveAllWidgets(); 
+}
+
+function showWidgetPicker() { document.getElementById('widget-picker').style.display = 'block'; }
+
+function addWidget(type) {
+    const targetGridId = currentPageIndex === 0 ? 'main-grid' : 'page-2';
+    const grid = document.getElementById(targetGridId);
+    const widgetId = 'widget-' + Date.now();
+    let html = '';
+    if (type === 'heart-widget') {
+        html = `<div id="${widgetId}" class="grid-item left-widget">
+                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
+                    <svg class="heart-icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    <div class="battery-container"><div class="battery-fill-inner" style="height: 100%; background: #4cd137; width: 50%; border-radius: 2px;"></div></div>
+                </div>`;
+    } else if (type === 'todo') {
+        html = `<div id="${widgetId}" class="grid-item widget-todo left-widget">
+                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
+                    <div style="font-weight:bold; margin-bottom:10px; font-size:14px;">待办清单</div>
+                    <div class="todo-item" onclick="toggleTodo(this)">○ 今天的计划</div>
+                    <div class="todo-item" onclick="toggleTodo(this)">○ 记得喝水</div>
+                </div>`;
+    } else if (type === 'ios-info') {
+        html = `<div id="${widgetId}" class="grid-item widget-ios-info" onclick="handleIosInfoClick('${widgetId}', event)">
+                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
+                    <div class="ios-banner" id="${widgetId}-banner">点击更换背景图</div>
+                    <div class="ios-avatar-wrap">
+                        <div class="ios-avatar" id="${widgetId}-avatar">点此换头像</div>
+                        <div class="ios-nickname">恋するxのカタムシス...?</div>
+                    </div>
+                    <div class="ios-status-row">
+                        <div class="ios-pill-group"><span>🔋 15%</span><span>📶</span><span>🎧</span></div>
+                        <div class="ios-time-pill ios-dynamic-time">00:00:00</div>
+                    </div>
+                    <div class="ios-calendar-row">
+                        <div class="ios-cal-item">Sun<br>14</div><div class="ios-cal-item">Mon<br>15</div>
+                        <div class="ios-cal-item">Tue<br>16</div><div class="ios-cal-item">Wed<br>17</div>
+                        <div class="ios-cal-item active">Thu<br>18</div><div class="ios-cal-item">Fri<br>19</div>
+                        <div class="ios-cal-item">Sat<br>20</div>
+                    </div>
+                    <div class="widget-footer-label">Top Widgets*</div>
+                </div>`;
+    } else if (type === 'ios-photo') {
+        html = `<div id="${widgetId}" class="grid-item widget-ios-photo" onclick="handleIosPhotoClick('${widgetId}', event)">
+                    <div class="delete-widget-btn" onclick="removeWidget('${widgetId}')">×</div>
+                    <div class="ios-photo-heart">🖤</div>
+                    <div class="ios-photo-content" id="${widgetId}-img">点击添加图片</div>
+                    <div class="ios-photo-stars">✨⭐</div>
+                    <div class="ios-photo-footer">Top Widgets*</div>
+                </div>`;
+    }
+    grid.insertAdjacentHTML('beforeend', html);
+    document.getElementById('widget-picker').style.display = 'none';
+    saveAllWidgets();
+}
+
+let currentEditingWidgetId = ""; 
+function handleIosInfoClick(id, event) {
+    if(isEditMode) return;
+    currentEditingWidgetId = id;
+    document.getElementById('ios-info-edit-modal').style.display = 'flex';
+}
+function handleIosPhotoClick(id, event) {
+    if(isEditMode) return;
+    currentEditingWidgetId = id;
+    document.getElementById('polaroid-edit-modal').style.display = 'flex';
+}
+function closeWidgetModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+function switchWidgetTab(prefix, mode) {
+    document.getElementById(`tab-${prefix}-file`).classList.toggle('active', mode === 'file');
+    document.getElementById(`tab-${prefix}-url`).classList.toggle('active', mode === 'url');
+    document.getElementById(`content-${prefix}-file`).classList.toggle('active', mode === 'file');
+    document.getElementById(`content-${prefix}-url`).classList.toggle('active', mode === 'url');
+}
+function switchIosTab(target) {
+    const tabs = ['banner', 'avatar', 'color'];
+    tabs.forEach(t => {
+        document.getElementById(`btn-ios-${t}`).classList.toggle('active', t === target);
+        document.getElementById(`content-ios-${t}`).classList.toggle('active', t === target);
+    });
+}
+
+function applyWidgetUrl(type) {
+    let url = ""; let targetEl = null;
+    if (type === 'po') {
+        url = document.getElementById('url-po-input').value; targetEl = document.getElementById(currentEditingWidgetId + '-img');
+    } else if (type === 'ios-banner') {
+        url = document.getElementById('url-ios-banner-input').value; targetEl = document.getElementById(currentEditingWidgetId + '-banner');
+    } else if (type === 'ios-avatar') {
+        url = document.getElementById('url-ios-avatar-input').value; targetEl = document.getElementById(currentEditingWidgetId + '-avatar');
+    }
+    if (url && targetEl) {
+        targetEl.style.backgroundImage = `url("${url}")`; targetEl.innerText = "";
+        saveAllWidgets(); closeWidgetModal('polaroid-edit-modal'); closeWidgetModal('ios-info-edit-modal');
+        alert("设置成功！");
+    }
+}
+
+function uploadWidgetImg(type) {
+    const input = event.target;
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            let targetEl = null;
+            if (type === 'po') targetEl = document.getElementById(currentEditingWidgetId + '-img');
+            else if (type === 'ios-banner') targetEl = document.getElementById(currentEditingWidgetId + '-banner');
+            else if (type === 'ios-avatar') targetEl = document.getElementById(currentEditingWidgetId + '-avatar');
+            if (targetEl) {
+                targetEl.style.backgroundImage = `url("${e.target.result}")`; targetEl.innerText = "";
+                saveAllWidgets(); closeWidgetModal('polaroid-edit-modal'); closeWidgetModal('ios-info-edit-modal');
             }
         };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function applyIosColor(color) {
+    const target = document.getElementById(currentEditingWidgetId);
+    if (target) { target.style.background = color; saveAllWidgets(); }
+}
+
+function triggerWidgetFileUpload(targetId) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = event => {
+            const target = document.getElementById(targetId);
+            target.style.backgroundImage = `url("${event.target.result}")`;
+            target.innerText = ""; saveAllWidgets();
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+function removeWidget(id) { const el = document.getElementById(id); if (el) el.remove(); saveAllWidgets(); }
+function toggleTodo(el) { if(isEditMode) return; el.classList.toggle('todo-done'); }
+
+function saveAllWidgets() {
+    // 同时保存第一页和第二页的内容
+    const grid1 = document.getElementById('main-grid').innerHTML;
+    const grid2 = document.getElementById('page-2').innerHTML;
+    localStorage.setItem('saved_grid_page_1', grid1);
+    localStorage.setItem('saved_grid_page_2', grid2);
+}
+
+window.onload = function() {
+    // 1. 加载保存过的组件内容
+    const savedGrid1 = localStorage.getItem('saved_grid_page_1');
+    if (savedGrid1) { document.getElementById('main-grid').innerHTML = savedGrid1; }
+    const savedGrid2 = localStorage.getItem('saved_grid_page_2');
+    if (savedGrid2) { document.getElementById('page-2').innerHTML = savedGrid2; }
+
+    // 2. 重新初始化拖拽逻辑（不需要 loadGridOrder）
+    initGridSortable(); 
+    const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
+    Object.keys(customIcons).forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.background = `url("${customIcons[id]}") center/100% 100% no-repeat`;
+    });
+
+    // 3. 加载背景和设置
+    const savedPhoneBg = localStorage.getItem('phone_bg_data');
+    if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
+    
+    // 注意：删掉了之前的 savedWidgetBg 加载，因为美化栏要删掉
+    
+    const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+    if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
+    if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;
+    if(savedConfig.model) {
+        const opt = document.createElement('option');
+        opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
+        document.getElementById('model-select').appendChild(opt);
+    }
+
+    const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+    if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
+    if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
+    if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
+
+    // 4. 加载保活和通知状态
+    const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
+    document.getElementById('keep-alive-toggle').checked = isKeepAlive;
+    const isNotify = localStorage.getItem('allow_notifications') === 'true';
+    document.getElementById('notification-toggle').checked = isNotify;
+
+    // 5. 加载自定义悬浮球样式
+    const savedBallCss = localStorage.getItem('custom_ball_css');
+    if(savedBallCss) {
+        document.getElementById('custom-ball-css').value = savedBallCss;
+        applyCustomBallCss(savedBallCss);
+    }
+
+    // 6. 启动所有计时器
+    setInterval(updateTime, 1000); 
+    updateTime();
+
+    setInterval(() => {
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const timeStrFull = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        document.querySelectorAll('.widget-minimal-clock .time').forEach(el => el.innerText = timeStr);
+        document.querySelectorAll('.ios-dynamic-time').forEach(el => el.innerText = timeStrFull);
+    }, 1000);
+
+    // 7. 电池状态
+    if (navigator.getBattery) {
+        navigator.getBattery().then(b => { 
+            document.querySelectorAll('.battery-fill-inner').forEach(el => {
+                el.style.width = (b.level * 100) + "%";
+            });
+        });
+    }
+};
+    Object.keys(customIcons).forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.background = `url("${customIcons[id]}") center/100% 100% no-repeat`;
+    });
+
+    const savedPhoneBg = localStorage.getItem('phone_bg_data');
+    if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
+    const savedWidgetBg = localStorage.getItem('widget_bg_data');
+    if(savedWidgetBg) document.getElementById('item-widget').style.backgroundImage = 'url("' + savedWidgetBg + '")';
+    
+    const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+    if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
+    if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;
+    if(savedConfig.model) {
+        const opt = document.createElement('option');
+        opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
+        document.getElementById('model-select').appendChild(opt);
+    }
+
+    const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+    if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
+    if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
+    if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
+
+    const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
+    document.getElementById('keep-alive-toggle').checked = isKeepAlive;
+    const isNotify = localStorage.getItem('allow_notifications') === 'true';
+    document.getElementById('notification-toggle').checked = isNotify;
+
+    const savedBallCss = localStorage.getItem('custom_ball_css');
+    if(savedBallCss) {
+        document.getElementById('custom-ball-css').value = savedBallCss;
+        applyCustomBallCss(savedBallCss);
+    }
+
+    setInterval(updateTime, 1000); 
+    updateTime();
+
+    setInterval(() => {
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const timeStrFull = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        document.querySelectorAll('.widget-minimal-clock .time').forEach(el => el.innerText = timeStr);
+        document.querySelectorAll('.ios-dynamic-time').forEach(el => el.innerText = timeStrFull);
+    }, 1000);
+
 async function toggleNotifications(enabled) {
     if (enabled) {
-        // 1. 检查浏览器支持情况
-        if (!("Notification" in window)) {
-            alert("抱歉，您的浏览器不支持系统通知。");
-            document.getElementById('notification-toggle').checked = false;
-            return;
-        }
-
-        // 2. 申请权限
+        if (!("Notification" in window)) { alert("不支持通知"); return; }
         const permission = await Notification.requestPermission();
-        
         if (permission === "granted") {
             localStorage.setItem('allow_notifications', 'true');
-            
-            // 3. 核心：立即触发订阅流程，确保获取 Web Push 所需的 Key
             await subscribeUser(); 
-            
-            // 4. 发送一条即时的测试通知，确认管道通畅
             navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification('系统提示', {
-                    body: '后台消息通知已成功开启！即使关闭网页，AI回复时也会弹窗提醒。',
-                    icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
-                    badge: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png',
-                    vibrate: [200, 100, 200]
-                });
+                reg.showNotification('系统提示', { body: '后台消息通知已开启！', icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png' });
             });
-            console.log("通知功能已完全激活");
-        } else {
-            alert("权限被拒绝！请点击地址栏左侧的设置按钮，手动允许“通知”权限，否则无法接收离线消息。");
-            document.getElementById('notification-toggle').checked = false;
-            localStorage.setItem('allow_notifications', 'false');
-        }
+        } else { document.getElementById('notification-toggle').checked = false; }
     } else {
-        // 关闭逻辑
         localStorage.setItem('allow_notifications', 'false');
-        localStorage.removeItem('web_push_subscription'); // 清除订阅信息
-        alert("已关闭后台通知。");
+        localStorage.removeItem('web_push_subscription');
     }
 }
     </script>
-<!-- 选择查谁的手机弹窗 -->
+
 <div id="friend-selector-modal" class="glass-modal">
     <div class="glass-modal-content">
         <h3 style="margin-top:0">想查谁的手机？</h3>
-        <div id="friend-list-for-check" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
-            <!-- 这里会自动填入QQ好友 -->
-        </div>
+        <div id="friend-list-for-check" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
         <button class="action-btn" style="background:#ccc; color:#333;" onclick="document.getElementById('friend-selector-modal').style.display='none'">取消</button>
+    </div>
+</div>
+
+<div id="polaroid-edit-modal" class="glass-modal">
+    <div class="glass-modal-content widget-edit-modal">
+        <h3>编辑拍立得</h3>
+        <div class="bg-tabs">
+            <div class="bg-tab-btn active" id="tab-po-file" onclick="switchWidgetTab('po', 'file')">本地上传</div>
+            <div class="bg-tab-btn" id="tab-po-url" onclick="switchWidgetTab('po', 'url')">图片 URL</div>
+        </div>
+        <div id="content-po-file" class="tab-content active">
+            <input type="file" accept="image/*" onchange="uploadWidgetImg('po')">
+        </div>
+        <div id="content-po-url" class="tab-content">
+            <input type="text" id="url-po-input" placeholder="输入图片直链 URL">
+            <button class="action-btn" onclick="applyWidgetUrl('po')">确定应用</button>
+        </div>
+        <button class="action-btn" style="background:#ccc; color:333; margin-top:15px;" onclick="closeWidgetModal('polaroid-edit-modal')">取消</button>
+    </div>
+</div>
+
+<div id="ios-info-edit-modal" class="glass-modal">
+    <div class="glass-modal-content widget-edit-modal">
+        <h3>编辑 iOS 小组件</h3>
+        <div class="bg-tabs">
+            <div class="bg-tab-btn active" id="btn-ios-banner" onclick="switchIosTab('banner')">顶部背景</div>
+            <div class="bg-tab-btn" id="btn-ios-avatar" onclick="switchIosTab('avatar')">头像</div>
+            <div class="bg-tab-btn" id="btn-ios-color" onclick="switchIosTab('color')">背景颜色</div>
+        </div>
+        <div id="content-ios-banner" class="tab-content active">
+            <label>上传背景或输入 URL</label>
+            <input type="file" accept="image/*" onchange="uploadWidgetImg('ios-banner')">
+            <input type="text" id="url-ios-banner-input" placeholder="或输入图片 URL">
+            <button class="action-btn" onclick="applyWidgetUrl('ios-banner')">确定应用</button>
+        </div>
+        <div id="content-ios-avatar" class="tab-content">
+            <label>上传头像或输入 URL</label>
+            <input type="file" accept="image/*" onchange="uploadWidgetImg('ios-avatar')">
+            <input type="text" id="url-ios-avatar-input" placeholder="或输入头像 URL">
+            <button class="action-btn" onclick="applyWidgetUrl('ios-avatar')">确定应用</button>
+        </div>
+        <div id="content-ios-color" class="tab-content">
+            <label>滑动选择组件背景颜色</label>
+            <div class="color-picker-container">
+                <input type="color" id="ios-bg-color-picker" oninput="applyIosColor(this.value)">
+                <div style="text-align:center; font-size:12px; color:#666;">点击上方色块开启选色卡</div>
+            </div>
+        </div>
+        <button class="action-btn" style="background:#ccc; color:333; margin-top:15px;" onclick="closeWidgetModal('ios-info-edit-modal')">取消</button>
     </div>
 </div>
 </body>
