@@ -713,7 +713,16 @@ gap: 15px;
     <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
         
 <div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
-    <!-- 桌面初始为空 -->
+    <div id="item-time" class="grid-item time-widget">
+        <div class="date-str" id="date-display"></div>
+        <div class="clock-str" id="clock-display">00:00</div>
+    </div>
+    <div id="item-xhs" class="icon-btn" onclick="openApp()"><span>小红书</span></div>
+    <div id="item-gacha" class="icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
+    <div id="item-self" class="icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
+    <div id="item-checkphone" class="icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
+    <div id="item-wl" class="icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
+    <div id="item-shop" class="icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
 </div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
@@ -1730,6 +1739,19 @@ window.onload = function() {
     if (savedGrid1) { document.getElementById('main-grid').innerHTML = savedGrid1; }
     const savedGrid2 = localStorage.getItem('saved_grid_page_2');
     if (savedGrid2) { document.getElementById('page-2').innerHTML = savedGrid2; }
+
+    // 修复重复图标问题
+    let needSave = false;
+    ['item-wl', 'item-shop'].forEach(itemId => {
+        const allInstances = document.querySelectorAll(`#${itemId}`);
+        if (allInstances.length > 1) {
+            for (let i = 1; i < allInstances.length; i++) {
+                allInstances[i].remove();
+            }
+            needSave = true;
+        }
+    });
+    if (needSave) saveAllWidgets();
 
     document.querySelectorAll('.grid-item').forEach(el => {
         el.classList.remove('dragging');
