@@ -112,7 +112,7 @@ padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bot
 height: 100%;
 display: grid;
 grid-template-columns: repeat(4, 1fr);
-grid-auto-rows: min-content; /* 改改这一行，防止行高被无意义压缩 */
+grid-auto-rows: min-content; 
 gap: 15px;
     box-sizing: border-box;
     align-content: start;
@@ -139,7 +139,6 @@ gap: 15px;
     box-shadow: 0 15px 40px rgba(0,0,0,0.4);
     position: fixed !important; 
     pointer-events: none;
-    /* 关键：强制维持原有的宽高，防止脱离网格时变瘪 */
     width: 70px !important; 
     height: 70px !important;
     margin: 0 !important;
@@ -158,7 +157,7 @@ gap: 15px;
         .left-widget {
     grid-column: span 2;
     grid-row: span 2;
-    aspect-ratio: 1 / 1; /* 新增这一行，强制 2x2 组件为正方形，防止压缩 */
+    aspect-ratio: 1 / 1; 
     background: var(--glass-bg);
     backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
@@ -200,29 +199,27 @@ gap: 15px;
     background-position: center;
     background-repeat: no-repeat;
     box-sizing: border-box;
-    /* 以下是新增的定位规矩 */
     position: relative;
-    overflow: visible; /* 允许文字溢出到图标外面 */
-    margin-bottom: 25px; /* 给图标下方的文字留出空位 */
+    overflow: visible; 
+    margin-bottom: 25px; 
 }
 
-/* 专门为图标下方的文字设置样式 */
 .icon-btn span {
     position: absolute;
-    bottom: -22px; /* 把文字推到图标底部下方 */
+    bottom: -22px; 
     width: 100%;
     text-align: center;
     font-size: 11px;
     color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8); /* 给文字加点阴影，防止背景太亮看不清 */
-    white-space: nowrap; /* 防止文字长了自动换行 */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8); 
+    white-space: nowrap; 
 }
         .icon-btn:active { transform: scale(0.9); }
 
         .progress-widgets { 
     grid-column: span 2; 
     grid-row: span 2;
-    aspect-ratio: 1 / 1; /* 新增这一行，防止进度条组件被压缩变扁 */
+    aspect-ratio: 1 / 1; 
     display: flex; flex-direction: column; gap: 10px; 
     background: var(--glass-bg);
             backdrop-filter: blur(10px);
@@ -270,16 +267,15 @@ gap: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); color: #333;
         }
 
-        /* 悬浮球基础设置：这里保留了保底样式，保证不美化时也能看见 */
 #floating-ball {
     position: absolute;
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); /* 默认蓝色 */
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
     z-index: 999;
     display: none; 
     cursor: move;
-    transform: rotate(45deg); /* 菱形造型 */
+    transform: rotate(45deg); 
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     border: 2px solid rgba(255,255,255,0.4);
     touch-action: none;
@@ -288,7 +284,6 @@ gap: 15px;
     justify-content: center;
 }
 
-/* 彻底移除叉号：强制清空所有图标内容 */
 #floating-ball::after {
     content: none !important; 
     display: none !important;
@@ -304,14 +299,12 @@ gap: 15px;
             display: flex; flex-direction: column; color: white;
         }
         .wb-header {
-    /* 顶部间距改为：手机状态栏高度 + 10像素 */
     padding: calc(env(safe-area-inset-top) + 10px) 20px 10px; 
     background: #222;
     display: flex; 
     flex-direction: column; 
     gap: 10px;
 }
-/* 新增的标签切换样式 */
 .wb-tabs {
     display: flex; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 4px;
 }
@@ -347,7 +340,6 @@ gap: 15px;
             padding: 40px 20px; box-sizing: border-box; overflow-y: auto;
         }
 
-        /* 效果选择器毛玻璃样式 */
         .effect-selector {
             display: flex; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
             padding: 5px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.2);
@@ -360,12 +352,10 @@ gap: 15px;
             background: white; color: black; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        /* HTML 预览全屏容器 */
         #html-preview-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 300; display: none;
         }
-    /* 背景设置选项卡样式 */
 .bg-tabs {
     display: flex;
     background: rgba(255, 255, 255, 0.2);
@@ -415,20 +405,17 @@ gap: 15px;
     cursor: pointer;
 }
     
-/* 滑动容器样式优化 */
 .content.page {
     box-sizing: border-box;
 }
-/* 指示灯动画 */
 .dot { transition: opacity 0.3s; }
 .dot.active { opacity: 1 !important; transform: scale(1.2); }
-/* --- iOS 风格底栏 Dock 样式 --- */
 .dock {
     position: absolute;
     bottom: calc(25px + env(safe-area-inset-bottom));
     left: 15px;
     right: 15px;
-    height: 110px; /* 高度从 95px 增加到 110px */
+    height: 110px; 
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
@@ -440,23 +427,22 @@ gap: 15px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-sizing: border-box;
     padding: 0 10px;
-    padding-bottom: 15px; /* 新增：让内部图标整体向上挪 15px，给文字腾位置 */
+    padding-bottom: 15px; 
 }
 .dock .icon-btn {
     width: 65px !important;
     height: 65px !important;
     margin: 0 !important;
-    margin-bottom: 0 !important; /* 确保不继承之前设置的 25px 底边距 */
+    margin-bottom: 0 !important; 
     border-radius: 18px;
     font-size: 12px;
-    position: relative; /* 保持相对定位 */
+    position: relative; 
 }
-/* --- 新增：桌面编辑与组件库样式 --- */
 .edit-mode-controls {
     position: fixed;
     top: calc(env(safe-area-inset-top) + 10px);
     left: 0; right: 0;
-    display: none; /* 默认隐藏 */
+    display: none; 
     justify-content: space-between;
     padding: 0 20px;
     z-index: 2000;
@@ -482,7 +468,6 @@ gap: 15px;
     display: flex; align-items: center; justify-content: center;
 }
 
-/* 组件选择弹窗 */
 #widget-picker {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.6); backdrop-filter: blur(20px);
@@ -500,47 +485,10 @@ gap: 15px;
     text-align: center; color: white;
 }
 
-/* --- 各个小组件的具体样式 --- */
-/* 极简数字时钟 (4x1) */
 .widget-minimal-clock { grid-column: span 4; padding: 20px; text-align: center; }
 .widget-minimal-clock .time { font-size: 48px; font-weight: bold; letter-spacing: -2px; }
 .widget-minimal-clock .info { font-size: 14px; opacity: 0.7; }
 
-/* 纯CSS天气组件 (2x2) */
-.widget-weather { 
-    grid-column: span 2; grid-row: span 2; 
-    padding: 15px; display: flex; flex-direction: column; justify-content: space-between;
-}
-.weather-icon-sun {
-    width: 40px; height: 40px; background: #ffce54;
-    border-radius: 50%; box-shadow: 0 0 20px #ffce54; margin: 10px auto;
-}
-.weather-temp { font-size: 32px; font-weight: bold; }
-
-/* 倒数日组件 (2x2) */
-.widget-countdown { grid-column: span 2; grid-row: span 2; padding: 15px; }
-.countdown-num { font-size: 36px; font-weight: bold; color: #ff6b6b; }
-
-/* 待办清单组件 (2x2) */
-.widget-todo { grid-column: span 2; grid-row: span 2; padding: 15px; text-align: left; }
-.todo-item { font-size: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
-.todo-done { text-decoration: line-through; opacity: 0.5; }
-
-/* 木鱼组件 (1x1) */
-.widget-muyu { 
-    grid-column: span 1; aspect-ratio: 1/1; 
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    cursor: pointer;
-}
-.muyu-img { width: 40px; height: 40px; background: #333; border-radius: 50%; border: 2px solid #555; }
-
-/* 语录便签 (4x1) */
-.widget-quote { 
-    grid-column: span 4; padding: 15px; font-style: italic; font-size: 13px; 
-    min-height: 60px; display: flex; align-items: center; justify-content: center;
-}
-
-/* 编辑模式下的震动效果 */
 .editing .grid-item { animation: wobble 0.3s infinite; }
 @keyframes wobble {
     0% { transform: rotate(-1deg); }
@@ -555,13 +503,12 @@ gap: 15px;
     z-index: 100;
 }
 .editing .delete-widget-btn { display: flex; }
-/* 新增组件样式 */
-/* 4x2 iOS 综合组件 */
+
 .widget-ios-info {
     grid-column: span 4;
     grid-row: span 2;
     width: 100%;
-    height: 245px; /* 增加了总高度，确保能放下更高的背景图 */
+    height: 245px; 
     background: rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -576,7 +523,7 @@ gap: 15px;
 }
 .ios-banner {
     width: 100%;
-    height: 150px; /* 增加了背景图高度 */
+    height: 150px; 
     background-size: cover;
     background-position: center;
     background-color: rgba(255,255,255,0.1);
@@ -590,7 +537,7 @@ gap: 15px;
     display: flex;
     align-items: flex-end;
     padding: 0 15px;
-    margin-top: -25px; /* 头像向上偏移，压住背景图 */
+    margin-top: -25px; 
     gap: 12px;
     z-index: 2;
 }
@@ -659,15 +606,14 @@ gap: 15px;
     margin-top: auto;
 }
 
-/* 2x2 拍立得相框 */
 .widget-ios-photo {
     grid-column: span 2;
     grid-row: span 2;
-    width: 155px; /* 固定宽高保持正方形 */
+    width: 155px; 
     height: 155px;
     background: #fff;
     border-radius: 20px;
-    padding: 10px 10px 25px 10px; /* 底部留白多一点做拍立得效果 */
+    padding: 10px 10px 25px 10px; 
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -707,7 +653,6 @@ gap: 15px;
     font-family: serif;
 }
 
-/* 专门为组件编辑设计的白色毛玻璃弹窗 */
 .widget-edit-modal {
     background: rgba(255, 255, 255, 0.8) !important;
     backdrop-filter: blur(25px) !important;
@@ -735,13 +680,11 @@ gap: 15px;
 
     <div class="phone-container" id="phone-bg">
         <div class="overlay"></div>
-<!-- 新增：编辑模式顶部工具栏 -->
 <div class="edit-mode-controls" id="edit-controls">
     <div class="edit-btn" onclick="showWidgetPicker()">+</div>
     <div class="edit-done" onclick="exitEditMode()">完成</div>
 </div>
 
-<!-- 新增：组件选择弹窗 -->
 <div id="widget-picker" onclick="this.style.display='none'">
 <div class="widget-grid" onclick="event.stopPropagation()">
     <div class="picker-item" onclick="addWidget('heart-widget')">灵动爱心 (2x2)</div>
@@ -750,11 +693,9 @@ gap: 15px;
     <div class="picker-item" onclick="addWidget('ios-photo')">拍立得相框 (2x2)</div>
 </div>
 </div>
-        <!-- 新增了滑动容器包裹 -->
 <div id="swiper-container" style="width: 100%; height: 100%; overflow: hidden; position: relative; z-index: 2;">
     <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
         
-        <!-- 第一页桌面 -->
 <div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
     <div id="item-time" class="grid-item time-widget">
         <div id="date-display" class="date-str">正在加载日期...</div>
@@ -763,21 +704,16 @@ gap: 15px;
     <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>
         </div>
 
-<!-- 第二页桌面 (放置扭蛋机和其他图标) -->
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
-    <!-- 扭蛋机图标 -->
     <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
 <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
 <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
-    <!-- 新增：网恋模拟器图标 -->
     <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
-    <!-- 新增：购物商城图标 -->
 <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
 </div>
 
     </div>
 
-<!-- 新增：iOS 风格底栏 Dock -->
 <div class="dock">
     <div id="item-wb" class="icon-btn" onclick="openWorldBook()"><span>世界书</span></div>
     <div id="item-qq" class="icon-btn" onclick="openQQ()"><span>QQ</span></div>
@@ -785,7 +721,6 @@ gap: 15px;
 <div id="item-set" class="icon-btn" onclick="openSettings('api')"><span>设置</span></div>
 </div>
 
-<!-- 页面指示灯 (向下挪动了一点位置，防止被底栏遮挡) -->
 <div id="page-dots" style="position: absolute; bottom: calc(135px + env(safe-area-inset-bottom)); width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;">
         <div class="dot active" style="width: 8px; height: 8px; border-radius: 50%; background: white; opacity: 1;"></div>
         <div class="dot" style="width: 8px; height: 8px; border-radius: 50%; background: white; opacity: 0.3;"></div>
@@ -794,27 +729,17 @@ gap: 15px;
 
         <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
 
-        <!-- 修改后的 App 容器：预先加载所有页面 -->
 <div id="app-overlay" style="display: none;">
-    <!-- QQ -->
     <iframe id="iframe-qq" src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <!-- 小红书 -->
     <iframe id="iframe-xhs" src="书书小红书.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <!-- 扭蛋机 -->
     <iframe id="iframe-gacha" src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <!-- 自律打卡 -->
     <iframe id="iframe-self" src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <!-- 网恋模拟器 -->
     <iframe id="iframe-wl" src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <!-- 查手机 -->
 <iframe id="iframe-checkphone" src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-<!-- 购物商城 -->
 <iframe id="iframe-shop" src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     
-    <!-- 世界书（原本就是 div 结构，保留即可） -->
     <div id="worldbook-app" style="display: none;">
     <div class="wb-header">
-        <!-- 新增的切换标签 -->
         <div class="wb-tabs">
             <div class="wb-tab-btn active" id="tab-scope-global" onclick="switchWbTab('global')">全局生效</div>
             <div class="wb-tab-btn" id="tab-scope-local" onclick="switchWbTab('local')">局部挂载</div>
@@ -828,7 +753,6 @@ gap: 15px;
 </div>
         </div>
 
-        <!-- 修改后的世界书添加弹窗 -->
         <div id="wb-modal">
             <h3 style="margin-top:0; color:white;">添加小剧场/书籍</h3>
             <label style="color:#aaa;">书籍/剧场名称</label>
@@ -912,7 +836,6 @@ gap: 15px;
     <span style="font-size:14px;">启用静音音频保活</span>
     <input type="checkbox" id="keep-alive-toggle" style="width:40px; margin:0;" onchange="toggleKeepAlive(this.checked)">
 </div>
-<!-- 新增：通知开关 -->
 <div class="setting-group" style="margin-top:15px;">
     <label>消息通知</label>
     <div style="display:flex; align-items:center; justify-content:space-between; background:#f2f2f7; padding:10px; border-radius:10px;">
@@ -940,7 +863,6 @@ gap: 15px;
                 <button class="action-btn" style="margin-top:20px;" onclick="saveApiSettings()">保存当前配置并应用</button>
             </div>
             <div id="appearance-inputs" style="display:none">
-    <!-- 手机背景设置 -->
     <div class="setting-group">
         <label>修改手机背景图</label>
         <div class="bg-tabs">
@@ -992,7 +914,7 @@ gap: 15px;
             </div>
         </div>
 
-        <div id="app-list-modal" class="glass-modal">
+<div id="app-list-modal" class="glass-modal">
     <div class="glass-modal-content" style="display: flex; flex-direction: column; max-height: 80%;">
         <h3 style="margin-top:0; flex-shrink: 0;">选择要修改的 App</h3>
         <div id="app-items-container" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div>
@@ -1025,7 +947,6 @@ gap: 15px;
     </div>
 
     <script>
-        // --- 悬浮球逻辑 ---
         let ball = document.getElementById('floating-ball');
         let isDraggingBall = false;
         function startDrag(e) {
@@ -1054,69 +975,77 @@ gap: 15px;
             };
         }
 
-        // --- 栅格图标拖拽排序逻辑 ---
-        function initGridSortable() {
+function initGridSortable() {
     window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
-    const container = document.getElementById('main-grid');
     let draggingItem = null;
-            let startX, startY;
-            let moveDist = 0;
-            container.addEventListener('touchstart', (e) => {
-                const item = e.target.closest('.grid-item');
-                if (!item) return;
-                draggingItem = item;
-                const touch = e.touches[0];
-                startX = touch.clientX; startY = touch.clientY;
-                moveDist = 0;
-            }, {passive: false});
-            container.addEventListener('touchmove', (e) => {
-    if (!draggingItem) return;
-    const touch = e.touches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-    moveDist = Math.hypot(dx, dy);
-    if (moveDist > 15) {
-        e.preventDefault(); 
-        draggingItem.classList.add('dragging');
-        draggingItem.style.left = touch.clientX - (draggingItem.offsetWidth/2) + 'px';
-        draggingItem.style.top = touch.clientY - (draggingItem.offsetHeight/2) + 'px';
+    let startX, startY;
+    let moveDist = 0;
 
-        const screenWidth = window.innerWidth;
-        const wrapper = document.getElementById('swiper-wrapper');
-        const pageDots = document.querySelectorAll('.dot');
-        const grid1 = document.getElementById('main-grid');
-        const grid2 = document.getElementById('page-2');
+    document.addEventListener('touchstart', (e) => {
+        const item = e.target.closest('.grid-item');
+        if (!item || !item.parentElement.classList.contains('content')) return;
+        draggingItem = item;
+        const touch = e.touches[0];
+        startX = touch.clientX; 
+        startY = touch.clientY;
+        moveDist = 0;
+    }, {passive: false});
 
-        if (touch.clientX > screenWidth - 30 && currentPageIndex === 0) {
-            currentPageIndex = 1;
-            wrapper.style.transform = `translateX(-50%)`; 
-            pageDots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
-            grid2.appendChild(draggingItem); 
-        } 
-        else if (touch.clientX < 30 && currentPageIndex === 1) {
-            currentPageIndex = 0;
-            wrapper.style.transform = `translateX(0%)`; 
-            pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
-            grid1.appendChild(draggingItem); 
-        }
+    document.addEventListener('touchmove', (e) => {
+        if (!draggingItem) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        moveDist = Math.hypot(dx, dy);
 
-        const currentContainer = draggingItem.parentElement;
-        const target = document.elementFromPoint(touch.clientX, touch.clientY);
-        const overItem = target ? target.closest('.grid-item') : null;
-        if (overItem && overItem !== draggingItem && overItem.parentElement === currentContainer) {
-            const rect = overItem.getBoundingClientRect();
-            const next = (touch.clientX > rect.left + rect.width / 2);
-            currentContainer.insertBefore(draggingItem, next ? overItem.nextSibling : overItem);
+        if (moveDist > 15) {
+            e.preventDefault(); 
+            draggingItem.classList.add('dragging');
+            draggingItem.style.left = touch.clientX - (draggingItem.offsetWidth/2) + 'px';
+            draggingItem.style.top = touch.clientY - (draggingItem.offsetHeight/2) + 'px';
+
+            const screenWidth = window.innerWidth;
+            const wrapper = document.getElementById('swiper-wrapper');
+            const pageDots = document.querySelectorAll('.dot');
+            const grid1 = document.getElementById('main-grid');
+            const grid2 = document.getElementById('page-2');
+
+            if (touch.clientX > screenWidth - 30 && currentPageIndex === 0) {
+                currentPageIndex = 1;
+                wrapper.style.transform = `translateX(-50%)`; 
+                pageDots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
+                grid2.appendChild(draggingItem); 
+            } 
+            else if (touch.clientX < 30 && currentPageIndex === 1) {
+                currentPageIndex = 0;
+                wrapper.style.transform = `translateX(0%)`; 
+                pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
+                grid1.appendChild(draggingItem); 
+            }
+
+            const currentContainer = draggingItem.parentElement;
+            draggingItem.style.visibility = 'hidden';
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            draggingItem.style.visibility = 'visible';
+            
+            const overItem = target ? target.closest('.grid-item') : null;
+            if (overItem && overItem !== draggingItem && overItem.parentElement === currentContainer) {
+                const rect = overItem.getBoundingClientRect();
+                const next = (touch.clientX > rect.left + rect.width / 2);
+                currentContainer.insertBefore(draggingItem, next ? overItem.nextSibling : overItem);
+            }
         }
-    }
-}, {passive: false});
-            container.addEventListener('touchend', (e) => {
-                if (!draggingItem) return;
-                if (moveDist > 15) { e.preventDefault(); saveGridOrder(); }
-                draggingItem.classList.remove('dragging');
-                draggingItem.style.left = ''; draggingItem.style.top = ''; draggingItem = null;
-            });
-        }
+    }, {passive: false});
+
+    document.addEventListener('touchend', (e) => {
+        if (!draggingItem) return;
+        if (moveDist > 15) { saveAllWidgets(); }
+        draggingItem.classList.remove('dragging');
+        draggingItem.style.left = ''; 
+        draggingItem.style.top = ''; 
+        draggingItem = null;
+    });
+}
 
         function saveGridOrder() {
             const items = Array.from(document.querySelectorAll('.grid-item'));
@@ -1393,22 +1322,14 @@ function saveAppearance() {
     try {
         const phoneBg = document.getElementById('phone-bg').dataset.tempBg;
         const ballCss = document.getElementById('custom-ball-css').value;
-
-        // 如果有新背景图才存，没改就不动，节省空间
         if(phoneBg) {
             localStorage.setItem('phone_bg_data', phoneBg);
-            // 存完后删掉临时数据，释放网页内存
             delete document.getElementById('phone-bg').dataset.tempBg;
         }
-        
         localStorage.setItem('custom_ball_css', ballCss);
-
         applyCustomBallCss(ballCss);
-        alert('外观已成功保存！');
-        closeSettings();
-    } catch (e) { 
-        alert("保存失败！\n\n原因：由于浏览器限制，无法存储太大的本地照片。\n\n解决办法：\n1. 请使用压缩软件缩小图片体积后再上传。\n2. 或者使用【图片URL】功能，这种方式不占空间且支持高清图。"); 
-    }
+        alert('外观已成功保存！'); closeSettings();
+    } catch (e) { alert("保存失败！浏览器存储已满"); }
 }
 
 function applyCustomBallCss(cssText) {
@@ -1655,32 +1576,6 @@ async function toggleKeepAlive(enabled) {
     }
 }
 
-let isEditMode = false;
-let longPressTimer;
-document.getElementById('swiper-container').addEventListener('touchstart', (e) => {
-    if (e.target.id === 'swiper-wrapper' || e.target.classList.contains('content')) {
-        longPressTimer = setTimeout(() => { enterEditMode(); }, 800);
-    }
-});
-document.getElementById('swiper-container').addEventListener('touchend', () => { clearTimeout(longPressTimer); });
-
-function enterEditMode() {
-    isEditMode = true;
-    document.getElementById('edit-controls').style.display = 'flex';
-    document.getElementById('main-grid').classList.add('editing');
-    document.getElementById('page-2').classList.add('editing');
-}
-
-function exitEditMode() {
-    isEditMode = false;
-    document.getElementById('edit-controls').style.display = 'none';
-    document.getElementById('main-grid').classList.remove('editing');
-    document.getElementById('page-2').classList.remove('editing');
-    saveAllWidgets(); 
-}
-
-function showWidgetPicker() { document.getElementById('widget-picker').style.display = 'block'; }
-
 function addWidget(type) {
     const targetGridId = currentPageIndex === 0 ? 'main-grid' : 'page-2';
     const grid = document.getElementById(targetGridId);
@@ -1818,7 +1713,6 @@ function removeWidget(id) { const el = document.getElementById(id); if (el) el.r
 function toggleTodo(el) { if(isEditMode) return; el.classList.toggle('todo-done'); }
 
 function saveAllWidgets() {
-    // 同时保存第一页和第二页的内容
     const grid1 = document.getElementById('main-grid').innerHTML;
     const grid2 = document.getElementById('page-2').innerHTML;
     localStorage.setItem('saved_grid_page_1', grid1);
@@ -1826,13 +1720,11 @@ function saveAllWidgets() {
 }
 
 window.onload = function() {
-    // 1. 加载保存过的组件内容
     const savedGrid1 = localStorage.getItem('saved_grid_page_1');
     if (savedGrid1) { document.getElementById('main-grid').innerHTML = savedGrid1; }
     const savedGrid2 = localStorage.getItem('saved_grid_page_2');
     if (savedGrid2) { document.getElementById('page-2').innerHTML = savedGrid2; }
 
-    // 2. 重新初始化拖拽逻辑（不需要 loadGridOrder）
     initGridSortable(); 
     const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
     Object.keys(customIcons).forEach(id => {
@@ -1840,11 +1732,8 @@ window.onload = function() {
         if(el) el.style.background = `url("${customIcons[id]}") center/100% 100% no-repeat`;
     });
 
-    // 3. 加载背景和设置
     const savedPhoneBg = localStorage.getItem('phone_bg_data');
     if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
-    
-    // 注意：删掉了之前的 savedWidgetBg 加载，因为美化栏要删掉
     
     const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
     if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
@@ -1852,7 +1741,8 @@ window.onload = function() {
     if(savedConfig.model) {
         const opt = document.createElement('option');
         opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
-        document.getElementById('model-select').appendChild(opt);
+        const sel = document.getElementById('model-select');
+        if(sel) sel.appendChild(opt);
     }
 
     const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
@@ -1860,20 +1750,17 @@ window.onload = function() {
     if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
     if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
 
-    // 4. 加载保活和通知状态
     const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
     document.getElementById('keep-alive-toggle').checked = isKeepAlive;
     const isNotify = localStorage.getItem('allow_notifications') === 'true';
     document.getElementById('notification-toggle').checked = isNotify;
 
-    // 5. 加载自定义悬浮球样式
     const savedBallCss = localStorage.getItem('custom_ball_css');
     if(savedBallCss) {
         document.getElementById('custom-ball-css').value = savedBallCss;
         applyCustomBallCss(savedBallCss);
     }
 
-    // 6. 启动所有计时器
     setInterval(updateTime, 1000); 
     updateTime();
 
@@ -1885,7 +1772,6 @@ window.onload = function() {
         document.querySelectorAll('.ios-dynamic-time').forEach(el => el.innerText = timeStrFull);
     }, 1000);
 
-    // 7. 电池状态
     if (navigator.getBattery) {
         navigator.getBattery().then(b => { 
             document.querySelectorAll('.battery-fill-inner').forEach(el => {
@@ -1894,51 +1780,6 @@ window.onload = function() {
         });
     }
 };
-    Object.keys(customIcons).forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.style.background = `url("${customIcons[id]}") center/100% 100% no-repeat`;
-    });
-
-    const savedPhoneBg = localStorage.getItem('phone_bg_data');
-    if(savedPhoneBg) document.getElementById('phone-bg').style.backgroundImage = 'url("' + savedPhoneBg + '")';
-    const savedWidgetBg = localStorage.getItem('widget_bg_data');
-    if(savedWidgetBg) document.getElementById('item-widget').style.backgroundImage = 'url("' + savedWidgetBg + '")';
-    
-    const savedConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
-    if(savedConfig.url) document.getElementById('api-url').value = savedConfig.url;
-    if(savedConfig.key) document.getElementById('api-key').value = savedConfig.key;
-    if(savedConfig.model) {
-        const opt = document.createElement('option');
-        opt.value = savedConfig.model; opt.innerText = savedConfig.model; opt.selected = true;
-        document.getElementById('model-select').appendChild(opt);
-    }
-
-    const savedMiniMax = JSON.parse(localStorage.getItem('minimax_config') || '{}');
-    if(savedMiniMax.groupId) document.getElementById('minimax-group-id').value = savedMiniMax.groupId;
-    if(savedMiniMax.key) document.getElementById('minimax-api-key').value = savedMiniMax.key;
-    if(savedMiniMax.model) document.getElementById('minimax-model').value = savedMiniMax.model;
-
-    const isKeepAlive = localStorage.getItem('background_keep_alive') === 'true';
-    document.getElementById('keep-alive-toggle').checked = isKeepAlive;
-    const isNotify = localStorage.getItem('allow_notifications') === 'true';
-    document.getElementById('notification-toggle').checked = isNotify;
-
-    const savedBallCss = localStorage.getItem('custom_ball_css');
-    if(savedBallCss) {
-        document.getElementById('custom-ball-css').value = savedBallCss;
-        applyCustomBallCss(savedBallCss);
-    }
-
-    setInterval(updateTime, 1000); 
-    updateTime();
-
-    setInterval(() => {
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const timeStrFull = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-        document.querySelectorAll('.widget-minimal-clock .time').forEach(el => el.innerText = timeStr);
-        document.querySelectorAll('.ios-dynamic-time').forEach(el => el.innerText = timeStrFull);
-    }, 1000);
 
 async function toggleNotifications(enabled) {
     if (enabled) {
