@@ -840,8 +840,10 @@ input:checked + .slider:before {
                 <div style="color:#ccc">></div>
             </div>
             <div class="list-group">
-                <div class="list-item" onclick="openWallet()"><span style="margin-right:15px;color:#07c160">💳</span>钱包</div>
-            </div>
+    <div class="list-item" onclick="openWallet()"><span style="margin-right:15px;color:#07c160">💳</span>钱包</div>
+    <!-- 这是新增的User人设入口 -->
+    <div class="list-item" onclick="openUserPersonaList()"><span style="margin-right:15px;color:#3498db">🎭</span>User人设</div>
+</div>
             <div class="list-group">
                 <div class="list-item" onclick="openFavorites()"><span style="margin-right:15px;color:#ff6b6b">📦</span>收藏</div>
                 <div class="list-item" onclick="openStickersPage()"><span style="margin-right:15px;color:#ffbe00">😊</span>表情</div>
@@ -1308,14 +1310,17 @@ let isGroupMode = false; // 标记当前是否在群聊中
 // 新增：约会记录数据库
 let datingHistories = JSON.parse(localStorage.getItem('qq_dating_history')) || {};
 let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
+// 新增：User人设数据库
+let userPersonas = JSON.parse(localStorage.getItem('qq_user_personas')) || [];
 
 // 在 saveData 函数里也要加上这一行
-        async function saveData() {
+function saveData() {
     try {
         localStorage.setItem('qq_friends', JSON.stringify(friends));
         localStorage.setItem('qq_groups', JSON.stringify(groups));
         localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
         localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+        localStorage.setItem('qq_dating_history', JSON.stringify(datingHistories));
         localStorage.setItem('qq_moments', JSON.stringify(moments));
         localStorage.setItem('ai_config', JSON.stringify(aiConfig));
         localStorage.setItem('my_info', JSON.stringify(myInfo));
@@ -1323,6 +1328,8 @@ let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
         localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
         localStorage.setItem('qq_stickers', JSON.stringify(stickers));
         localStorage.setItem('qq_group_chats', JSON.stringify(groupChats));
+        localStorage.setItem('qq_user_personas', JSON.stringify(userPersonas));
+    
 
         // --- 新增：同步数据到云服务器 ---
         const subRaw = localStorage.getItem('web_push_subscription');
@@ -1919,9 +1926,19 @@ if (typeof isWatching !== 'undefined' && isWatching && currentVideoName) {
             // 新增：判断是否是主动发起的提示
 let proactivePrompt = isProactive ? "\n【强制指令】：用户已经很久没说话了，你现在是“突然想起”用户。禁止复读上文，禁止继续之前的话题。请从你的长期记忆、当前时间、天气或完全无关的新话题入手，进行一次随性的开启。绝对不要说出和上一条回复中相似的词句！" : "";
 
-            // 在下面这一行中，我们将 watchPrompt 加入了 sys
+            // --- 新增：提取 User 人设，强制让 AI 注意 ---
+            let userPersonaPrompt = "";
+            if (friend.userPersonaId) {
+                const uPersona = userPersonas.find(u => u.id === friend.userPersonaId);
+                if (uPersona) {
+                    userPersonaPrompt = `\n【重要设定，请牢记以下关于用户的全部信息】：\n用户现在的名字是[${uPersona.name}]。\n用户的详细人设与背景情况描述如下：\n${uPersona.content}\n（请你在聊天中必须充分带入、参考和迎合这层设定，以该视角和态度对待用户）`;
+                }
+            }
+            // ---------------------------
+
+            // 在下面这一行中，我们将 userPersonaPrompt 加入了 sys
             let sys = `# Role
-你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}
+你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}${userPersonaPrompt}
 
 【找我代付指令】：
 如果用户向你发送了代付请求卡片，你可以看到他买了什么（payItems）和金额。
@@ -3162,6 +3179,7 @@ listGroup.innerHTML = `
             <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
             <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
             <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
+            <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
 <div class="list-item">
     <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
     <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
@@ -3725,6 +3743,138 @@ setInterval(() => {
         }
     });
 }, 60000); // 60000毫秒 = 1分钟检查一次
+// ================= User人设相关核心代码开始 =================
+function openUserPersonaList() {
+    document.getElementById('user-persona-list-page').classList.add('active');
+    renderUserPersonaList();
+}
+
+function renderUserPersonaList() {
+    const list = document.getElementById('user-persona-list');
+    if (userPersonas.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">暂无设置任何User人设，点击右上角添加</div>';
+        return;
+    }
+    list.innerHTML = userPersonas.map(u => `
+        <div class="wechat-chat-item" style="padding:15px; margin: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border:none;" onclick="openUserPersonaEdit('${u.id}')">
+            <div class="chat-avatar" style="border-radius:6px; background:#e6f7ff; color:#3498db;">${u.avatar ? `<img src="${u.avatar}" decoding="async">` : '人设'}</div>
+            <div class="chat-body" style="padding-right:30px;">
+                <div class="chat-top"><div class="chat-nickname" style="color:#3498db; font-weight:bold;">${u.name}</div></div>
+                <div class="chat-preview" style="white-space: normal; line-clamp: 2; -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; margin-top: 5px;">${u.content}</div>
+            </div>
+            <div style="color:#fa5151; font-size:13px; position:absolute; right:15px; top:15px;" onclick="event.stopPropagation(); deleteUserPersona('${u.id}')">删除</div>
+        </div>
+    `).join('');
+}
+
+function openUserPersonaEdit(id = '') {
+    let u = userPersonas.find(x => x.id === id);
+    document.getElementById('edit-user-persona-id').value = id;
+    document.getElementById('edit-user-persona-avatar').value = u ? u.avatar : '';
+    document.getElementById('edit-user-persona-avatar-display').innerHTML = (u && u.avatar) ? `<img src="${u.avatar}" style="width:100%; height:100%; object-fit:cover;">` : '点击设置头像';
+    document.getElementById('edit-user-persona-name').value = u ? u.name : '';
+    document.getElementById('edit-user-persona-content').value = u ? u.content : '';
+    document.getElementById('user-persona-edit-modal').style.display = 'flex';
+}
+
+function saveUserPersona() {
+    const idInput = document.getElementById('edit-user-persona-id').value;
+    const name = document.getElementById('edit-user-persona-name').value.trim();
+    const content = document.getElementById('edit-user-persona-content').value.trim();
+    const avatar = document.getElementById('edit-user-persona-avatar').value;
+
+    if (!name) return alert('人设名字不能为空哦！');
+    
+    if (idInput) {
+        let u = userPersonas.find(x => x.id === idInput);
+        if (u) {
+            u.name = name;
+            u.content = content;
+            u.avatar = avatar;
+        }
+    } else {
+        userPersonas.push({
+            id: 'up_' + Date.now(),
+            name: name,
+            content: content,
+            avatar: avatar
+        });
+    }
+    saveData();
+    document.getElementById('user-persona-edit-modal').style.display = 'none';
+    renderUserPersonaList();
+}
+
+function changeUserPersonaAvatar() {
+    const choice = prompt("1. 从本地手机上传图片\\n2. 粘贴图片网络链接URL");
+    if (choice === "1") {
+        document.getElementById('user-persona-avatar-upload').click();
+    } else if (choice === "2") {
+        const url = prompt("请输入或粘贴图片链接:");
+        if (url) {
+            document.getElementById('edit-user-persona-avatar').value = url;
+            document.getElementById('edit-user-persona-avatar-display').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+    }
+}
+
+document.getElementById('user-persona-avatar-upload').onchange = function() {
+    if (this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('edit-user-persona-avatar').value = e.target.result;
+            document.getElementById('edit-user-persona-avatar-display').innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+        };
+        reader.readAsDataURL(this.files[0]);
+    }
+};
+
+function deleteUserPersona(id) {
+    if (confirm("确定要删除这个人设吗？")) {
+        userPersonas = userPersonas.filter(u => u.id !== id);
+        // 解绑好友用到的这个人设
+        friends.forEach(f => {
+            if(f.userPersonaId === id) f.userPersonaId = null;
+        });
+        saveData();
+        renderUserPersonaList();
+    }
+}
+
+function openUserPersonaSelect() {
+    const f = friends.find(f => f.name === currentFriendName);
+    const list = document.getElementById('user-persona-select-list');
+    
+    let html = `<div style="display:flex; align-items:center; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom: 5px; cursor:pointer; ${!f.userPersonaId ? 'background:#e6f7ff;' : ''}" onclick="selectUserPersona('')">
+        <span style="font-size:14px; flex:1; text-align:center;">重置为空 (AI使用原本记忆)</span>
+    </div>`;
+    
+    html += userPersonas.map(u => `
+        <div style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; border:1px solid #ddd; cursor:pointer; margin-bottom: 5px; ${f.userPersonaId === u.id ? 'background:#e6f7ff; border:1px solid #3498db;' : ''}" onclick="selectUserPersona('${u.id}')">
+            <div style="width:40px; height:40px; border-radius:6px; overflow:hidden; background:#eee;">
+                ${u.avatar ? `<img src="${u.avatar}" style="width:100%; height:100%; object-fit:cover;">` : ''}
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:bold; font-size:14px;">${u.name}</div>
+                <div style="font-size:12px; color:#888; margin-top:2px; line-clamp:1; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;">${u.content}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    list.innerHTML = html;
+    document.getElementById('user-persona-select-modal').style.display = 'flex';
+}
+
+function selectUserPersona(id) {
+    const f = friends.find(f => f.name === currentFriendName);
+    if (f) {
+        f.userPersonaId = id;
+        saveData();
+        openSettings(); // 刷新设置面板显示的文字
+    }
+    document.getElementById('user-persona-select-modal').style.display = 'none';
+}
+// ================= User人设相关核心代码结束 =================
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -3973,5 +4123,64 @@ setInterval(() => {
     </div>
 </div>
 </div>
+<!-- === User人设相关的新页面和弹窗开始 === -->
+<!-- 1. 列表页面 -->
+<div id="user-persona-list-page" class="page" style="z-index: 1000; background: var(--bg-gray);">
+    <div class="header">
+        <span onclick="document.getElementById('user-persona-list-page').classList.remove('active')">〈 退出</span>
+        <span>User我的假面人设</span>
+        <span style="font-size:24px; cursor:pointer; color:#3498db;" onclick="openUserPersonaEdit()">⊕</span>
+    </div>
+    <div class="content" id="user-persona-list"></div>
+</div>
+
+<!-- 2. 添加/编辑人设弹窗 -->
+<div id="user-persona-edit-modal" class="glass-modal" style="z-index: 9600;">
+    <div class="glass-card" style="width: 300px; padding: 20px; border-radius: 15px;">
+        <h3 style="text-align: center; margin-bottom: 5px; color:#3498db;">编写我的身份设定</h3>
+        <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">你可随时在角色聊天设置中切换该面具</p>
+        
+        <input type="hidden" id="edit-user-persona-id">
+        <input type="hidden" id="edit-user-persona-avatar">
+        
+        <div style="text-align: center; margin-bottom: 15px;">
+            <div id="edit-user-persona-avatar-display" style="width: 60px; height: 60px; border-radius: 8px; background: #f2f2f2; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; color: #999; font-size: 11px;" onclick="changeUserPersonaAvatar()">点击设置头像</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 12px; color: #666;">面具名字</label>
+            <input type="text" id="edit-user-persona-name" style="width: 100%; border: none; border-bottom: 1px solid #ccc; padding: 8px 0; font-size: 14px; outline: none; background: transparent;" placeholder="比如：霸道总裁、傲娇校花...">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; color: #666;">具体身份背景描述 (告诉AI你是谁)</label>
+            <textarea id="edit-user-persona-content" style="width: 100%; height: 110px; border: 1px dashed #ccc; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; background: rgba(255,255,255,0.5); margin-top: 5px;" placeholder="描述你的身份背景。例如：你是一个家财万贯但体弱多病的少爷，非常依赖当前聊天的AI角色..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; background: rgba(0,0,0,0.05); color: #666; margin-bottom: 0;" onclick="document.getElementById('user-persona-edit-modal').style.display = 'none'">撤退</button>
+            <button class="wx-btn" style="flex: 1; background: #3498db; color: white; border: none; margin-bottom: 0;" onclick="saveUserPersona()">生成面具</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. 在角色前应用人设时的选择列表弹窗 -->
+<div id="user-persona-select-modal" class="glass-modal" style="z-index: 9600;">
+    <div class="glass-card" style="width: 300px; max-height: 80%; padding: 20px; border-radius: 15px; overflow-y: auto;">
+        <h3 style="text-align: center; margin-bottom: 15px; color:#3498db;">我在此角色眼里的身份</h3>
+        <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">点击选中，AI将永远用以下视角看待你</p>
+        
+        <div id="user-persona-select-list" style="display: flex; flex-direction: column;">
+            <!-- 这里通过上面的代码动态渲染 -->
+        </div>
+        
+        <div style="text-align: center; margin-top: 15px;">
+            <button class="wx-btn" style="width: 100%; background: #eee; color: #666; margin-bottom: 0;" onclick="document.getElementById('user-persona-select-modal').style.display = 'none'">返回</button>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="user-persona-avatar-upload" style="display:none" accept="image/*">
+<!-- === User人设相关的新页面和弹窗结束 === -->
 </body>
 </html>
