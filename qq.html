@@ -280,6 +280,9 @@ input:checked + .slider:before {
         #chat-page { z-index: var(--z-chat); }
         #settings-page { z-index: var(--z-settings); }
         #moments-page { z-index: var(--z-moments); background: white; }
+        #moments-editor-page, #visibility-selector-page {
+            z-index: var(--z-modal) !important;
+        }
         #moments-config-page, #api-config-page, #editor-page, #worldbook-page, #wallet-page, #wallet-history-page, #favorites-page, #memory-page, #heartbeat-page, #theater-overlay, #stickers-page { 
     z-index: var(--z-sub-page); background: var(--bg-gray); position: absolute; width: 100%; height: 100%; top: 0; left: 0; 
 }
@@ -794,6 +797,7 @@ input:checked + .slider:before {
     <!-- 1. 微信列表页 -->
     <div id="tab-chat" class="page active">
     <div class="header">
+        <span style="cursor:pointer; padding-right: 20px;" onclick="openMomentsEditor()">📷</span>
         <span>微信</span>
         <span style="font-size:14px; color:var(--wechat-green); cursor:pointer;" onclick="openGroupListPage()">群聊</span>
     </div>
@@ -819,7 +823,10 @@ input:checked + .slider:before {
 
     <!-- 3. 发现页 -->
     <div id="tab-discover" class="page">
-        <div class="header">发现</div>
+        <div class="header">
+            <span>发现</span>
+            <span style="cursor:pointer;" onclick="openMomentsEditor()">📷</span>
+        </div>
         <div class="content">
             <div class="list-group">
                 <div class="list-item" onclick="openMoments()">🎡 朋友圈</div>
@@ -1106,6 +1113,39 @@ input:checked + .slider:before {
             <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="triggerRealImageUpload()">真实图片</div>
             <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="openDescribeInputModal()">描述图片</div>
             <div style="text-align:center; margin-top:10px; color:#666; cursor:pointer;" onclick="closeImageChoiceModal()">取消</div>
+        </div>
+    </div>
+
+    <div id="avatar-choice-modal" class="glass-modal">
+        <div class="glass-card">
+            <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">修改头像</h3>
+            <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="triggerAvatarUpload()">从相册选择</div>
+            <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #5e35b1;" onclick="openAvatarUrlInput()">粘贴图片 URL</div>
+            <div style="text-align:center; margin-top:10px; color:#666; cursor:pointer;" onclick="closeAvatarChoiceModal()">取消</div>
+        </div>
+    </div>
+
+    <div id="moments-bg-choice-modal" class="glass-modal">
+        <div class="glass-card">
+            <h3 style="text-align:center; margin-bottom:20px; color:#5e35b1;">更换朋友圈封面</h3>
+            <div id="moments-bg-main-choice" style="display: flex; gap: 15px;">
+                <div class="list-item" style="flex: 1; background:white; border-radius:12px; margin-bottom:15px; flex-direction: column; justify-content: center; font-weight: bold; color: #5e35b1; height: 100px; gap: 10px;" onclick="triggerMomentsBgUpload()">
+                    <span style="font-size: 24px;">🖼️</span>
+                    <span>相册上传</span>
+                </div>
+                <div class="list-item" style="flex: 1; background:white; border-radius:12px; margin-bottom:15px; flex-direction: column; justify-content: center; font-weight: bold; color: #5e35b1; height: 100px; gap: 10px;" onclick="showMomentsUrlInput()">
+                    <span style="font-size: 24px;">🔗</span>
+                    <span>URL 上传</span>
+                </div>
+            </div>
+            <div id="moments-bg-url-input-area" style="display: none; flex-direction: column; gap: 10px;">
+                <input type="text" id="moments-bg-url-field" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; outline: none;" placeholder="在此粘贴图片 URL">
+                <div style="display: flex; gap: 10px;">
+                    <button class="wx-btn wx-btn-recharge" style="flex: 1; margin-bottom: 0;" onclick="confirmMomentsBgUrl()">确定</button>
+                    <button class="wx-btn" style="flex: 1; background: #eee; color: #666; margin-bottom: 0;" onclick="hideMomentsUrlInput()">返回</button>
+                </div>
+            </div>
+            <div style="text-align:center; margin-top:20px; color:#666; cursor:pointer;" onclick="closeMomentsBgChoiceModal()">取消</div>
         </div>
     </div>
 
@@ -1860,7 +1900,9 @@ async function sendPetMsg() {
 }
 
                 async function getAiReply(isProactive = false) {
-    if(!aiConfig.key) return alert("配置错误");
+    // 强制同步主页面的 API 设置
+    aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+    if(!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
             const friend = friends.find(f => f.name === currentFriendName);
             const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
             
@@ -2370,7 +2412,31 @@ if (sub && document.visibilityState !== 'visible') {
         function clearChatHistory() { if (confirm("确定要清空聊天记录吗？")) { chatHistories[currentFriendName] = []; const friend = friends.find(f => f.name === currentFriendName); if (friend) friend.lastMsg = ""; saveData(); renderMessages(); alert("已清空记录"); } }
         function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
         function toggleToolBox() { const box = document.getElementById('tool-box'); box.style.display = (box.style.display === 'none') ? 'grid' : 'none'; }
-        function changeMomentsBackground() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('moments-bg-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if (u) { localStorage.setItem('moments_bg_url', u); renderMoments(); } } }
+        function changeMomentsBackground() { 
+            document.getElementById('moments-bg-choice-modal').style.display = 'flex'; 
+            hideMomentsUrlInput(); 
+        }
+        function closeMomentsBgChoiceModal() { document.getElementById('moments-bg-choice-modal').style.display = 'none'; }
+        function triggerMomentsBgUpload() { document.getElementById('moments-bg-upload').click(); closeMomentsBgChoiceModal(); }
+        function showMomentsUrlInput() {
+            document.getElementById('moments-bg-main-choice').style.display = 'none';
+            document.getElementById('moments-bg-url-input-area').style.display = 'flex';
+        }
+        function hideMomentsUrlInput() {
+            document.getElementById('moments-bg-main-choice').style.display = 'flex';
+            document.getElementById('moments-bg-url-input-area').style.display = 'none';
+            document.getElementById('moments-bg-url-field').value = '';
+        }
+        function confirmMomentsBgUrl() {
+            const u = document.getElementById('moments-bg-url-field').value.trim();
+            if (u) {
+                localStorage.setItem('moments_bg_url', u);
+                renderMoments();
+                closeMomentsBgChoiceModal();
+            } else {
+                alert('请输入有效的图片 URL');
+            }
+        }
         document.getElementById('moments-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { localStorage.setItem('moments_bg_url', e.target.result); renderMoments(); }; reader.readAsDataURL(this.files[0]); } };
         function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); document.getElementById('worldbook-page').classList.add('active'); }
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
@@ -2459,9 +2525,32 @@ await getAiReply(true);
         function closeModelSelector() { document.getElementById('model-selector-page').classList.remove('active'); }
         function changeMyName() { const n=prompt("名字:"); if(n){myInfo.name=n; saveData(); renderMePage();}}
         function changeMyWxid() { const n=prompt("微信号:"); if(n){myInfo.wxid=n; saveData(); renderMePage();}}
-        function changeMyAvatar() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('my-avatar-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if(u){myInfo.avatar=u; saveData(); renderMePage();}} }
+
+        let avatarTarget = 'friend'; // 'me' or 'friend'
+        function changeMyAvatar() { avatarTarget = 'me'; document.getElementById('avatar-choice-modal').style.display = 'flex'; }
+        function changeAvatar() { avatarTarget = 'friend'; document.getElementById('avatar-choice-modal').style.display = 'flex'; }
+        function closeAvatarChoiceModal() { document.getElementById('avatar-choice-modal').style.display = 'none'; }
+        function triggerAvatarUpload() {
+            if (avatarTarget === 'me') document.getElementById('my-avatar-upload').click();
+            else document.getElementById('avatar-upload').click();
+            closeAvatarChoiceModal();
+        }
+        function openAvatarUrlInput() {
+            const u = prompt("请输入图片 URL:");
+            if (u) {
+                if (avatarTarget === 'me') {
+                    myInfo.avatar = u;
+                    renderMePage();
+                } else {
+                    friends.find(f => f.name === currentFriendName).avatarUrl = u;
+                    openSettings();
+                }
+                saveData();
+            }
+            closeAvatarChoiceModal();
+        }
+
         document.getElementById('my-avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{myInfo.avatar=e.target.result;saveData();renderMePage();}; r.readAsDataURL(this.files[0]);}}
-        function changeAvatar() { const choice = prompt("1.本地\n2.URL"); if (choice === "1") document.getElementById('avatar-upload').click(); else if (choice === "2") { const u = prompt("URL:"); if(u){friends.find(f => f.name === currentFriendName).avatarUrl=u;saveData();openSettings();}} }
         document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
         function changeChatBackground() {
     const choice = prompt("请输入数字选择：\n1. 从本地相册上传\n2. 使用网络图片链接(URL)");
@@ -2729,7 +2818,9 @@ function executeTransfer() {
 
         // 3. 独立出来的群聊回复逻辑（包含输入状态显示）
                                 async function getGroupAiReply() {
-            if (!aiConfig.key) return alert("请先配置 API 设置");
+            // 强制同步主页面的 API 设置
+            aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+            if (!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
             const group = groupChats.find(g => g.id === currentFriendName);
             if (!group) return;
 

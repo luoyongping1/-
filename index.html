@@ -112,7 +112,7 @@ padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bot
 height: 100%;
 display: grid;
 grid-template-columns: repeat(4, 1fr);
-grid-auto-rows: min-content; 
+grid-auto-rows: minmax(calc((100vw - 85px) / 4 + 20px), min-content); 
 gap: 15px;
     box-sizing: border-box;
     align-content: start;
@@ -713,7 +713,7 @@ gap: 15px;
     <div id="swiper-wrapper" style="display: flex; width: 200%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y;">
         
 <div class="content" id="main-grid" oncontextmenu="return false;" style="width: 50%; flex-shrink: 0;">
-    <div id="item-time" class="grid-item time-widget">
+    <div id="item-time" class="grid-item time-widget" onclick="openTimeColorPicker()">
         <div class="date-str" id="date-display"></div>
         <div class="clock-str" id="clock-display">00:00</div>
     </div>
@@ -961,6 +961,23 @@ gap: 15px;
             </div>
         </div>
 
+        <div id="time-color-modal" class="glass-modal">
+            <div class="glass-modal-content">
+                <h3 style="margin-top:0">选择时间文字颜色</h3>
+                <div class="color-picker-container">
+                    <input type="color" id="time-color-picker" oninput="applyTimeColor(this.value)">
+                    <div style="text-align:center; font-size:12px; color:#666; margin-top:10px;">点击上方色块选取颜色，或滑动下方预设</div>
+                    <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+                        <div style="width:30px; height:30px; border-radius:50%; background:#ffffff; border:1px solid #ddd;" onclick="applyTimeColor('#ffffff')"></div>
+                        <div style="width:30px; height:30px; border-radius:50%; background:#000000; border:1px solid #ddd;" onclick="applyTimeColor('#000000')"></div>
+                        <div style="width:30px; height:30px; border-radius:50%; background:#ff6b6b; border:1px solid #ddd;" onclick="applyTimeColor('#ff6b6b')"></div>
+                        <div style="width:30px; height:30px; border-radius:50%; background:#4facfe; border:1px solid #ddd;" onclick="applyTimeColor('#4facfe')"></div>
+                    </div>
+                </div>
+                <button class="action-btn" style="margin-top:20px;" onclick="closeTimeColorPicker()">确定</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -1014,12 +1031,10 @@ function initGridSortable() {
     }, {passive: false});
 
     document.addEventListener('touchmove', (e) => {
-    // 只要手指开始移动（滑动），就说明不是长按，立刻取消进入编辑模式的倒计时
-    clearTimeout(longPressTimer); 
-
-    if (!draggingItem) return;
-    const touch = e.touches[0];
-    const dx = touch.clientX - startX;
+        clearTimeout(longPressTimer); 
+        if (!draggingItem) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX;
         const dy = touch.clientY - startY;
         moveDist = Math.hypot(dx, dy);
         if (moveDist > 10) {
@@ -1029,55 +1044,60 @@ function initGridSortable() {
             draggingItem.style.height = initialRect.height + 'px';
             draggingItem.style.left = (touch.clientX - initialRect.width / 2) + 'px';
             draggingItem.style.top = (touch.clientY - initialRect.height / 2) + 'px';
+            
             const screenWidth = window.innerWidth;
             const wrapper = document.getElementById('swiper-wrapper');
             const pageDots = document.querySelectorAll('.dot');
             const grid1 = document.getElementById('main-grid');
             const grid2 = document.getElementById('page-2');
+            
             if (touch.clientX > screenWidth - 40 && currentPageIndex === 0) {
                 currentPageIndex = 1;
                 wrapper.style.transform = `translateX(-50%)`; 
                 pageDots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
-                grid2.appendChild(draggingItem); 
+                if (draggingItem.parentElement !== grid2) grid2.appendChild(draggingItem); 
             } 
             else if (touch.clientX < 40 && currentPageIndex === 1) {
                 currentPageIndex = 0;
                 wrapper.style.transform = `translateX(0%)`; 
                 pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
-                grid1.appendChild(draggingItem); 
-            }
-            const currentContainer = draggingItem.parentElement;
-            const siblings = Array.from(currentContainer.querySelectorAll('.grid-item:not(.dragging)'));
-            let closestItem = null;
-            let minDistance = Infinity;
-            siblings.forEach(sibling => {
-                if (sibling.id === 'item-time') return;
-                const rect = sibling.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                const distance = Math.hypot(touch.clientX - centerX, touch.clientY - centerY);
-                if (distance < minDistance && distance < 50) {
-                    minDistance = distance;
-                    closestItem = sibling;
-                }
-            });
-            if (closestItem) {
-                const rect = closestItem.getBoundingClientRect();
-                const isAfter = touch.clientX > rect.left + rect.width / 2;
-                if (isAfter) { currentContainer.insertBefore(draggingItem, closestItem.nextSibling); } 
-                else { currentContainer.insertBefore(draggingItem, closestItem); }
+                if (draggingItem.parentElement !== grid1) grid1.appendChild(draggingItem); 
             }
         }
     }, {passive: false});
 
     document.addEventListener('touchend', (e) => {
-    // 只要手指抬起，立刻取消长按倒计时，防止在空白处点一下也弹出加号
     clearTimeout(longPressTimer);
-
     if (!draggingItem) return;
+
+    if (moveDist > 10) {
+        const touch = e.changedTouches[0];
+        const currentContainer = draggingItem.parentElement;
+        const gridRect = currentContainer.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(currentContainer);
+        const paddingLeft = parseFloat(computedStyle.paddingLeft);
+        const paddingTop = parseFloat(computedStyle.paddingTop);
+        const gap = 15;
+        const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
+        const rowHeight = colWidth + 25;
+
+        let col = Math.floor((touch.clientX - gridRect.left - paddingLeft + gap/2) / (colWidth + gap)) + 1;
+        let row = Math.floor((touch.clientY - gridRect.top - paddingTop + gap/2) / (rowHeight + gap)) + 1;
+        
+        col = Math.max(1, Math.min(4, col));
+        row = Math.max(1, row);
+
+        if (draggingItem.id === 'item-time' || draggingItem.classList.contains('widget-ios-info')) {
+            col = 1; 
+        }
+
+        draggingItem.style.gridColumnStart = col;
+        draggingItem.style.gridRowStart = row;
+        saveAllWidgets();
+    }
+
     draggingItem.classList.remove('dragging');
-    draggingItem.style.left = ''; draggingItem.style.top = ''; draggingItem.style.width = ''; draggingItem.style.height = ''; draggingItem.style.visibility = '';
-    if (moveDist > 10) { saveAllWidgets(); }
+    draggingItem.style.left = ''; draggingItem.style.top = ''; draggingItem.style.width = ''; draggingItem.style.height = ''; 
     draggingItem = null;
 });
 }
@@ -1742,7 +1762,7 @@ window.onload = function() {
     // 确保默认图标存在且不重复
     let needSave = false;
     const defaultApps = [
-        { id: 'item-time', html: `<div id="item-time" class="grid-item time-widget"><div class="date-str" id="date-display"></div><div class="clock-str" id="clock-display">00:00</div></div>` },
+        { id: 'item-time', html: `<div id="item-time" class="grid-item time-widget" onclick="openTimeColorPicker()"><div class="date-str" id="date-display"></div><div class="clock-str" id="clock-display">00:00</div></div>` },
         { id: 'item-xhs', html: `<div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>` },
         { id: 'item-gacha', html: `<div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>` },
         { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>` },
@@ -1756,11 +1776,17 @@ window.onload = function() {
         if (instances.length === 0) {
             document.getElementById('main-grid').insertAdjacentHTML('beforeend', app.html);
             needSave = true;
-        } else if (instances.length > 1) {
-            for (let i = 1; i < instances.length; i++) {
-                instances[i].remove();
+        } else {
+            if (app.id === 'item-time' && !instances[0].hasAttribute('onclick')) {
+                instances[0].setAttribute('onclick', 'openTimeColorPicker()');
+                needSave = true;
             }
-            needSave = true;
+            if (instances.length > 1) {
+                for (let i = 1; i < instances.length; i++) {
+                    instances[i].remove();
+                }
+                needSave = true;
+            }
         }
     });
 
@@ -1810,6 +1836,11 @@ window.onload = function() {
     setInterval(updateTime, 1000); 
     updateTime();
 
+    const savedTimeColor = localStorage.getItem('time_display_color');
+    if (savedTimeColor) {
+        document.getElementById('item-time').style.color = savedTimeColor;
+    }
+
     setInterval(() => {
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -1846,6 +1877,25 @@ async function toggleNotifications(enabled) {
 
 let isEditMode = false;
 let longPressTimer;
+
+function openTimeColorPicker() {
+    document.getElementById('time-color-modal').style.display = 'flex';
+    const currentColor = document.getElementById('item-time').style.color || '#ffffff';
+    // Convert to hex if needed, but input[type=color] wants hex
+    // For simplicity, just set the value if it's already hex or default
+    if (currentColor.startsWith('#')) {
+        document.getElementById('time-color-picker').value = currentColor;
+    }
+}
+
+function closeTimeColorPicker() {
+    document.getElementById('time-color-modal').style.display = 'none';
+}
+
+function applyTimeColor(color) {
+    document.getElementById('item-time').style.color = color;
+    localStorage.setItem('time_display_color', color);
+}
     </script>
 
 <div id="friend-selector-modal" class="glass-modal">
