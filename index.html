@@ -72,16 +72,17 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text-color);
     overflow: hidden; 
-    -webkit-touch-callout: none; /* 禁用系统默认菜单 */
+}
+/* 除了输入框和文本域，其他地方禁止选中和弹出系统菜单，确保粘贴可用 */
+*:not(input):not(textarea) {
+    -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
 }
-/* 新增：强制让所有图片和按钮都不弹出系统菜单 */
 * {
-    -webkit-touch-callout: none !important;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -253,13 +254,11 @@ gap: 15px;
         #settings-panel input, #settings-panel select, #settings-panel textarea {
     width: 100%; padding: 12px; background: #f2f2f7; border: 1px solid #ddd;
     color: #000; border-radius: 10px; box-sizing: border-box; margin-bottom: 10px;
-    /* 以下是新增的允许粘贴的代码 */
+    /* 强制开启所有输入框（含密钥框）的选中和粘贴功能 */
     -webkit-user-select: text !important;
-    -khtml-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
     user-select: text !important;
     -webkit-touch-callout: default !important;
+    pointer-events: auto !important;
 }
         .action-btn {
             width: 100%; padding: 12px; background: var(--accent-color);
@@ -699,15 +698,6 @@ gap: 15px;
     cursor: pointer;
 }
     </style>
-/* 强制所有输入框和文本域允许选中和弹出系统菜单 */
-input, textarea {
-    -webkit-user-select: text !important;
-    -khtml-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-    -webkit-touch-callout: default !important;
-}
 </head>
 <body>
 
@@ -833,14 +823,20 @@ input, textarea {
                 <span style="cursor:pointer; font-size: 20px;" onclick="closeSettings()">✕</span>
             </div>
             <div id="api-inputs" style="display:none">
-                <div class="setting-group">
-                    <label>API URL</label>
-                    <input type="text" id="api-url" placeholder="https://api.openai.com/v1">
-                </div>
-                <div class="setting-group">
-                    <label>API密钥</label>
-                    <input type="password" id="api-key" placeholder="Key">
-                </div>
+    <div class="setting-group">
+        <label>API URL (双击框内或点右侧粘贴)</label>
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="api-url" placeholder="https://api.openai.com/v1" ondblclick="handlePaste('api-url')" style="margin-bottom:0;">
+            <button class="action-btn" onclick="handlePaste('api-url')" style="width:70px; margin:0; font-size:12px; background:#4facfe;">粘贴</button>
+        </div>
+    </div>
+    <div class="setting-group">
+        <label>API密钥 (双击框内或点右侧粘贴)</label>
+        <div style="display:flex; gap:8px;">
+            <input type="password" id="api-key" placeholder="Key" ondblclick="handlePaste('api-key')" style="margin-bottom:0;">
+            <button class="action-btn" onclick="handlePaste('api-key')" style="width:70px; margin:0; font-size:12px; background:#4facfe;">粘贴</button>
+        </div>
+    </div>
                 <div class="setting-group">
                     <label>模型选择</label>
                     <div style="display:flex; gap:10px">
@@ -997,6 +993,23 @@ input, textarea {
     </div>
 
     <script>
+    // 粘贴功能函数
+async function handlePaste(targetId) {
+    try {
+        // 尝试从系统剪贴板读取文字
+        const text = await navigator.clipboard.readText();
+        if (text) {
+            document.getElementById(targetId).value = text;
+            console.log('已成功粘贴内容');
+        } else {
+            alert("剪辑板里好像没有内容哦");
+        }
+    } catch (err) {
+        // 如果浏览器拦截了自动读取（通常需要点击确认）
+        alert("粘贴失败，请确保已授予网页读取剪辑板的权限，或尝试手动输入。");
+        console.error('无法读取剪贴板: ', err);
+    }
+}
         let ball = document.getElementById('floating-ball');
         let isDraggingBall = false;
         function startDrag(e) {
