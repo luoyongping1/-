@@ -251,9 +251,16 @@ gap: 15px;
         label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
         
         #settings-panel input, #settings-panel select, #settings-panel textarea {
-            width: 100%; padding: 12px; background: #f2f2f7; border: 1px solid #ddd;
-            color: #000; border-radius: 10px; box-sizing: border-box; margin-bottom: 10px;
-        }
+    width: 100%; padding: 12px; background: #f2f2f7; border: 1px solid #ddd;
+    color: #000; border-radius: 10px; box-sizing: border-box; margin-bottom: 10px;
+    /* 以下是新增的允许粘贴的代码 */
+    -webkit-user-select: text !important;
+    -khtml-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+}
         .action-btn {
             width: 100%; padding: 12px; background: var(--accent-color);
             border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 5px;
@@ -692,6 +699,15 @@ gap: 15px;
     cursor: pointer;
 }
     </style>
+/* 强制所有输入框和文本域允许选中和弹出系统菜单 */
+input, textarea {
+    -webkit-user-select: text !important;
+    -khtml-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+}
 </head>
 <body>
 
