@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<![CDATA[<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -80,6 +80,7 @@ input:checked + .slider:before {
 .sp-info { flex: 1; }
 .sp-title { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
 .sp-desc { font-size: 10px; color: #666; line-clamp: 1; overflow: hidden; }
+.sp-price { font-size: 18px; font-weight: bold; color: #ffffff; margin-top: 5px; }
 .sp-price { font-size: 18px; font-weight: bold; color: #ffffff; margin-top: 5px; }
 .sp-footer { font-size: 11px; color: #999; border-top: 1px solid #2a2a2a; padding-top: 8px; text-align: center; }
 .sp-btn-paid { color: #07c160; font-weight: bold; }
@@ -860,6 +861,7 @@ input:checked + .slider:before {
     <div class="list-item" onclick="openAppBeautify()"><span style="margin-right:15px;color:#9b59b6">🎨</span>美化</div>
 </div>
                 <div class="list-item" onclick="openApiConfig()"><div class="info"><span style="margin-right:15px;color:#4facfe">⚙️</span>API 与模型设置</div><span>></span></div>
+                <div class="list-item" onclick="openMiniMaxConfig()"><div class="info"><span style="margin-right:15px;color:#f39c12">🎙️</span>MiniMax 语音设置</div><span>></span></div>
             </div>
         </div>
     </div>
@@ -1287,7 +1289,71 @@ input:checked + .slider:before {
     <input type="file" id="real-image-upload" style="display:none" accept="image/*">
     <input type="file" id="moment-image-upload" style="display:none" accept="image/*" multiple>
 
+    <!-- 引入 Capacitor 核心与插件 -->
+    <script src="capacitor.js"></script>
     <script>
+    // 异步初始化通知权限
+    async function initNotifications() {
+        try {
+            const { LocalNotifications } = Capacitor.Plugins;
+            const perm = await LocalNotifications.requestPermissions();
+            if (perm.display === 'granted') {
+                console.log("✅ 通知权限已获取");
+                // 创建通知渠道（安卓 8.0+ 必须）
+                await LocalNotifications.createChannel({
+                    id: 'messages',
+                    name: '好友消息',
+                    description: 'QQ 好友发送的消息通知',
+                    importance: 5, // 5 表示最高级别（会弹出横幅）
+                    visibility: 1, // 1 为 Public，锁屏可见
+                    sound: 'default',
+                    vibration: true,
+                    lights: true,
+                    lightColor: '#00FF00'
+                });
+            }
+        } catch (e) {
+            console.warn("通知初始化失败:", e);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', initNotifications);
+
+    // 发送原生本地通知
+    async function sendNativeNotification(title, body, iconUrl) {
+        try {
+            const { LocalNotifications } = Capacitor.Plugins;
+            await LocalNotifications.schedule({
+                notifications: [
+                    {
+                        title: title,
+                        body: body,
+                        id: Math.floor(Math.random() * 1000000),
+                        schedule: { at: new Date(Date.now() + 100) }, // 立即发送
+                        sound: 'default',
+                        attachments: null,
+                        actionTypeId: "",
+                        extra: null,
+                        channelId: 'messages',
+                        smallIcon: 'res://ic_launcher', // 华为等系统指定资源图标兼容性更好
+                        largeIcon: iconUrl,
+                        priority: 2, // 2 为最高优先级（安卓层面的 MAX）
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error("原生通知发送失败:", e);
+            // 降级使用 Service Worker 通知
+            if (navigator.serviceWorker.active) {
+                navigator.serviceWorker.active.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    body: body,
+                    icon: iconUrl
+                });
+            }
+        }
+    }
+
     // 桌宠拖拽逻辑
 let theaterPet = null;
 function initTheaterPetDrag() {
@@ -2178,19 +2244,28 @@ chatHistories[currentFriendName].push({
 friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
 saveData(); 
 
-// --- 核心修复：更强力的后台通知触发逻辑 ---
-if (localStorage.getItem('allow_notifications') === 'true' && document.visibilityState !== 'visible') {
-    // 获取 Service Worker 注册对象，无论是在主页还是 iframe 都能更稳妥地发送
-    navigator.serviceWorker.ready.then(registration => {
-        if (registration.active) {
-            registration.active.postMessage({
-                type: 'SHOW_NOTIFICATION',
-                title: currentFriendName + ' 发来QQ消息',
-                body: isTheaterMsg ? "[发送了一个小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText),
-                icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
-            });
-        }
-    });
+// --- 核心修复：更强力的后台通知触发逻辑（集成原生通知） ---
+if (document.visibilityState !== 'visible') {
+    const notifyTitle = (isGroupMode ? `[群聊] ${currentFriendName}` : currentFriendName) + ' 发来QQ消息';
+    const notifyBody = isTheaterMsg ? "[发送了一个小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
+    const notifyIcon = friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png';
+    
+    // 优先使用原生 LocalNotifications 实现横幅弹出
+    if (typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform()) {
+        sendNativeNotification(notifyTitle, notifyBody, notifyIcon);
+    } else if (localStorage.getItem('allow_notifications') === 'true') {
+        // H5 降级逻辑
+        navigator.serviceWorker.ready.then(registration => {
+            if (registration.active) {
+                registration.active.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: notifyTitle,
+                    body: notifyBody,
+                    icon: notifyIcon
+                });
+            }
+        });
+    }
 }
 // --- 修复结束 ---
 
@@ -2478,6 +2553,26 @@ if (sub && document.visibilityState !== 'visible') {
         function openPersonaEditor() { document.getElementById('persona-input').value = friends.find(f => f.name===currentFriendName).persona; document.getElementById('editor-page').classList.add('active'); }
         function closePersonaEditor() { document.getElementById('editor-page').classList.remove('active'); }
         function savePersona() { friends.find(f => f.name===currentFriendName).persona = document.getElementById('persona-input').value; saveData(); closePersonaEditor(); }
+
+        function editVoiceId() {
+            const f = friends.find(f => f.name === currentFriendName);
+            const vid = prompt("请输入 MiniMax 音色 ID:", f.voiceId || "cherry");
+            if (vid !== null) {
+                f.voiceId = vid.trim();
+                saveData();
+                openSettings();
+            }
+        }
+
+        function openMiniMaxConfig() {
+            const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+            const key = prompt("请输入 MiniMax API Key:", mmConfig.key || "");
+            if (key === null) return;
+            const groupId = prompt("请输入 MiniMax Group ID:", mmConfig.groupId || "");
+            if (groupId === null) return;
+            localStorage.setItem('minimax_config', JSON.stringify({key: key.trim(), groupId: groupId.trim()}));
+            alert("MiniMax 配置已保存");
+        }
 
 // 新增功能 1：保存主动发消息的分钟数设置
 function saveAutoMsgFreq(val) {
@@ -3270,6 +3365,7 @@ listGroup.innerHTML = `
             <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
             <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
             <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
+            <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888">${f.voiceId || '未设置'}</div><span>></span></div>
             <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
 <div class="list-item">
     <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
@@ -3530,7 +3626,7 @@ function saveBgUrlSetting() {
     closeBgSettingModal();
 }
 
-// 应用所有页面的背景图（包含标题栏和搜索栏透明逻辑）
+// 应用当前好友的专属气泡样式
 function applyAllBackgrounds() {
     const pages = [
         { id: 'tab-chat', key: 'qq_chatlist_bg' },
@@ -4209,69 +4305,64 @@ function selectUserPersona(id) {
 
     <!-- 影院专用简易输入框：现在短小精悍，出现在头像左侧 -->
     <div id="pet-chat-box" style="display:none; position:absolute; top:5px; right:75px; width:200px; height:50px; background:rgba(0,0,0,0.6); padding:5px; border-radius:30px; align-items:center; gap:5px;" onclick="event.stopPropagation()">
-        <input type="text" id="pet-input" style="flex:1; border-radius:20px; border:none; padding:8px 12px; outline:none; font-size:12px; background:#fff;" placeholder="聊聊剧情...">
-        <button style="background:#07c160; color:white; border:none; width:50px; height:32px; border-radius:20px; font-size:12px; flex-shrink:0;" onclick="sendPetMsg()">发送</button>
+        <input type="text" id="pet-input" style="flex:1; border-radius:20px; border:none; padding:8px 12px; outline:none; font-size:12px; background: white;" placeholder="和他说说话..." onkeydown="if(event.key==='Enter') sendPetMsg()">
+        <div style="color:#07c160; font-weight:bold; font-size:14px; padding-right:10px;" onclick="sendPetMsg()">发送</div>
     </div>
 </div>
-</div>
-<!-- === User人设相关的新页面和弹窗开始 === -->
-<!-- 1. 列表页面 -->
-<div id="user-persona-list-page" class="page" style="z-index: 1000; background: var(--bg-gray);">
-    <div class="header">
-        <span onclick="document.getElementById('user-persona-list-page').classList.remove('active')">〈 退出</span>
-        <span>User我的假面人设</span>
-        <span style="font-size:24px; cursor:pointer; color:#3498db;" onclick="openUserPersonaEdit()">⊕</span>
-    </div>
-    <div class="content" id="user-persona-list"></div>
 </div>
 
-<!-- 2. 添加/编辑人设弹窗 -->
-<div id="user-persona-edit-modal" class="glass-modal" style="z-index: 9600;">
-    <div class="glass-card" style="width: 300px; padding: 20px; border-radius: 15px;">
-        <h3 style="text-align: center; margin-bottom: 5px; color:#3498db;">编写我的身份设定</h3>
-        <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">你可随时在角色聊天设置中切换该面具</p>
+<!-- User人设管理页面 -->
+<div id="user-persona-list-page" class="page" style="z-index: 7000; background: var(--bg-gray);">
+    <div class="header">
+        <span onclick="document.getElementById('user-persona-list-page').classList.remove('active')">〈 返回</span>
+        <span>User人设管理</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="openUserPersonaEdit()">⊕</span>
+    </div>
+    <div class="content" id="user-persona-list">
+        <!-- 列表由 JS 动态生成 -->
+    </div>
+</div>
+
+<!-- User人设编辑弹窗 -->
+<div id="user-persona-edit-modal" class="glass-modal" style="z-index: 10000;">
+    <div class="glass-card" style="width: 90%; background: white;">
+        <h3 style="text-align:center; margin-bottom:15px; color:#333;">编辑/新增人设</h3>
         
         <input type="hidden" id="edit-user-persona-id">
         <input type="hidden" id="edit-user-persona-avatar">
         
-        <div style="text-align: center; margin-bottom: 15px;">
-            <div id="edit-user-persona-avatar-display" style="width: 60px; height: 60px; border-radius: 8px; background: #f2f2f2; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; color: #999; font-size: 11px;" onclick="changeUserPersonaAvatar()">点击设置头像</div>
+        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+            <div id="edit-user-persona-avatar-display" style="width:70px; height:70px; border-radius:10px; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#999; overflow:hidden; border:1px solid #ddd;" onclick="changeUserPersonaAvatar()">点击设置头像</div>
         </div>
-        
+
         <div style="margin-bottom: 15px;">
-            <label style="font-size: 12px; color: #666;">面具名字</label>
-            <input type="text" id="edit-user-persona-name" style="width: 100%; border: none; border-bottom: 1px solid #ccc; padding: 8px 0; font-size: 14px; outline: none; background: transparent;" placeholder="比如：霸道总裁、傲娇校花...">
+            <label style="font-size: 13px; color: #666; display:block; margin-bottom:5px;">人设名字 (如：宝贝、哥哥、他的前女友)</label>
+            <input type="text" id="edit-user-persona-name" style="width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; outline: none; font-size: 15px;">
         </div>
-        
+
         <div style="margin-bottom: 20px;">
-            <label style="font-size: 12px; color: #666;">具体身份背景描述 (告诉AI你是谁)</label>
-            <textarea id="edit-user-persona-content" style="width: 100%; height: 110px; border: 1px dashed #ccc; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; background: rgba(255,255,255,0.5); margin-top: 5px;" placeholder="描述你的身份背景。例如：你是一个家财万贯但体弱多病的少爷，非常依赖当前聊天的AI角色..."></textarea>
+            <label style="font-size: 13px; color: #666; display:block; margin-bottom:5px;">详细人设背景 (写在这里AI会照着演)</label>
+            <textarea id="edit-user-persona-content" style="width: 100%; height: 120px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; outline: none; font-size: 14px; resize:none; line-height:1.5;" placeholder="例如：我是他失散多年的青梅竹马，性格比较内向害羞..."></textarea>
         </div>
 
         <div style="display: flex; gap: 10px;">
-            <button class="wx-btn" style="flex: 1; background: rgba(0,0,0,0.05); color: #666; margin-bottom: 0;" onclick="document.getElementById('user-persona-edit-modal').style.display = 'none'">撤退</button>
-            <button class="wx-btn" style="flex: 1; background: #3498db; color: white; border: none; margin-bottom: 0;" onclick="saveUserPersona()">生成面具</button>
+            <button class="wx-btn wx-btn-recharge" style="flex: 1; margin-bottom: 0;" onclick="saveUserPersona()">保存人设</button>
+            <button class="wx-btn" style="flex: 1; background: #eee; color: #666; margin-bottom: 0;" onclick="document.getElementById('user-persona-edit-modal').style.display='none'">取消</button>
         </div>
     </div>
 </div>
 
-<!-- 3. 在角色前应用人设时的选择列表弹窗 -->
-<div id="user-persona-select-modal" class="glass-modal" style="z-index: 9600;">
-    <div class="glass-card" style="width: 300px; max-height: 80%; padding: 20px; border-radius: 15px; overflow-y: auto;">
-        <h3 style="text-align: center; margin-bottom: 15px; color:#3498db;">我在此角色眼里的身份</h3>
-        <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 15px;">点击选中，AI将永远用以下视角看待你</p>
-        
-        <div id="user-persona-select-list" style="display: flex; flex-direction: column;">
-            <!-- 这里通过上面的代码动态渲染 -->
+<!-- 好友设置中的人设选择弹窗 -->
+<div id="user-persona-select-modal" class="glass-modal" style="z-index: 10000;">
+    <div class="glass-card" style="width: 85%; padding: 20px; background: white;">
+        <h3 style="text-align: center; margin-bottom: 20px; font-size: 17px;">选择我在此角色面前的人设</h3>
+        <div id="user-persona-select-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+            <!-- 这里会动态生成已保存的人设列表 -->
         </div>
-        
-        <div style="text-align: center; margin-top: 15px;">
-            <button class="wx-btn" style="width: 100%; background: #eee; color: #666; margin-bottom: 0;" onclick="document.getElementById('user-persona-select-modal').style.display = 'none'">返回</button>
-        </div>
+        <div style="text-align:center; color:#576b95; font-size:14px; cursor:pointer;" onclick="document.getElementById('user-persona-select-modal').style.display='none'">取消选择</div>
     </div>
 </div>
 
 <input type="file" id="user-persona-avatar-upload" style="display:none" accept="image/*">
-<!-- === User人设相关的新页面和弹窗结束 === -->
 </body>
 </html>
