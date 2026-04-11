@@ -2097,7 +2097,16 @@ const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
         frequency_penalty: 1.0   // 惩罚频繁出现的词汇
     })
 });
-                const data = await res.json();
+                                const data = await res.json();
+                
+                // 新增报错拦截，显示具体原因
+                if (data.error) {
+                    throw new Error(data.error.message || JSON.stringify(data.error));
+                }
+                if (!data.choices || data.choices.length === 0) {
+                    throw new Error("API未返回有效内容，请检查Key余额或模型名称是否填写正确");
+                }
+                
                 let rawContent = data.choices[0].message.content;
 
 // --- 处理 AI 支付逻辑 ---
@@ -2387,8 +2396,14 @@ if (sub && document.visibilityState !== 'visible') {
                     body: JSON.stringify({ model: aiConfig.model, messages: [ { role: "system", content: sysPrompt }, { role: "user", content: "对话内容：\n" + msgContent } ] })
                 });
                 const data = await res.json();
-                if (data.choices && data.choices[0]) {
-                    const summary = data.choices[0].message.content.trim();
+
+// 新增报错拦截
+if (data.error) {
+    throw new Error(data.error.message);
+}
+
+if (data.choices && data.choices.length > 0) {
+    const summary = data.choices[0].message.content.trim();
                     f.longMemory = (f.longMemory ? f.longMemory + "\n" : "") + `[${new Date().toLocaleString()}总结]: ${summary}`;
                     f.lastSummaryIdx = history.length;
                     document.getElementById('long-memory-text').value = f.longMemory;
@@ -2448,9 +2463,16 @@ if (momentsBg) {
                     let p = type === 'comment' ? `好友 ${myInfo.name} 朋友圈回复你：“${userText}”。回复他。` : type === 'new_post' ? `好友 ${myInfo.name} 发动态：“${m.text}”。回复他。` : `内容：“${m.text}”。`;
                     const sys = `# Role\n模拟[${f.name}]，人设：${f.persona}。\n聊天记录：\n${h || "无"}\n\n# 任务\n写一条朋友圈评论（15字内）。禁止AI腔。`;
                     try {
-                        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, { method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, {role: "user", content: p}] }) });
-                        const data = await res.json(); const aiC = data.choices[0].message.content.trim();
-                        if(!m.comments) m.comments = []; m.comments.push({ name: f.name, text: aiC, replyTo: myInfo.name }); saveData(); renderMoments();
+                        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, { method: 'POST', headers: { 'Authorization': 'Bearer '+aiConfig.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: aiConfig.model, messages: [{role: "system", content: sys}, {role: "user", content: p}] }) });
+const data = await res.json(); 
+
+// 朋友圈逻辑拦截
+if (data.choices && data.choices.length > 0) {
+    const aiC = data.choices[0].message.content.trim();
+    if(!m.comments) m.comments = []; 
+    m.comments.push({ name: f.name, text: aiC, replyTo: myInfo.name }); 
+    saveData(); renderMoments();
+}
                     } catch (e) {}
                 }
             }
