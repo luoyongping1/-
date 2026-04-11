@@ -2404,7 +2404,11 @@ if (sub && document.visibilityState !== 'visible') {
             const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : myInfo.name[0];
             document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
             const momentsBg = localStorage.getItem('moments_bg_url');
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`;
+if (momentsBg) {
+    document.getElementById('moments-bg-display').style.backgroundImage = 'url(' + momentsBg + ')';
+    document.getElementById('moments-bg-display').style.backgroundSize = 'cover';
+    document.getElementById('moments-bg-display').style.backgroundPosition = 'center';
+}
             const listArr = [];
             moments.slice().reverse().forEach((m, idx) => {
                 const realIdx = moments.length - 1 - idx;
@@ -2512,7 +2516,20 @@ if (sub && document.visibilityState !== 'visible') {
                 alert('请输入有效的图片 URL');
             }
         }
-        document.getElementById('moments-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { localStorage.setItem('moments_bg_url', e.target.result); renderMoments(); }; reader.readAsDataURL(this.files[0]); } };
+        document.getElementById('moments-bg-upload').onchange = function() {
+    if (this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                localStorage.setItem('moments_bg_url', e.target.result);
+                renderMoments();
+            } catch (err) {
+                alert("图片文件太大了，超出了浏览器的保存限制。请尝试先在手机上把图片截图后上传（截图文件较小），或者使用更小的图片。");
+            }
+        };
+        reader.readAsDataURL(this.files[0]);
+    }
+};
         function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); document.getElementById('worldbook-page').classList.add('active'); }
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
         function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
@@ -3506,7 +3523,13 @@ function toggleTimeAwareness(val) {
             renderContactList(); 
             renderMePage(); 
             const momentsBg = localStorage.getItem('moments_bg_url');
-            if(momentsBg) { const bgEl = document.getElementById('moments-bg-display'); if(bgEl) bgEl.style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`; }
+if (momentsBg) {
+    const bgEl = document.getElementById('moments-bg-display');
+    if (bgEl) {
+        bgEl.style.backgroundImage = 'url(' + momentsBg + ')';
+        bgEl.style.backgroundSize = 'cover';
+    }
+}
         };
         function openBubbleEditor() {
     const friend = friends.find(f => f.name === currentFriendName);
