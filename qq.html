@@ -3391,6 +3391,7 @@ listGroup.innerHTML = `
             <span class="slider"></span>
         </label>
     </div>
+    <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
     <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
 `;
     } else {
@@ -3411,7 +3412,8 @@ listGroup.innerHTML = `
     <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
         value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
 </div>
-<div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
+            <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
+            <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
             <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
             <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
         `;
