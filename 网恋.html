@@ -33,12 +33,12 @@
         .top-nav {
     display: flex; 
     justify-content: space-between; 
-    /* 改为底部对齐 */
-    align-items: flex-end;
-    /* 顶部留出状态栏高度，底部留15像素 */
-    padding: env(safe-area-inset-top) 25px 15px 25px; 
-    /* 自动计算总高度 */
-    height: calc(60px + env(safe-area-inset-top));
+    /* 改为居中对齐，防止按钮太靠顶 */
+    align-items: center;
+    /* 增加顶部的内边距，确保避开手机的时间、电量显示区域 */
+    padding: calc(env(safe-area-inset-top) + 15px) 10px 10px 10px; 
+    /* 将高度调大到 90px，给按钮留出足够空间 */
+    height: calc(90px + env(safe-area-inset-top));
     box-sizing: border-box;
     background: var(--glass);
     backdrop-filter: blur(10px); 
