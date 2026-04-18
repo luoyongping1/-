@@ -730,6 +730,7 @@ gap: 15px;
     <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
     <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
     <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
+    <div id="item-ddp" class="grid-item icon-btn" onclick="openDDPApp()"><span>对对碰背单词</span></div>
 </div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
@@ -754,13 +755,14 @@ gap: 15px;
         <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
 
 <div id="app-overlay" style="display: none;">
-    <iframe id="iframe-qq" src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-xhs" src="书书小红书.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-gacha" src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-self" src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-wl" src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-<iframe id="iframe-checkphone" src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-<iframe id="iframe-shop" src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-qq" data-src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-xhs" data-src="书书小红书.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-gacha" data-src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-self" data-src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-wl" data-src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-checkphone" data-src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-shop" data-src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-ddp" data-src="对对碰背单词.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     
     <div id="worldbook-app" style="display: none;">
     <div class="wb-header">
@@ -1132,13 +1134,19 @@ function initGridSortable() {
 }
 
 function switchAppWindow(targetId) {
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
     });
     document.getElementById('app-overlay').style.display = "block";
     const target = document.getElementById(targetId);
+
+    // 懒加载：如果 iframe 还没有 src，则根据 data-src 设置 src
+    if (target && target.tagName === 'IFRAME' && target.getAttribute('data-src') && !target.getAttribute('src')) {
+        target.src = target.getAttribute('data-src');
+    }
+
     if(targetId === 'worldbook-app') { target.style.display = "flex"; } else { target.style.display = "block"; }
     showBall();
 }
@@ -1149,6 +1157,7 @@ function openGacha() { switchAppWindow("iframe-gacha"); }
 function openSelfApp() { switchAppWindow("iframe-self"); }
 function openWlApp() { switchAppWindow("iframe-wl"); }
 function openShopApp() { switchAppWindow("iframe-shop"); }
+function openDDPApp() { switchAppWindow("iframe-ddp"); }
 function openWorldBook() { switchAppWindow("worldbook-app"); renderWorldBook(); }
 
 function startCheckPhone(name) {
@@ -1166,7 +1175,7 @@ function closeApp() {
     if(isDraggingBall) return;
     document.getElementById('app-overlay').style.display = "none";
     ball.style.display = "none";
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -1520,7 +1529,7 @@ const appNames = {
     'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
     'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡',
     'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器',
-    'item-shop': '购物商城'
+    'item-shop': '购物商城', 'item-ddp': '对对碰背单词'
 };
 function showAppListModal() {
     const container = document.getElementById('app-items-container');
@@ -1797,7 +1806,8 @@ window.onload = function() {
         { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>` },
         { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>` },
         { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>` },
-        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>` }
+        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>` },
+        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" onclick="openDDPApp()"><span>对对碰背单词</span></div>` }
     ];
 
     defaultApps.forEach(app => {
