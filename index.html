@@ -139,6 +139,17 @@ input, textarea {
     overflow: visible !important;
 }
 
+.grid-item.dragging {
+    z-index: 9999 !important;
+    opacity: 0.8;
+    transform: scale(1.05);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: fixed !important; 
+    pointer-events: none;
+    /* 保持原有比例，不强制死宽高，由脚本动态处理 */
+    margin: 0 !important;
+    transition: transform 0.1s;
+}
 /* 拖拽时给下方图标一个稍微位移的预感（可选，增加流畅感） */
 .grid-item {
     transition: transform 0.3s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.2s;
@@ -1031,16 +1042,14 @@ async function handlePaste(targetId) {
 
 function initGridSortable() {
     window.oncontextmenu = function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    };
-
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+};
     let draggingItem = null;
     let startX, startY;
     let moveDist = 0;
-    let dragClone = null; // 用克隆体来显示拖拽中的图标，原图标保持在原位占位
     let initialRect = null;
 
     document.addEventListener('touchstart', (e) => {
@@ -1048,156 +1057,99 @@ function initGridSortable() {
         if (item || e.target.classList.contains('content')) {
             longPressTimer = setTimeout(() => { enterEditMode(); }, 800);
         }
-        // 不允许拖拽时间组件、底栏图标
-        if (!item || item.id === 'item-time') return;
-        if (!item.parentElement || !item.parentElement.classList.contains('content')) return;
-
+        if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
         draggingItem = item;
         initialRect = draggingItem.getBoundingClientRect();
         const touch = e.touches[0];
-        startX = touch.clientX;
+        startX = touch.clientX; 
         startY = touch.clientY;
         moveDist = 0;
     }, {passive: false});
 
     document.addEventListener('touchmove', (e) => {
-        clearTimeout(longPressTimer);
+        clearTimeout(longPressTimer); 
         if (!draggingItem) return;
-
         const touch = e.touches[0];
         const dx = touch.clientX - startX;
         const dy = touch.clientY - startY;
         moveDist = Math.hypot(dx, dy);
-
         if (moveDist > 10) {
-            e.preventDefault();
-
-            // 第一次超过阈值时，创建克隆体
-            if (!dragClone) {
-                // 记录原始位置（用于克隆体定位）
-                initialRect = draggingItem.getBoundingClientRect();
-
-                // 创建一个视觉上的克隆体用于跟随手指
-                dragClone = draggingItem.cloneNode(true);
-                dragClone.style.position = 'fixed';
-                dragClone.style.width = initialRect.width + 'px';
-                dragClone.style.height = initialRect.height + 'px';
-                dragClone.style.left = initialRect.left + 'px';
-                dragClone.style.top = initialRect.top + 'px';
-                dragClone.style.zIndex = '9999';
-                dragClone.style.opacity = '0.85';
-                dragClone.style.transform = 'scale(1.08)';
-                dragClone.style.boxShadow = '0 20px 50px rgba(0,0,0,0.5)';
-                dragClone.style.pointerEvents = 'none';
-                dragClone.style.transition = 'none';
-                dragClone.style.margin = '0';
-                dragClone.style.borderRadius = '22px';
-                document.body.appendChild(dragClone);
-
-                // 原图标变半透明作为占位符
-                draggingItem.style.opacity = '0.3';
-            }
-
-            // 克隆体跟随手指移动，以手指为中心
-            dragClone.style.left = (touch.clientX - initialRect.width / 2) + 'px';
-            dragClone.style.top = (touch.clientY - initialRect.height / 2) + 'px';
-
-            // 切换页面逻辑（拖到屏幕边缘时翻页）
+            e.preventDefault(); 
+            draggingItem.classList.add('dragging');
+            draggingItem.style.width = initialRect.width + 'px';
+            draggingItem.style.height = initialRect.height + 'px';
+            draggingItem.style.left = (touch.clientX - initialRect.width / 2) + 'px';
+            draggingItem.style.top = (touch.clientY - initialRect.height / 2) + 'px';
+            
             const screenWidth = window.innerWidth;
             const wrapper = document.getElementById('swiper-wrapper');
             const pageDots = document.querySelectorAll('.dot');
             const grid1 = document.getElementById('main-grid');
             const grid2 = document.getElementById('page-2');
-
+            
             if (touch.clientX > screenWidth - 40 && currentPageIndex === 0) {
                 currentPageIndex = 1;
-                wrapper.style.transform = `translateX(-50%)`;
+                wrapper.style.transform = `translateX(-50%)`; 
                 pageDots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
-                if (draggingItem.parentElement !== grid2) grid2.appendChild(draggingItem);
-            } else if (touch.clientX < 40 && currentPageIndex === 1) {
+                if (draggingItem.parentElement !== grid2) grid2.appendChild(draggingItem); 
+            } 
+            else if (touch.clientX < 40 && currentPageIndex === 1) {
                 currentPageIndex = 0;
-                wrapper.style.transform = `translateX(0%)`;
+                wrapper.style.transform = `translateX(0%)`; 
                 pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
-                if (draggingItem.parentElement !== grid1) grid1.appendChild(draggingItem);
+                if (draggingItem.parentElement !== grid1) grid1.appendChild(draggingItem); 
             }
-
-            // 实时预览：找到手指下方的格子，把原图标移动到那个格子附近作为占位预览
-            const currentContainer = draggingItem.parentElement;
-            const gridRect = currentContainer.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(currentContainer);
-            const paddingLeft = parseFloat(computedStyle.paddingLeft);
-            const paddingTop = parseFloat(computedStyle.paddingTop);
-            const gap = 15;
-            // 每列宽度：总宽度减去左右padding再减去3个gap，除以4列
-            const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
-            // 每行高度
-            const rowHeight = colWidth + 25;
-
-            let col = Math.round((touch.clientX - gridRect.left - paddingLeft) / (colWidth + gap)) + 1;
-            let row = Math.round((touch.clientY - gridRect.top - paddingTop) / (rowHeight + gap)) + 1;
-
-            // 根据组件占几列限制col范围
-            const spanCols = draggingItem.classList.contains('widget-ios-info') ? 4 :
-                             (draggingItem.classList.contains('left-widget') || draggingItem.classList.contains('widget-ios-photo') || draggingItem.classList.contains('progress-widgets')) ? 2 : 1;
-            col = Math.max(1, Math.min(4 - spanCols + 1, col));
-            row = Math.max(2, Math.min(6, row)); // row从2开始，避免和时钟重叠
-
-            draggingItem.style.gridColumnStart = col;
-            draggingItem.style.gridRowStart = row;
         }
     }, {passive: false});
 
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(longPressTimer);
-        if (!draggingItem) return;
+document.addEventListener('touchend', (e) => {
+    clearTimeout(longPressTimer);
+    if (!draggingItem) return;
 
-        if (moveDist > 10 && dragClone) {
-            const touch = e.changedTouches[0];
-            const currentContainer = draggingItem.parentElement;
-            const gridRect = currentContainer.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(currentContainer);
-            const paddingLeft = parseFloat(computedStyle.paddingLeft);
-            const paddingTop = parseFloat(computedStyle.paddingTop);
-            const gap = 15;
-            const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
-            const rowHeight = colWidth + 25;
+    if (moveDist > 10) {
+        const touch = e.changedTouches[0];
+        const currentContainer = draggingItem.parentElement;
+        const gridRect = currentContainer.getBoundingClientRect();
+        
+        // 获取当前容器的精确间距
+        const gap = 15;
+        const paddingLeft = 20;
+        const paddingTop = parseFloat(window.getComputedStyle(currentContainer).paddingTop);
+        
+        // 重新计算每一格的宽度和高度
+        const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
+        const rowHeight = colWidth + 25; // 这里的 25 是图标下方文字留出的空间
 
-            // 用手指松开时的位置计算目标格子
-            let col = Math.round((touch.clientX - gridRect.left - paddingLeft) / (colWidth + gap)) + 1;
-            let row = Math.round((touch.clientY - gridRect.top - paddingTop) / (rowHeight + gap)) + 1;
+        // 计算手指落在哪一列、哪一行
+        let col = Math.floor((touch.clientX - gridRect.left - paddingLeft + gap/2) / (colWidth + gap)) + 1;
+        let row = Math.floor((touch.clientY - gridRect.top - paddingTop + gap/2) / (rowHeight + gap)) + 1;
+        
+        // 限制范围：列只能是 1-4
+        col = Math.max(1, Math.min(4, col));
+        // 限制范围：行只能是 1-5 (防止钻到底栏后面)
+        row = Math.max(1, Math.min(5, row));
 
-            // 根据组件占几列限制col范围，防止超出屏幕右边
-            const spanCols = draggingItem.classList.contains('widget-ios-info') ? 4 :
-                             (draggingItem.classList.contains('left-widget') || draggingItem.classList.contains('widget-ios-photo') || draggingItem.classList.contains('progress-widgets')) ? 2 : 1;
-            col = Math.max(1, Math.min(4 - spanCols + 1, col));
-            // row最小为2（第1行是时钟），最大为6（防止钻入底栏）
-            row = Math.max(2, Math.min(6, row));
-
-            // 特殊大组件（4列宽）强制从第1列开始
-            if (draggingItem.classList.contains('widget-ios-info')) {
-                col = 1;
-            }
-
-            // 应用最终格子位置
-            draggingItem.style.gridColumnStart = col;
-            draggingItem.style.gridRowStart = row;
-
-            saveAllWidgets();
+        // 特殊大组件强制左对齐
+        if (draggingItem.id === 'item-time' || draggingItem.classList.contains('widget-ios-info')) {
+            col = 1; 
         }
 
-        // 恢复原图标透明度
-        draggingItem.style.opacity = '';
+        // 应用新的格子坐标
+        draggingItem.style.gridColumnStart = col;
+        draggingItem.style.gridRowStart = row;
+        
+        // 保存位置到本地存储
+        saveAllWidgets();
+    }
 
-        // 删除克隆体
-        if (dragClone) {
-            dragClone.remove();
-            dragClone = null;
-        }
-
-        draggingItem = null;
-        moveDist = 0;
-        initialRect = null;
-    });
+    // 恢复拖拽状态
+    draggingItem.classList.remove('dragging');
+    draggingItem.style.left = ''; 
+    draggingItem.style.top = ''; 
+    draggingItem.style.width = ''; 
+    draggingItem.style.height = ''; 
+    draggingItem = null;
+});
 }
 
 function switchAppWindow(targetId) {
