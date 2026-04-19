@@ -73,17 +73,18 @@
     color: var(--text-color);
     overflow: hidden; 
 }
-/* 除了输入框和文本域，其他地方禁止选中和弹出系统菜单，确保粘贴可用 */
-*:not(input):not(textarea) {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
+
 * {
     -webkit-tap-highlight-color: transparent;
+}
+
+input, textarea {
+    -webkit-user-select: text !important;
+    -khtml-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
 }
 
         :root {
@@ -107,16 +108,21 @@
 
         /* --- 核心：网格布局容器 --- */
                             .content {
-position: relative;
-z-index: 2;
-padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px) 20px; 
-height: 100%;
-display: grid;
-grid-template-columns: repeat(4, 1fr);
-grid-auto-rows: minmax(calc((100vw - 85px) / 4 + 20px), min-content); 
-gap: 15px;
+    position: relative;
+    z-index: 2;
+    /* 顶部预留安全距离，底部预留 150px 避开底栏 */
+    padding: calc(env(safe-area-inset-top) + 20px) 20px 150px 20px; 
+    height: 100vh;
+    width: 100%;
+    display: grid;
+    /* 严格平分4列 */
+    grid-template-columns: repeat(4, 1fr);
+    /* 自动计算行高，保证图标是正方形排列 */
+    grid-auto-rows: calc((100vw - 40px - 45px) / 4 + 25px); 
+    gap: 15px;
     box-sizing: border-box;
     align-content: start;
+    overflow-y: hidden; /* 防止页面上下乱滚 */
 }
 
         .overlay {
@@ -239,13 +245,13 @@ gap: 15px;
         .bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.2); margin-top: 5px; border-radius: 2px; }
         .bar-fill { height: 100%; background: var(--accent-color); border-radius: 2px; }
 
-        #settings-panel {
-            position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%;
-            background: #ffffff; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-top-left-radius: 30px; border-top-right-radius: 30px;
-            padding: 20px; box-sizing: border-box; overflow-y: auto;
-            color: #333; 
-        }
+#settings-panel {
+    position: absolute; bottom: -100%; left: 0; width: 100%; height: 85%;
+    background: #ffffff; z-index: 10; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-top-left-radius: 30px; border-top-right-radius: 30px;
+    padding: 20px; box-sizing: border-box; overflow-y: auto;
+    color: #333; 
+}
         #settings-panel.active { bottom: 0; }
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #000; }
         .setting-group { margin-bottom: 15px; }
@@ -421,23 +427,23 @@ gap: 15px;
 .dot { transition: opacity 0.3s; }
 .dot.active { opacity: 1 !important; transform: scale(1.2); }
 .dock {
-    position: absolute;
-    bottom: calc(25px + env(safe-area-inset-bottom));
+    position: fixed; /* 改为 fixed 保证不随页面滚动 */
+    bottom: calc(20px + env(safe-area-inset-bottom));
     left: 15px;
     right: 15px;
-    height: 110px; 
+    height: 100px; 
     background: rgba(255, 255, 255, 0.25);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border-radius: 35px;
+    border-radius: 30px;
     display: flex;
     justify-content: space-evenly;
     align-items: center;
-    z-index: 5;
+    z-index: 1000; /* 确保层级高于图标 */
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-sizing: border-box;
     padding: 0 10px;
-    padding-bottom: 15px; 
+    pointer-events: auto; /* 确保底栏图标可以点击 */
 }
 .dock .icon-btn {
     width: 65px !important;
@@ -729,6 +735,7 @@ gap: 15px;
     <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
     <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
     <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
+    <div id="item-ddp" class="grid-item icon-btn" onclick="openDDPApp()"><span>对对碰背单词</span></div>
 </div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
@@ -753,13 +760,14 @@ gap: 15px;
         <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
 
 <div id="app-overlay" style="display: none;">
-    <iframe id="iframe-qq" src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-xhs" src="书书小红书.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-gacha" src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-self" src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-    <iframe id="iframe-wl" src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-<iframe id="iframe-checkphone" src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-<iframe id="iframe-shop" src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-qq" data-src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-xhs" data-src="书书小红书.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-gacha" data-src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-self" data-src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-wl" data-src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-checkphone" data-src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-shop" data-src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-ddp" data-src="对对碰背单词.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     
     <div id="worldbook-app" style="display: none;">
     <div class="wb-header">
@@ -824,18 +832,12 @@ gap: 15px;
             </div>
             <div id="api-inputs" style="display:none">
     <div class="setting-group">
-        <label>API URL (双击框内或点右侧粘贴)</label>
-        <div style="display:flex; gap:8px;">
-            <input type="text" id="api-url" placeholder="https://api.openai.com/v1" ondblclick="handlePaste('api-url')" style="margin-bottom:0;">
-            <button class="action-btn" onclick="handlePaste('api-url')" style="width:70px; margin:0; font-size:12px; background:#4facfe;">粘贴</button>
-        </div>
+        <label>API URL</label>
+        <input type="text" id="api-url" placeholder="https://api.openai.com/v1">
     </div>
     <div class="setting-group">
-        <label>API密钥 (双击框内或点右侧粘贴)</label>
-        <div style="display:flex; gap:8px;">
-            <input type="password" id="api-key" placeholder="Key" ondblclick="handlePaste('api-key')" style="margin-bottom:0;">
-            <button class="action-btn" onclick="handlePaste('api-key')" style="width:70px; margin:0; font-size:12px; background:#4facfe;">粘贴</button>
-        </div>
+        <label>API密钥</label>
+        <input type="password" id="api-key" placeholder="Key">
     </div>
                 <div class="setting-group">
                     <label>模型选择</label>
@@ -1039,7 +1041,12 @@ async function handlePaste(targetId) {
         }
 
 function initGridSortable() {
-    window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
+    window.oncontextmenu = function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+};
     let draggingItem = null;
     let startX, startY;
     let moveDist = 0;
@@ -1095,7 +1102,7 @@ function initGridSortable() {
         }
     }, {passive: false});
 
-    document.addEventListener('touchend', (e) => {
+document.addEventListener('touchend', (e) => {
     clearTimeout(longPressTimer);
     if (!draggingItem) return;
 
@@ -1103,42 +1110,62 @@ function initGridSortable() {
         const touch = e.changedTouches[0];
         const currentContainer = draggingItem.parentElement;
         const gridRect = currentContainer.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(currentContainer);
-        const paddingLeft = parseFloat(computedStyle.paddingLeft);
-        const paddingTop = parseFloat(computedStyle.paddingTop);
+        
+        // 获取当前容器的精确间距
         const gap = 15;
+        const paddingLeft = 20;
+        const paddingTop = parseFloat(window.getComputedStyle(currentContainer).paddingTop);
+        
+        // 重新计算每一格的宽度和高度
         const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
-        const rowHeight = colWidth + 25;
+        const rowHeight = colWidth + 25; // 这里的 25 是图标下方文字留出的空间
 
+        // 计算手指落在哪一列、哪一行
         let col = Math.floor((touch.clientX - gridRect.left - paddingLeft + gap/2) / (colWidth + gap)) + 1;
         let row = Math.floor((touch.clientY - gridRect.top - paddingTop + gap/2) / (rowHeight + gap)) + 1;
         
+        // 限制范围：列只能是 1-4
         col = Math.max(1, Math.min(4, col));
-        row = Math.max(1, row);
+        // 限制范围：行只能是 1-5 (防止钻到底栏后面)
+        row = Math.max(1, Math.min(5, row));
 
+        // 特殊大组件强制左对齐
         if (draggingItem.id === 'item-time' || draggingItem.classList.contains('widget-ios-info')) {
             col = 1; 
         }
 
+        // 应用新的格子坐标
         draggingItem.style.gridColumnStart = col;
         draggingItem.style.gridRowStart = row;
+        
+        // 保存位置到本地存储
         saveAllWidgets();
     }
 
+    // 恢复拖拽状态
     draggingItem.classList.remove('dragging');
-    draggingItem.style.left = ''; draggingItem.style.top = ''; draggingItem.style.width = ''; draggingItem.style.height = ''; 
+    draggingItem.style.left = ''; 
+    draggingItem.style.top = ''; 
+    draggingItem.style.width = ''; 
+    draggingItem.style.height = ''; 
     draggingItem = null;
 });
 }
 
 function switchAppWindow(targetId) {
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
     });
     document.getElementById('app-overlay').style.display = "block";
     const target = document.getElementById(targetId);
+
+    // 懒加载：如果 iframe 还没有 src，则根据 data-src 设置 src
+    if (target && target.tagName === 'IFRAME' && target.getAttribute('data-src') && !target.getAttribute('src')) {
+        target.src = target.getAttribute('data-src');
+    }
+
     if(targetId === 'worldbook-app') { target.style.display = "flex"; } else { target.style.display = "block"; }
     showBall();
 }
@@ -1149,7 +1176,9 @@ function openGacha() { switchAppWindow("iframe-gacha"); }
 function openSelfApp() { switchAppWindow("iframe-self"); }
 function openWlApp() { switchAppWindow("iframe-wl"); }
 function openShopApp() { switchAppWindow("iframe-shop"); }
+function openDDPApp() { switchAppWindow("iframe-ddp"); }
 function openWorldBook() { switchAppWindow("worldbook-app"); renderWorldBook(); }
+function openDDPApp() { switchAppWindow("iframe-ddp"); }
 
 function startCheckPhone(name) {
     document.getElementById('friend-selector-modal').style.display = 'none';
@@ -1166,7 +1195,7 @@ function closeApp() {
     if(isDraggingBall) return;
     document.getElementById('app-overlay').style.display = "none";
     ball.style.display = "none";
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -1520,7 +1549,7 @@ const appNames = {
     'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
     'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡',
     'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器',
-    'item-shop': '购物商城'
+    'item-shop': '购物商城', 'item-ddp': '对对碰背单词'
 };
 function showAppListModal() {
     const container = document.getElementById('app-items-container');
@@ -1797,7 +1826,8 @@ window.onload = function() {
         { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>` },
         { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>` },
         { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>` },
-        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>` }
+        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>` },
+        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" onclick="openDDPApp()"><span>对对碰背单词</span></div>` }
     ];
 
     defaultApps.forEach(app => {
