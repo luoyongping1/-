@@ -68,8 +68,8 @@
     padding: 0;
     display: block; 
     min-height: 100vh;
-    background-color: #000; 
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #f7f7f7; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color: var(--text-color);
     overflow: hidden; 
 }
@@ -88,42 +88,47 @@ input, textarea {
 }
 
         :root {
-            --bg-color: #1a1a1a;
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --text-color: #ffffff;
-            --accent-color: #ff6b6b;
-            --blue-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --bg-color: #f8f9fa;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --text-color: #555555; /* 柔和的深灰色 */
+            --accent-color: #b8c6cf; /* 莫兰迪蓝色调 */
+            --blue-gradient: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+            --soft-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
         }
 
         .phone-container {
             width: 100%;        
             height: 100vh;      
-            background: var(--bg-color);
+            background: linear-gradient(180deg, #fdfbfb 0%, #ebedee 100%);
             position: relative;
             overflow: hidden;
             background-size: cover;
             background-position: center;
-            background-image: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=1000');
+            /* 替换为手机主页面背景图 */
+            background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/YkOI/660X1434/image_1776692418145.png/webp'); 
         }
 
         /* --- 核心：网格布局容器 --- */
-                            .content {
-    position: relative;
-    z-index: 2;
-    /* 顶部预留安全距离，底部预留 150px 避开底栏 */
-    padding: calc(env(safe-area-inset-top) + 20px) 20px 150px 20px; 
-    height: 100vh;
-    width: 100%;
-    display: grid;
-    /* 严格平分4列 */
-    grid-template-columns: repeat(4, 1fr);
-    /* 自动计算行高，保证图标是正方形排列 */
-    grid-auto-rows: calc((100vw - 40px - 45px) / 4 + 25px); 
-    gap: 15px;
-    box-sizing: border-box;
-    align-content: start;
-    overflow-y: hidden; /* 防止页面上下乱滚 */
-}
+        .content {
+            position: relative;
+            z-index: 2;
+            padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 60px) 20px;
+            height: 100%;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: auto; /* 允许第一行（时间行）根据内容自适应高度，防止重叠 */
+            /* 固定行高：(屏幕宽-边距-间隙)/4 + 28px标签空间 */
+            grid-auto-rows: calc((100vw - 85px) / 4 + 28px); 
+            gap: 15px;
+            box-sizing: border-box;
+            align-content: start;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .content::-webkit-scrollbar { display: none; }
 
         .overlay {
             position: absolute;
@@ -133,11 +138,13 @@ input, textarea {
         }
 
         .grid-item {
-    position: relative;
-    transition: transform 0.2s, box-shadow 0.2s;
-    touch-action: none;
-    overflow: visible !important;
-}
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: none;
+            overflow: visible !important;
+            align-self: start; /* 防止在大型组件行内被拉伸变大 */
+            width: 100%;
+        }
 
 .grid-item.dragging {
     z-index: 9999 !important;
@@ -157,22 +164,40 @@ input, textarea {
 
         .time-widget { 
             grid-column: span 4; 
+            grid-row: span 1; 
             text-align: center; 
             display: flex; 
             flex-direction: column; 
             justify-content: center;
+            color: var(--text-color);
+            padding: 20px 0;
+            margin-top: 10px;
+            margin-bottom: 20px; /* 适度的底部外边距，在 auto 行高下可微调与后排图标的间距 */
         }
-        .date-str { font-size: 14px; opacity: 0.9; }
-        .clock-str { font-size: 56px; font-weight: bold; }
+        .date-str { 
+            font-size: 13px; 
+            letter-spacing: 2px; 
+            font-weight: 300; 
+            text-transform: uppercase;
+            opacity: 0.8; 
+        }
+        .clock-str { 
+            font-size: 72px; 
+            font-weight: 200; 
+            margin-top: -5px;
+            letter-spacing: -2px;
+        }
 
         .left-widget {
     grid-column: span 2;
     grid-row: span 2;
     aspect-ratio: 1 / 1; 
     background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 25px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+            border: var(--glass-border);
+            box-shadow: var(--soft-shadow);
+            border-radius: 28px;
             position: relative;
             overflow: hidden;
             background-size: cover;
@@ -193,36 +218,41 @@ input, textarea {
         }
         #battery-fill { height: 100%; background: #4cd137; width: 50%; border-radius: 2px; transition: width 0.5s; }
 
-                .icon-btn {
-    grid-column: span 1;
-    grid-row: span 1;
-    width: 100%;
-    aspect-ratio: 1 / 1; 
-    background: var(--glass-bg);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 22px; 
-    display: flex; 
-    justify-content: center;
-    align-items: center; 
-    backdrop-filter: blur(10px);
-    cursor: pointer; 
-    background-size: cover; 
-    background-position: center;
-    background-repeat: no-repeat;
-    box-sizing: border-box;
-    position: relative;
-    overflow: visible; 
-    margin-bottom: 25px; 
-}
+        .icon-btn {
+            grid-column: span 1;
+            grid-row: span 1;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: var(--glass-bg);
+            border: var(--glass-border);
+            border-radius: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            cursor: pointer;
+            background-size: 60%;
+            background-position: center;
+            background-repeat: no-repeat;
+            box-sizing: border-box;
+            position: relative;
+            overflow: visible;
+            margin-bottom: 30px; 
+            user-select: none;
+            box-shadow: var(--soft-shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
 .icon-btn span {
     position: absolute;
-    bottom: -22px; 
+    bottom: -24px; 
     width: 100%;
     text-align: center;
     font-size: 11px;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8); 
+    font-weight: 300;
+    color: var(--text-color);
+    text-shadow: none; 
     white-space: nowrap; 
 }
         .icon-btn:active { transform: scale(0.9); }
@@ -233,11 +263,14 @@ input, textarea {
     aspect-ratio: 1 / 1; 
     display: flex; flex-direction: column; gap: 10px; 
     background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            padding: 15px;
-            border-radius: 25px;
-            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 28px;
+            border: var(--glass-border);
+            box-shadow: var(--soft-shadow);
             justify-content: center;
+            color: var(--text-color);
         }
         .progress-item {
             width: 100%; font-size: 11px; text-align: right;
@@ -424,35 +457,37 @@ input, textarea {
 .content.page {
     box-sizing: border-box;
 }
-.dot { transition: opacity 0.3s; }
-.dot.active { opacity: 1 !important; transform: scale(1.2); }
+.dot { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.dot.active { opacity: 0.8 !important; transform: scale(1.1); background: var(--text-color) !important; }
 .dock {
-    position: fixed; /* 改为 fixed 保证不随页面滚动 */
+    position: absolute;
     bottom: calc(20px + env(safe-area-inset-bottom));
-    left: 15px;
-    right: 15px;
+    left: 20px;
+    right: 20px;
     height: 100px; 
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    border-radius: 38px;
     display: flex;
     justify-content: space-evenly;
     align-items: center;
-    z-index: 1000; /* 确保层级高于图标 */
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 5;
+    border: var(--glass-border);
     box-sizing: border-box;
-    padding: 0 10px;
-    pointer-events: auto; /* 确保底栏图标可以点击 */
+    padding: 0 15px;
+    padding-bottom: 5px; 
+    box-shadow: 0 15px 40px rgba(0,0,0,0.06);
 }
 .dock .icon-btn {
-    width: 65px !important;
-    height: 65px !important;
+    width: 64px !important;
+    height: 64px !important;
     margin: 0 !important;
-    margin-bottom: 0 !important; 
-    border-radius: 18px;
+    margin-bottom: 12px !important; 
+    border-radius: 20px;
     font-size: 12px;
     position: relative; 
+    box-shadow: none; /* Dock内部图标不需要额外投影，保持干净 */
 }
 .edit-mode-controls {
     position: fixed;
@@ -492,12 +527,12 @@ input, textarea {
     max-height: 80vh; overflow-y: auto;
 }
 .picker-item {
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.3);
+    border: 1px solid rgba(255,255,255,0.5);
     border-radius: 20px; 
     padding: 20px 10px;
     text-align: center; 
-    color: white;
+    color: var(--text-color);
     font-size: 13px;
     display: flex;
     flex-direction: column;
@@ -537,16 +572,17 @@ input, textarea {
     grid-column: span 4;
     grid-row: span 2;
     width: 100%;
-    height: 245px; /* 增加了总高度，确保能放下更高的背景图 */
-    background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 30px;
+    height: 100%; 
+    background: var(--glass-bg);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 32px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-color);
+    border: var(--glass-border);
+    box-shadow: var(--soft-shadow);
     box-sizing: border-box;
     position: relative;
 }
@@ -586,9 +622,9 @@ input, textarea {
 }
 .ios-nickname {
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     padding-bottom: 5px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    color: var(--text-color);
 }
 .ios-status-row {
     display: flex;
@@ -597,20 +633,22 @@ input, textarea {
     align-items: center;
 }
 .ios-pill-group {
-    background: rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.05);
     border-radius: 20px;
     padding: 4px 12px;
     display: flex;
     gap: 10px;
     font-size: 11px;
     align-items: center;
+    color: var(--text-color);
 }
 .ios-time-pill {
-    background: rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.05);
     border-radius: 20px;
     padding: 4px 12px;
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 500;
+    color: var(--text-color);
 }
 .ios-calendar-row {
     display: flex;
@@ -626,6 +664,7 @@ input, textarea {
     bottom: -8px;
     left: 50%;
     transform: translateX(-50%);
+    color: var(--accent-color);
 }
 .widget-footer-label {
     text-align: center;
@@ -638,16 +677,17 @@ input, textarea {
 .widget-ios-photo {
     grid-column: span 2;
     grid-row: span 2;
-    width: 155px; 
-    height: 155px;
+    width: 100%; 
+    aspect-ratio: 1 / 1;
     background: #fff;
-    border-radius: 20px;
-    padding: 10px 10px 25px 10px; 
+    border-radius: 24px;
+    padding: 8px 8px 24px 8px; 
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: var(--soft-shadow);
     position: relative;
+    border: 1px solid #f0f0f0;
 }
 .ios-photo-content {
     width: 100%;
@@ -729,26 +769,26 @@ input, textarea {
         <div class="date-str" id="date-display"></div>
         <div class="clock-str" id="clock-display">00:00</div>
     </div>
-    <div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>
-    <div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>
-    <div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>
-    <div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>
-    <div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>
-    <div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>
-    <div id="item-ddp" class="grid-item icon-btn" onclick="openDDPApp()"><span>对对碰背单词</span></div>
+    <div id="item-xhs" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/K1R2/1080X1080/image_1776692583750.png/webp') !important; background-size: cover !important;" onclick="openApp()"><span>小红书</span></div>
+    <div id="item-gacha" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp') !important; background-size: cover !important;" onclick="openGacha()"><span>扭蛋机</span></div>
+    <div id="item-self" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openSelfApp()"><span>自律打卡</span></div>
+    <div id="item-checkphone" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/cJUV/1080X1080/image_1776692589613.png/webp') !important; background-size: cover !important;" onclick="showFriendSelector()"><span>查手机</span></div>
+    <div id="item-wl" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp') !important; background-size: cover !important;" onclick="openWlApp()"><span>网恋模拟</span></div>
+    <div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>
+    <div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>
 </div>
 
-<div class="content" id="page-2" style="width: 50%; flex-shrink: 0; padding-top: 60px;">
+<div class="content" id="page-2" style="width: 50%; flex-shrink: 0;">
     <!-- 桌面初始为空，原本图标可通过编辑模式加回 -->
 </div>
 
     </div>
 
 <div class="dock">
-    <div id="item-wb" class="icon-btn" onclick="openWorldBook()"><span>世界书</span></div>
-    <div id="item-qq" class="icon-btn" onclick="openQQ()"><span>QQ</span></div>
-    <div id="item-face" class="icon-btn" onclick="openSettings('appearance')"><span>外观</span></div>
-<div id="item-set" class="icon-btn" onclick="openSettings('api')"><span>设置</span></div>
+    <div id="item-wb" class="icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openWorldBook()"><span>世界书</span></div>
+    <div id="item-qq" class="icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vbJJ/1080X1080/image_1776692512012.png/webp') !important; background-size: cover !important;" onclick="openQQ()"><span>QQ</span></div>
+    <div id="item-face" class="icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp') !important; background-size: cover !important;" onclick="openSettings('appearance')"><span>外观</span></div>
+<div id="item-set" class="icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openSettings('api')"><span>设置</span></div>
 </div>
 
 <div id="page-dots" style="position: absolute; bottom: calc(135px + env(safe-area-inset-bottom)); width: 100%; display: flex; justify-content: center; gap: 8px; pointer-events: none;">
@@ -1102,54 +1142,101 @@ function initGridSortable() {
         }
     }, {passive: false});
 
-document.addEventListener('touchend', (e) => {
-    clearTimeout(longPressTimer);
-    if (!draggingItem) return;
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(longPressTimer);
+        if (!draggingItem) return;
 
-    if (moveDist > 10) {
-        const touch = e.changedTouches[0];
-        const currentContainer = draggingItem.parentElement;
-        const gridRect = currentContainer.getBoundingClientRect();
-        
-        // 获取当前容器的精确间距
-        const gap = 15;
-        const paddingLeft = 20;
-        const paddingTop = parseFloat(window.getComputedStyle(currentContainer).paddingTop);
-        
-        // 重新计算每一格的宽度和高度
-        const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
-        const rowHeight = colWidth + 25; // 这里的 25 是图标下方文字留出的空间
+        if (moveDist > 10) {
+            const touch = e.changedTouches[0];
+            const currentContainer = draggingItem.parentElement;
+            const gridRect = currentContainer.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(currentContainer);
+            const paddingLeft = parseFloat(computedStyle.paddingLeft) || 20;
+            const paddingTop = parseFloat(computedStyle.paddingTop) || 20;
+            const gap = 15;
+            const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
+            const rowHeight = colWidth + 28; 
 
-        // 计算手指落在哪一列、哪一行
-        let col = Math.floor((touch.clientX - gridRect.left - paddingLeft + gap/2) / (colWidth + gap)) + 1;
-        let row = Math.floor((touch.clientY - gridRect.top - paddingTop + gap/2) / (rowHeight + gap)) + 1;
-        
-        // 限制范围：列只能是 1-4
-        col = Math.max(1, Math.min(4, col));
-        // 限制范围：行只能是 1-5 (防止钻到底栏后面)
-        row = Math.max(1, Math.min(5, row));
+            let col = Math.floor((touch.clientX - gridRect.left - paddingLeft + gap / 2) / (colWidth + gap)) + 1;
+            let row = Math.floor((touch.clientY - gridRect.top - paddingTop + gap / 2) / (rowHeight + gap)) + 1;
 
-        // 特殊大组件强制左对齐
-        if (draggingItem.id === 'item-time' || draggingItem.classList.contains('widget-ios-info')) {
-            col = 1; 
+            const getWidgetSpan = (el) => {
+                let sx = 1, sy = 1;
+                if (el.id === 'item-time' || el.classList.contains('time-widget') || el.classList.contains('widget-minimal-clock')) { sx = 4; sy = 1; }
+                else if (el.classList.contains('widget-ios-info')) { sx = 4; sy = 2; }
+                else if (el.classList.contains('left-widget') || el.classList.contains('widget-ios-photo') || el.classList.contains('progress-widgets')) { sx = 2; sy = 2; }
+                return { sx, sy };
+            };
+
+            const { sx: spanX, sy: spanY } = getWidgetSpan(draggingItem);
+            col = Math.max(1, Math.min(4 - spanX + 1, col));
+            row = Math.max(1, row);
+            if (spanX === 4) col = 1;
+
+            const inferGridPos = (el, container) => {
+                const r = el.getBoundingClientRect();
+                const cr = container.getBoundingClientRect();
+                const cw = (cr.width - 40 - 45) / 4; 
+                const rh = cw + 28;
+                return {
+                    c: Math.round((r.left - cr.left - 20) / (cw + 15)) + 1,
+                    r: Math.round((r.top - cr.top - 20) / (rh + 15)) + 1,
+                    ...getWidgetSpan(el)
+                };
+            };
+
+            const isAreaOccupied = (c, r, sx, sy, currentItem, container) => {
+                const items = container.querySelectorAll('.grid-item');
+                for (let other of items) {
+                    if (other === currentItem || other.classList.contains('dragging')) continue;
+                    const pos = other.style.gridColumnStart ? 
+                        { c: parseInt(other.style.gridColumnStart), r: parseInt(other.style.gridRowStart), ...getWidgetSpan(other) } :
+                        inferGridPos(other, container);
+                    if (!(c + sx <= pos.c || c >= pos.c + pos.sx || r + sy <= pos.r || r >= pos.r + pos.sy)) return true;
+                }
+                return false;
+            };
+
+            // 碰撞自动移位逻辑：以拖动物品为优先
+            const others = currentContainer.querySelectorAll('.grid-item');
+            others.forEach(other => {
+                if (other === draggingItem) return;
+                const pos = other.style.gridColumnStart ? 
+                    { c: parseInt(other.style.gridColumnStart), r: parseInt(other.style.gridRowStart), ...getWidgetSpan(other) } :
+                    inferGridPos(other, currentContainer);
+
+                if (!(col + spanX <= pos.c || col >= pos.c + pos.sx || row + spanY <= pos.r || row >= pos.r + pos.sy)) {
+                    let newR = pos.r, newC = pos.c;
+                    const { sx: osx, sy: osy } = getWidgetSpan(other);
+                    while (isAreaOccupied(newC, newR, osx, osy, other, currentContainer) || 
+                           !(newC + osx <= col || newC >= col + spanX || newR + osy <= row || newR >= row + spanY)) {
+                        newC++;
+                        if (newC + osx - 1 > 4) { newC = 1; newR++; }
+                    }
+                    other.style.gridColumn = `${newC} / span ${osx}`;
+                    other.style.gridRow = `${newR} / span ${osy}`;
+                    other.style.gridColumnStart = newC;
+                    other.style.gridRowStart = newR;
+                }
+            });
+
+            draggingItem.style.gridColumn = `${col} / span ${spanX}`;
+            draggingItem.style.gridRow = `${row} / span ${spanY}`;
+            draggingItem.style.gridColumnStart = col;
+            draggingItem.style.gridRowStart = row;
         }
 
-        // 应用新的格子坐标
-        draggingItem.style.gridColumnStart = col;
-        draggingItem.style.gridRowStart = row;
+        draggingItem.classList.remove('dragging');
+        draggingItem.style.left = ''; 
+        draggingItem.style.top = ''; 
+        draggingItem.style.width = ''; 
+        draggingItem.style.height = '';
         
-        // 保存位置到本地存储
-        saveAllWidgets();
-    }
-
-    // 恢复拖拽状态
-    draggingItem.classList.remove('dragging');
-    draggingItem.style.left = ''; 
-    draggingItem.style.top = ''; 
-    draggingItem.style.width = ''; 
-    draggingItem.style.height = ''; 
-    draggingItem = null;
-});
+        if (moveDist > 10) {
+            saveAllWidgets(); 
+        }
+        draggingItem = null;
+    });
 }
 
 function switchAppWindow(targetId) {
@@ -1178,7 +1265,6 @@ function openWlApp() { switchAppWindow("iframe-wl"); }
 function openShopApp() { switchAppWindow("iframe-shop"); }
 function openDDPApp() { switchAppWindow("iframe-ddp"); }
 function openWorldBook() { switchAppWindow("worldbook-app"); renderWorldBook(); }
-function openDDPApp() { switchAppWindow("iframe-ddp"); }
 
 function startCheckPhone(name) {
     document.getElementById('friend-selector-modal').style.display = 'none';
@@ -1821,13 +1907,13 @@ window.onload = function() {
     let needSave = false;
     const defaultApps = [
         { id: 'item-time', html: `<div id="item-time" class="grid-item time-widget" onclick="openTimeColorPicker()"><div class="date-str" id="date-display"></div><div class="clock-str" id="clock-display">00:00</div></div>` },
-        { id: 'item-xhs', html: `<div id="item-xhs" class="grid-item icon-btn" onclick="openApp()"><span>小红书</span></div>` },
-        { id: 'item-gacha', html: `<div id="item-gacha" class="grid-item icon-btn" onclick="openGacha()"><span>扭蛋机</span></div>` },
-        { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" onclick="openSelfApp()"><span>自律打卡</span></div>` },
-        { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" onclick="showFriendSelector()"><span>查手机</span></div>` },
-        { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" onclick="openWlApp()"><span>网恋模拟</span></div>` },
-        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" onclick="openShopApp()"><span>购物商城</span></div>` },
-        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" onclick="openDDPApp()"><span>对对碰背单词</span></div>` }
+        { id: 'item-xhs', html: `<div id="item-xhs" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/K1R2/1080X1080/image_1776692583750.png/webp') !important; background-size: cover !important;" onclick="openApp()"><span>小红书</span></div>` },
+        { id: 'item-gacha', html: `<div id="item-gacha" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp') !important; background-size: cover !important;" onclick="openGacha()"><span>扭蛋机</span></div>` },
+        { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openSelfApp()"><span>自律打卡</span></div>` },
+        { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/cJUV/1080X1080/image_1776692589613.png/webp') !important; background-size: cover !important;" onclick="showFriendSelector()"><span>查手机</span></div>` },
+        { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp') !important; background-size: cover !important;" onclick="openWlApp()"><span>网恋模拟</span></div>` },
+        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>` },
+        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` }
     ];
 
     defaultApps.forEach(app => {
