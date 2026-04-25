@@ -1905,6 +1905,19 @@ const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
     })
 });
                 const data = await res.json();
+
+                // --- 核心修复：检查 API 是否报错 ---
+                if (data.error) {
+                    // 如果 API 返回了错误（比如 Key 过期、余额不足等），直接抛出具体的错误原因
+                    throw new Error(data.error.message || "API 服务器返回了错误");
+                }
+                if (!data.choices || !data.choices[0]) {
+                    // 如果没有返回 choices 数组，说明模型名称可能填错了
+                    console.error("API返回数据异常：", data);
+                    throw new Error("API返回数据格式不正确，请检查[模型名称]是否填写正确。");
+                }
+                // --------------------------------
+
                 let rawContent = data.choices[0].message.content;
 
 // --- 处理 AI 支付逻辑 ---
