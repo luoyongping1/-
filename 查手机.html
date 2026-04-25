@@ -888,9 +888,9 @@ function renderBrowserList() {
         if (currentAppId === 'qq') {
     try {
         const sysPrompt = `你现在是手机破解专家，请严格按照格式输出。
-【绝对指令】：只允许输出 6 个好友的数据。严禁出现“(以此类推)”、“例如”或任何开场白解释！
+【绝对指令】：只允许输出 6 个好友的数据。严禁出现任何开场白解释、严禁输出“(以此类推)”！
 被查者[${targetName}]的人设是：${targetFriend.persona}。
-【格式要求】：名字:关系:话1#话2#话3#话4#话5#话6|名字:关系:话1#话2#话3#话4#话5#话6
+【输出格式要求】：名字:关系:话1#话2#话3#话4#话5#话6|下一个名字:关系:...
 (对话共6句，按：好友-我-好友-我-好友-我的顺序编排)。`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
@@ -898,23 +898,29 @@ function renderBrowserList() {
             body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
         });
         const data = await res.json();
-        const rawData = data.choices[0].message.content;
+        let rawData = data.choices[0].message.content.trim();
         
-        // 解析逻辑：先按 | 分隔好友，再按 : 分隔名字/关系/对话
-        currentQQFriends = rawData.split('|').map(item => { 
-            const parts = item.split(':'); 
-            const name = parts[0];
-            const relation = parts[1];
-            const chatText = parts[2] || "";
-            
-            // 将 6 条对话按 # 分隔并存入对应的历史记录
-            const msgs = chatText.split('#');
-            qqChatHistories[name] = msgs.map((txt, idx) => ({
-                type: idx % 2 === 0 ? 'friend' : 'self', // 偶数是好友，奇数是被查者自己
-                text: txt.trim()
-            }));
+        // 解析前清理可能存在的垃圾文本
+        if (rawData.includes(':')) {
+            rawData = rawData.substring(rawData.indexOf(rawData.match(/[^\s]/)));
+        }
 
-            return { name: name, relation: relation }; 
+        const friendItems = rawData.split('|');
+        currentQQFriends = [];
+        friendItems.forEach(item => { 
+            const parts = item.split(':'); 
+            if (parts.length >= 3) {
+                const name = parts[0].trim();
+                const relation = parts[1].trim();
+                const chatText = parts[2] || "";
+                
+                const msgs = chatText.split('#');
+                qqChatHistories[name] = msgs.map((txt, idx) => ({
+                    type: idx % 2 === 0 ? 'friend' : 'self',
+                    text: txt.trim()
+                }));
+                currentQQFriends.push({ name: name, relation: relation });
+            }
         });
         
         renderQQList();
@@ -1129,27 +1135,30 @@ const items = (mainParts[1] || "").split('#');
         const text = input.value.trim();
         if (!text) return;
         const targetName = localStorage.getItem('target_check_name');
+        const friendsData = JSON.parse(localStorage.getItem('qq_friends')) || [];
+        const targetFriend = friendsData.find(f => f.name === targetName) || { persona: "普通人" };
         const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+        
         if (!qqChatHistories[currentChatFriend]) qqChatHistories[currentChatFriend] = [];
         qqChatHistories[currentChatFriend].push({ type: 'self', text: text });
         input.value = '';
         renderMessages();
-                try {
+        
+        try {
             const friendInfo = currentQQFriends.find(f => f.name === currentChatFriend);
-            // 改进后的指令：强行洗脑 AI，让它明白自己是“好友”身份
             const sysPrompt = `你现在正在模拟[${currentChatFriend}]。
 请注意你的身份：你是[${targetName}]的朋友/亲人，你们的关系是：${friendInfo.relation}。
-你绝对不是[${targetName}]，你是在和他/她对话。
-对方（[${targetName}]）的人设是：${(JSON.parse(localStorage.getItem('qq_friends')).find(f=>f.name===targetName)||{}).persona}。
-请根据你们的【关系】和【对方的人设】，以你作为[${currentChatFriend}]的口吻进行回复。
-语气要极度口语化、生活化，像真实的人在聊天，严禁说废话，严禁像AI助手的语气。`;
+对方（[${targetName}]）的人设是：${targetFriend.persona}。
+现在对方以[${targetName}]的身份对你说：“${text}”。
+请根据你们的关系和对方的人设，以[${currentChatFriend}]的口吻进行回复。
+要求：语气极度口语化、生活化，像真实的人在聊天，严禁说废话！`;
 
             const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
                 method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }, { role: "user", content: text }] })
+                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
             });
             const data = await res.json();
-            qqChatHistories[currentChatFriend].push({ type: 'friend', text: data.choices[0].message.content });
+            qqChatHistories[currentChatFriend].push({ type: 'friend', text: data.choices[0].message.content.trim() });
             renderMessages();
         } catch (e) { console.error(e); }
     }
