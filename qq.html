@@ -1411,9 +1411,24 @@ if (m.isSystemNotice) {
 }
         
         let avHtml = "";
-        if (isSelf) {
-            avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我';
-        } else {
+if (isSelf) {
+    // --- 核心修改：检测面具头像 ---
+    const friend = friends.find(f => f.name === currentFriendName);
+    let personaAvatar = "";
+    if (friend && friend.userPersonaId) {
+        const uPersona = userPersonas.find(u => u.id === friend.userPersonaId);
+        if (uPersona && uPersona.avatar) {
+            personaAvatar = uPersona.avatar;
+        }
+    }
+
+    if (personaAvatar) {
+        avHtml = `<img src="${personaAvatar}" decoding="async">`;
+    } else {
+        avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我';
+    }
+    // --- 修改结束 ---
+} else {
             // 关键修改：如果是群聊，从消息本身获取发送者头像，否则从好友列表找
             if (isGroupMode) {
                 const senderObj = friends.find(f => f.name === m.sender);
@@ -3860,17 +3875,25 @@ function saveUserPersona() {
     renderUserPersonaList();
 }
 
-function changeUserPersonaAvatar() {
-    const choice = prompt("1. 从本地手机上传图片\\n2. 粘贴图片网络链接URL");
-    if (choice === "1") {
-        document.getElementById('user-persona-avatar-upload').click();
-    } else if (choice === "2") {
-        const url = prompt("请输入或粘贴图片链接:");
-        if (url) {
-            document.getElementById('edit-user-persona-avatar').value = url;
-            document.getElementById('edit-user-persona-avatar-display').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
-        }
+// 打开头像来源选择弹窗
+function openUserPersonaAvatarChoice() {
+    document.getElementById('user-persona-avatar-choice-modal').style.display = 'flex';
+}
+
+// 触发相册选择
+function triggerUserPersonaUpload() {
+    document.getElementById('user-persona-avatar-upload').click();
+    document.getElementById('user-persona-avatar-choice-modal').style.display = 'none';
+}
+
+// 触发 URL 输入
+function openUserPersonaUrlInput() {
+    const url = prompt("请输入面具图片的网络链接 URL:");
+    if (url) {
+        document.getElementById('edit-user-persona-avatar').value = url;
+        document.getElementById('edit-user-persona-avatar-display').innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:cover;">`;
     }
+    document.getElementById('user-persona-avatar-choice-modal').style.display = 'none';
 }
 
 document.getElementById('user-persona-avatar-upload').onchange = function() {
@@ -4323,7 +4346,7 @@ document.head.appendChild(style);
         <input type="hidden" id="edit-user-persona-avatar">
         
         <div style="text-align: center; margin-bottom: 15px;">
-            <div id="edit-user-persona-avatar-display" style="width: 60px; height: 60px; border-radius: 8px; background: #f2f2f2; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; color: #999; font-size: 11px;" onclick="changeUserPersonaAvatar()">点击设置头像</div>
+            <div id="edit-user-persona-avatar-display" style="width: 60px; height: 60px; border-radius: 8px; background: #f2f2f2; margin: 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; color: #999; font-size: 11px;" onclick="openUserPersonaAvatarChoice()">点击设置头像</div>
         </div>
         
         <div style="margin-bottom: 15px;">
@@ -4340,6 +4363,16 @@ document.head.appendChild(style);
             <button class="wx-btn" style="flex: 1; background: rgba(0,0,0,0.05); color: #666; margin-bottom: 0;" onclick="document.getElementById('user-persona-edit-modal').style.display = 'none'">撤退</button>
             <button class="wx-btn" style="flex: 1; background: #3498db; color: white; border: none; margin-bottom: 0;" onclick="saveUserPersona()">生成面具</button>
         </div>
+    </div>
+</div>
+
+<!-- 新增：User人设专属的头像来源选择弹窗 -->
+<div id="user-persona-avatar-choice-modal" class="glass-modal" style="z-index: 9700;">
+    <div class="glass-card">
+        <h3 style="text-align:center; margin-bottom:20px; color:#3498db;">修改面具头像</h3>
+        <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #3498db; cursor: pointer;" onclick="triggerUserPersonaUpload()">从相册选择</div>
+        <div class="list-item" style="background:white; border-radius:12px; margin-bottom:15px; justify-content: center; font-weight: bold; color: #3498db; cursor: pointer;" onclick="openUserPersonaUrlInput()">粘贴图片 URL</div>
+        <div style="text-align:center; margin-top:10px; color:#666; cursor:pointer;" onclick="document.getElementById('user-persona-avatar-choice-modal').style.display='none'">取消</div>
     </div>
 </div>
 
