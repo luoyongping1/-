@@ -618,29 +618,28 @@ async function triggerAI() {
         const headers = { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' };
 
         if (currentAppId === 'qq') {
-            // 1. 获取“我”（User）的信息
+            // 1. 获取“我”（User）的名字
             const myInfo = JSON.parse(localStorage.getItem('my_info') || '{"name":"我"}');
             const userName = myInfo.name;
 
-            // 2. 获取角色的好友列表（排除掉角色自己）
-            const allFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
-            const otherFriends = allFriends
-                .filter(f => f.name !== targetName)
-                .map(f => f.name)
-                .join('、');
+            // 2. 获取你和这个角色之间【真实】的最后6条聊天记录
+            const realHistory = JSON.parse(localStorage.getItem('qq_history') || '{}')[targetName] || [];
+            const recentMsgs = realHistory.slice(-6).map(m => `${m.type === 'self' ? userName : targetName}: ${m.text}`).join(' # ');
 
             const sysPrompt = `你现在是手机取证专家，正在搜查角色[${targetName}]的手机。
-【当前手机主人】：${targetName}
-【他手机里的真实联系人名单】：${userName}(这是他的恋人/User)、${otherFriends}。
-【取证任务】：
-请生成[${targetName}]与他手机里联系人的6组聊天记录快照。
-【强制要求】：
-1. 严禁捏造名单以外的名字。
-2. 必须包含他与恋人[${userName}]的私密对话。
-3. 语气必须符合[${targetName}]的身份。
-4. 严格格式输出（禁止任何解释，禁止代码块）：
-联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6|联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6|...
-5. 必须输出满6个人，每人6句对话，用“|”分隔不同的人，用“#”分隔对话。`;
+【手机主人人设】：${targetPersona}
+【手机里的联系人限制】：
+1. 必须包含[${userName}]（这是机主的恋人/用户）。
+2. 其他5位联系人必须根据【手机主人人设】中提到的社交圈、同事、朋友或家人来虚构。
+
+【取证内容要求】：
+1. 与[${userName}]的对话：请参考两人真实的近期互动：${recentMsgs || "暂无记录，请根据人设自由发挥建议暧昧点"}。
+2. 与其他人的对话：体现机主的社会关系（如工作交接、朋友邀约、家人唠叨等）。
+3. 语气必须完全符合[${targetName}]的人设。
+
+【输出格式强制要求】：
+联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6|联系人名字:关系:对话1#对话2#对话3...
+(严禁解释，严禁代码块，必须输出满6人，每人6句对话，人用|隔开，话用#隔开)`;
 
             const res = await fetch(url, {
                 method: 'POST', headers: headers,
