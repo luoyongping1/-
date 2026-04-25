@@ -910,12 +910,12 @@ function renderBrowserList() {
     }
 } else if (currentAppId === 'browser') {
     try {
-        const sysPrompt = `你现在是手机破解专家。你正在破解[${targetName}]的浏览器历史记录。
-        被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构出8条搜索或访问记录（要体现性格、秘密或最近的烦恼）。
-        格式要求（严格遵守，只输出格式内容）：
-        标题|网址|时间#标题|网址|时间...
-        例如：如何偷偷存私房钱|www.baidu.com|10:25#心跳过快是怎么回事|m.39.net|昨天...`;
+        const sysPrompt = `你现在是极客黑客。你正在强行读取[${targetName}]的浏览器无痕浏览记录。
+        【主人人设】：${targetFriend.persona}。
+        请根据人设虚构出8条最能暴露其内心、真实欲望、焦虑或不为人知的秘密的搜索记录。
+        
+        【严格格式要求】：标题|网址(随便编一个)|时间(如:10:20或昨天)
+        多条记录之间用“#”号隔开。直接输出结果，绝对禁止输出任何废话和开场白！`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
@@ -942,12 +942,12 @@ function renderBrowserList() {
     }
 } else if (currentAppId === 'shop') {
     try {
-        const sysPrompt = `你现在是消费心理分析专家。你正在分析[${targetName}]的手机购物车。
-        被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构出5件他/她想买的商品，并分析他/她为什么要买这个。并且必须要30字以上。
-        格式要求（严格遵守）：
-        商品名|价格|规格|购买理由#商品名|价格|规格|购买理由...
-        例如：粉色蕾丝睡裙|199.00|L码|想在你面前展示不一样的一面#男士古龙香水|588.00|50ml|听说你很喜欢这个味道...`;
+        const sysPrompt = `你现在是消费行为分析师。你正在扫描[${targetName}]的淘宝购物车和待收货清单。
+        【主人人设】：${targetFriend.persona}。
+        请虚构5个最能体现他/她生活状态或特殊小爱好的商品。
+        
+        【严格格式要求】：商品全名|单价|规格(颜色或尺码)|购买动机(30字以上，要体现出他/她为什么要买，心理活动是什么)
+        多件商品之间用“#”隔开。直接输出内容，严禁废话！`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
@@ -975,9 +975,13 @@ function renderBrowserList() {
 } else if (currentAppId === 'diary') {
     try {
         const chatContext = JSON.stringify(qqChatHistories);
-        const sysPrompt = `你现在是[${targetName}]。根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇私密手帐日记。
-格式要求：日期|日记正文内容|内心深处的秘密内容|心情简述
-【特别要求】：直接输出内容，严禁在正文中出现任何类似于"[日记正文]"、"**[日期]**"、"内心最真实的秘密"等标签或标题文字。语气要极度口语化、真实。`;
+        const sysPrompt = `你现在是[${targetName}]。请根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇极度私密的电子日记。
+        语气要极度口语化（多用碎碎念、语气词、感叹句），像是写给自己看的，不要像AI写的。
+        
+        【严格格式要求】：直接输出内容，中间用“|”隔开，顺序如下：
+        日期(如:2023年8月24日 阴)|日记正文(生活感慨)|藏在心底不敢对任何人说的秘密|心情简述(4个字以内)
+        
+        【禁令】：严禁输出任何标签（如“日期：”），严禁开场白！`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
@@ -991,11 +995,12 @@ function renderBrowserList() {
     } catch (e) { alert("生成失败"); } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
 } else if (currentAppId === 'photo') {
     try {
-        const sysPrompt = `你现在是手机数据恢复专家。你正在破解[${targetName}]的加密相册。
-        被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请虚构6张照片的详细文字描述。
-        【警告】：直接输出描述内容，严禁输出任何开场白、介绍语或总结（如禁止写：以下是为您恢复的照片）。
-        格式要求：描述1#描述2#描述3#描述4#描述5#描述6`;
+        const sysPrompt = `你现在是高级数据恢复专家。你正在强行恢复[${targetName}]相册中被彻底删除的照片。
+        【主人人设】：${targetFriend.persona}。
+        请虚构6张极具生活气息、画面感极强、甚至带有一点故事悬念的照片描述。
+        
+        【严格格式要求】：照片1描述#照片2描述#照片3描述#照片4描述#照片5描述#照片6描述
+        直接输出描述，绝对禁止说“以下是恢复的内容”！`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
