@@ -595,25 +595,41 @@ if(saved) {
     }
 
     function onPointerDown(e, el) {
-        startX = e.clientX; startY = e.clientY;
-        let isLongPress = false;
-        const timer = setTimeout(() => { isLongPress = true; isEditMode = true; render(); }, 600);
-        el.onpointermove = (moveEvent) => {
-            if (Math.abs(moveEvent.clientX - startX) > 10 || Math.abs(moveEvent.clientY - startY) > 10) clearTimeout(timer);
-            if (isEditMode) {
-                if (!draggedEl) { draggedEl = el; draggedEl.classList.add('is-dragging'); }
-                draggedEl.style.transform = `translate(${moveEvent.clientX - startX}px, ${moveEvent.clientY - startY}px) scale(1.1)`;
-                checkCollision(moveEvent.clientX, moveEvent.clientY);
-            }
-        };
-        el.onpointerup = el.onpointercancel = () => {
+    startX = e.clientX; startY = e.clientY;
+    let isLongPress = false;
+    let hasMoved = false; // 新增：是否移动过
+    const timer = setTimeout(() => { 
+        if(!hasMoved) { // 只有没移动过才触发编辑模式
+            isLongPress = true; 
+            isEditMode = true; 
+            render(); 
+        }
+    }, 800); // 稍微加长长按时间，防止误触发
+
+    el.onpointermove = (moveEvent) => {
+        const moveX = Math.abs(moveEvent.clientX - startX);
+        const moveY = Math.abs(moveEvent.clientY - startY);
+        if (moveX > 5 || moveY > 5) {
+            hasMoved = true;
             clearTimeout(timer);
-            if (!isLongPress && !isEditMode) openApp(el.dataset.id);
-            if (draggedEl) { draggedEl.classList.remove('is-dragging'); draggedEl = null; render(); save(); }
-            el.onpointermove = null; el.onpointerup = null;
-        };
-        el.setPointerCapture(e.pointerId);
-    }
+        }
+        if (isEditMode) {
+            if (!draggedEl) { draggedEl = el; draggedEl.classList.add('is-dragging'); }
+            draggedEl.style.transform = `translate(${moveEvent.clientX - startX}px, ${moveEvent.clientY - startY}px) scale(1.1)`;
+            checkCollision(moveEvent.clientX, moveEvent.clientY);
+        }
+    };
+    el.onpointerup = el.onpointercancel = () => {
+        clearTimeout(timer);
+        // 修复逻辑：只要不是长按状态，且没有大幅度拖拽，就视为点击
+        if (!isLongPress && !isEditMode && !hasMoved) {
+            openApp(el.dataset.id);
+        }
+        if (draggedEl) { draggedEl.classList.remove('is-dragging'); draggedEl = null; render(); save(); }
+        el.onpointermove = null; el.onpointerup = null;
+    };
+    el.setPointerCapture(e.pointerId);
+}
 
     function checkCollision(curX, curY) {
         document.querySelectorAll('.item').forEach(target => {
@@ -871,11 +887,11 @@ function renderBrowserList() {
 
         if (currentAppId === 'qq') {
     try {
-        const sysPrompt = `你现在是手机破解专家。你正在破解[${targetName}]的QQ联系人。
-        被查者[${targetName}]的人设是：${targetFriend.persona}。
-        请根据人设虚构出5个QQ好友，并为每个好友编造3轮历史对话（好友先说，被查者回，共6条消息）。
-        格式要求（严格遵守，只输出格式内容）：
-        名字:关系:话1#话2#话3#话4#话5#话6|名字:关系:话1#话2#话3#话4#话5#话6...`;
+        const sysPrompt = `你现在是手机破解专家，请严格按照格式输出。
+【绝对指令】：只允许输出 6 个好友的数据。严禁出现“(以此类推)”、“例如”或任何开场白解释！
+被查者[${targetName}]的人设是：${targetFriend.persona}。
+【格式要求】：名字:关系:话1#话2#话3#话4#话5#话6|名字:关系:话1#话2#话3#话4#话5#话6
+(对话共6句，按：好友-我-好友-我-好友-我的顺序编排)。`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
@@ -975,24 +991,45 @@ function renderBrowserList() {
 } else if (currentAppId === 'diary') {
     try {
         const chatContext = JSON.stringify(qqChatHistories);
-        const sysPrompt = `你现在是[${targetName}]。请根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇极度私密的电子日记。
+        // 这是优化后的黑客破解风格提示词
+        const sysPrompt = `你现在是[${targetName}]。请根据你的人设(${targetFriend.persona})和最近的聊天记录(${chatContext})，写一篇今天的私密电子日记。
         语气要极度口语化（多用碎碎念、语气词、感叹句），像是写给自己看的，不要像AI写的。
         
         【严格格式要求】：直接输出内容，中间用“|”隔开，顺序如下：
-        日期(如:2023年8月24日 阴)|日记正文(生活感慨)|藏在心底不敢对任何人说的秘密|心情简述(4个字以内)
+        日期(如:2023年8月24日 阴)|日记正文(写写生活中的琐事和感慨)|藏在心底不敢对任何人说的秘密或羞涩心事|心情简述(4个字以内)
         
-        【禁令】：严禁输出任何标签（如“日期：”），严禁开场白！`;
+        【禁令】：严禁输出任何标签（如禁止出现“日期：”、“秘密：”等字样），严禁任何开场白解释！`;
         
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
         });
         const data = await res.json();
-        const parts = data.choices[0].message.content.split('|');
-        currentDiaryData = { date: parts[0], body: parts[1], secret: parts[2], mood: parts[3] };
-        document.querySelector('#diary-fav-btn i').className = 'far fa-heart'; // 重置为未收藏状态
-        renderDiary();
-    } catch (e) { alert("生成失败"); } finally { btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; }
+        const rawContent = data.choices[0].message.content.trim();
+        const parts = rawContent.split('|');
+        
+        // 增加了一个判断，防止 AI 格式返回错误导致代码崩溃
+        if (parts.length >= 4) {
+            currentDiaryData = { 
+                date: parts[0].trim(), 
+                body: parts[1].trim(), 
+                secret: parts[2].trim(), 
+                mood: parts[3].trim() 
+            };
+            // 恢复收藏图标为未收藏的空心状态
+            const heartIcon = document.querySelector('#diary-fav-btn i');
+            if(heartIcon) heartIcon.className = 'far fa-heart'; 
+            renderDiary();
+        } else {
+            console.error("AI 返回格式错误:", rawContent);
+            alert("手帐数据解密失败，请重试一次");
+        }
+    } catch (e) { 
+        console.error(e);
+        alert("日记生成失败，请检查网络或配置"); 
+    } finally { 
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i>'; 
+    }
 } else if (currentAppId === 'photo') {
     try {
         const sysPrompt = `你现在是高级数据恢复专家。你正在强行恢复[${targetName}]相册中被彻底删除的照片。
