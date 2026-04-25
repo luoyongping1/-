@@ -618,10 +618,34 @@ async function triggerAI() {
         const headers = { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' };
 
         if (currentAppId === 'qq') {
-            const sysPrompt = `你现在是手机取证专家。必须输出机主[${targetName}]的6位好友互动数据。
-严格格式（禁止输出任何多余文字或代码块标签）：
-名字1:关系1:对话1#对话2#对话3#对话4#对话5#对话6|名字2:关系2:对话1#对话2#对话3#对话4#对话5#对话6|...
-要求：总共6人，每人6对话。直接输出纯文本数据！`;
+            // 获取你设置的所有好友名单
+            const friendsList = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+            const friendNames = friendsList.map(f => f.name).join('、');
+            
+            // 获取你自己的名字 (User)
+            const myInfo = JSON.parse(localStorage.getItem('my_info') || '{"name":"用户"}');
+            const userName = myInfo.name;
+
+            // 获取最近的真实聊天记录摘要（如果有的话）
+            const allHistory = JSON.parse(localStorage.getItem('qq_history') || '{}');
+            let historyContext = "暂无详细记录";
+            if (Object.keys(allHistory).length > 0) {
+                // 取出每个好友最后一条消息作为 AI 的参考背景
+                historyContext = Object.keys(allHistory).map(name => {
+                    const lastMsg = allHistory[name].slice(-1)[0]?.text || "";
+                    return `${name}的最后消息:${lastMsg}`;
+                }).join('; ');
+            }
+
+            const sysPrompt = `你现在是手机取证专家。必须为机主[${targetName}]生成6位好友的聊天取证快照。
+【强制名单】：你只能从以下真实联系人中选择：${userName}(这是User/恋人)、${friendNames}。
+【背景参考】：${historyContext}。
+【要求】：
+1. 严禁捏造名单以外的任何人。
+2. 必须包含与 ${userName} 的对话，且由于是恋人，内容应体现亲密感或近期的互动。
+3. 严格格式输出（禁止任何解释，禁止代码块）：
+名字1:关系:对话1#对话2#对话3#对话4#对话5#对话6|名字2:关系:对话1#对话2#对话3#对话4#对话5#对话6|...
+4. 必须输出满6个人，每人6句对话。`;
 
             const res = await fetch(url, {
                 method: 'POST', headers: headers,
