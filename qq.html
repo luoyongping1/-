@@ -279,7 +279,21 @@ input:checked + .slider:before {
         .me-wxid { font-size: 14px; color: var(--text-sub); cursor: pointer; }
 
         #chat-page { z-index: var(--z-chat); }
-        #settings-page { z-index: var(--z-settings); }
+        #settings-page { 
+    z-index: var(--z-settings); 
+    background: var(--bg-gray); 
+    position: absolute; 
+    width: 100%; 
+    height: 100%; 
+    top: 0; 
+    left: 0; 
+    overflow: hidden; /* 这一行防止整个页面乱跑 */
+}
+#settings-page .content {
+    flex: 1;
+    overflow-y: auto; /* 这一行确保菜单内容多的时候可以上下滑动 */
+    -webkit-overflow-scrolling: touch;
+}
         #moments-page { z-index: var(--z-moments); background: white; }
         #moments-editor-page, #visibility-selector-page {
             z-index: var(--z-modal) !important;
@@ -3163,45 +3177,53 @@ closeChat = function() {
         document.getElementById('settings-avatar').innerHTML = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
         document.getElementById('settings-name').innerText = g.name;
         
-        // 动态生成群聊专属菜单
-listGroup.innerHTML = `
-    <div class="list-item" onclick="addMoreMembersToGroup()">
-        <div class="info">添加群成员</div><span>></span>
-    </div>
-    <div class="list-item">
-        <div class="info">允许群角色发送表情包</div>
-        <label class="wx-switch">
-            <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="list-item">
-        <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
-        <label class="wx-switch">
-            <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
-`;
+        listGroup.innerHTML = `
+            <div class="list-item" onclick="addMoreMembersToGroup()">
+                <div class="info">添加群成员</div><span>></span>
+            </div>
+            <div class="list-item">
+                <div class="info">允许群角色发送表情包</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="list-item">
+                <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+        `;
     } else {
         const f = friends.find(f => f.name === currentFriendName);
         document.getElementById('settings-avatar').innerHTML = f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial;
         document.getElementById('settings-name').innerText = f.name;
         
-        // 恢复私聊菜单
+        // 核心修改：在这里把所有丢失的按钮都加回去了
         listGroup.innerHTML = `
-            <div class="list-item"><div class="info">时间感知</div><label class="wx-switch"><input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)"><span class="slider"></span></label></div>
+            <div class="list-item">
+                <div class="info">时间感知</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
             <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
             <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
             <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
             <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
-<div class="list-item">
-    <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
-    <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
-        value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
-</div>
-<div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
+            <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
+            <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
+            <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
+            <div class="list-item">
+                <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
+                <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
+                    value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
+            </div>
+            <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
             <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
             <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
         `;
