@@ -248,6 +248,7 @@ input:checked + .slider:before {
         .list-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid var(--border-color); cursor: pointer; }
         .list-item:active { background: #f2f2f2; }
         .avatar { width: 45px; height: 45px; border-radius: 6px; margin-right: 12px; background: #5c6bc0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0; overflow: hidden; }
+.msg .avatar { margin: 0 !important; } /* 这一行是新增的，专门负责消除聊天气泡旁的头像间距 */
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .info { flex: 1; min-width: 0; }
         .name { font-size: 16px; }
@@ -476,7 +477,7 @@ input:checked + .slider:before {
     border-color: transparent transparent transparent #95ec69;
 }
 
-        .voice-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-left: 10px; }
+        .voice-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-left: 12px; }
         .voice-bar {
             display: flex; align-items: center; gap: 10px; cursor: pointer;
             background: #fff; padding: 10px 15px; border-radius: 6px;
@@ -1553,12 +1554,12 @@ if (m.isShoppingPay) {
                             </div>
                         </div>`);
                 } else if (m.isSticker) {
-                    htmlArr.push(`
-                        <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
-                            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
-                            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
-                            <img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:10px;" decoding="async">
-                        </div>`);
+    htmlArr.push(`
+        <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
+            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
+            <img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">
+        </div>`);
                 } else {
                     htmlArr.push(`
                         <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
@@ -2749,34 +2750,30 @@ function executeTransfer() {
 }
                 // 1. 修改后的发送消息函数（不再嵌套回复逻辑）
         function sendMsg() { 
-            const val = document.getElementById('msg-input').value.trim(); 
-            if(!val) return; 
-            if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; 
-            
-            chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); 
-            
-            if (isGroupMode) {
-                const g = groupChats.find(x => x.id === currentFriendName);
-                g.lastMsg = "我: " + val;
-            } else {
-                const friend = friends.find(f => f.name === currentFriendName);
-                friend.lastMsg = val; 
-                // 增加聊天点数和更新天数
-                updateFireOnChat(friend);
-            }
-            
-            document.getElementById('msg-input').value = ''; 
-            clearQuote(); 
-            saveData(); 
-            renderMessages(); 
-            
-            // 发送后自动判断是调人回复还是调群回复
-            if (isGroupMode) {
-                getGroupAiReply(); 
-            } else {
-                getAiReply(); 
-            }
-        }
+    const val = document.getElementById('msg-input').value.trim(); 
+    if(!val) return; 
+    if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; 
+    
+    chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); 
+    
+    if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        g.lastMsg = "我: " + val;
+    } else {
+        const friend = friends.find(f => f.name === currentFriendName);
+        friend.lastMsg = val; 
+        // 增加聊天点数和更新天数
+        updateFireOnChat(friend);
+    }
+    
+    document.getElementById('msg-input').value = ''; 
+    clearQuote(); 
+    saveData(); 
+    renderMessages(); 
+    
+    // 发送后不再自动判断是调人回复还是调群回复
+    // AI回复现在需要点击小话筒图标手动触发
+}
 
         // 2. 新增：专门处理小话筒点击的函数
         function handleMicClick() {
