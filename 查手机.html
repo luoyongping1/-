@@ -236,7 +236,34 @@
         .scrapbook-section { background: rgba(255,255,255,0.7); border: 1px dashed #d9d9d9; border-radius: 8px; padding: 15px; margin-bottom: 15px; line-height: 1.8; font-size: 15px; word-wrap: break-word; white-space: pre-wrap; }
         .photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding-bottom: 20px; }
         .photo-card { aspect-ratio: 1 / 1; background: #ffffff; border-radius: 12px; border: 1px solid #f0f0f0; position: relative; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
-        .wallet-card { background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%); border-radius: 20px; padding: 25px; color: white; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; overflow: hidden; }
+        
+        /* 银行 App 风格钱包 */
+        .wallet-container { padding: 5px 0; }
+        .wallet-card { 
+            background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); 
+            border-radius: 20px; padding: 25px; color: white; margin-bottom: 25px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); position: relative; overflow: hidden;
+        }
+        .wallet-card::after {
+            content: ''; position: absolute; top: -50%; right: -20%; width: 150px; height: 150px;
+            background: rgba(255,255,255,0.05); border-radius: 50%;
+        }
+        .wallet-label { font-size: 11px; opacity: 0.7; letter-spacing: 1px; margin-bottom: 8px; }
+        .wallet-balance-num { font-size: 30px; font-weight: 700; font-family: 'Helvetica Neue', sans-serif; }
+        .trans-section-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; padding-left: 5px; }
+        .trans-item {
+            background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #f8f8f8;
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .trans-main { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .trans-title { font-size: 15px; font-weight: 500; color: #262626; }
+        .trans-price { font-size: 16px; font-weight: 700; color: #ff3b30; }
+        .trans-price.income { color: #34c759; }
+        .trans-time { font-size: 12px; color: #999; margin-bottom: 8px; }
+        .trans-comment { 
+            font-size: 13px; color: #666; background: #f9f9f9; padding: 10px; 
+            border-radius: 10px; line-height: 1.4; border-left: 3px solid #ddd;
+        }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -440,12 +467,23 @@ function checkCollision(curX, curY) {
 function openApp(id) {
     if(id === 'time' || id === 'mood') return;
     currentAppId = id;
+
+    // 清理逻辑：防止上个 App 残留
+    const appContent = document.getElementById('app-content');
+    appContent.innerHTML = ''; 
+    appContent.scrollTop = 0;
+    closeQQChat(); 
+    document.getElementById('diary-fav-btn').style.display = 'none';
+
+    if(id === 'appearance') {
+        document.getElementById('app-appearance').style.display = 'flex';
+        return;
+    }
+
     document.getElementById('ai-scan-btn').style.display = 'flex';
     document.getElementById('app-window').style.display = 'flex';
     
-    if(id === 'appearance') {
-        document.getElementById('app-appearance').style.display = 'flex';
-    } else if(id === 'qq') {
+    if(id === 'qq') {
         document.getElementById('app-title').innerText = 'QQ';
         renderQQList();
     } else if(id === 'browser') {
@@ -533,67 +571,89 @@ async function sendQQMsg() {
     const text = input.value.trim();
     if (!text) return;
     
-    // 自身发送
     if (!qqChatHistories[currentChatFriend]) qqChatHistories[currentChatFriend] = [];
     qqChatHistories[currentChatFriend].push({ type: 'self', text: text });
     input.value = '';
     renderMessages();
 
-    // AI 回复逻辑
-    const targetName = localStorage.getItem('target_check_name') || "主人";
     const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
     if (!aiConfig.key) return;
 
     try {
         const friendInfo = currentQQFriends.find(f => f.name === currentChatFriend) || { relation: "朋友" };
-        const sysPrompt = `你现在是手机机主[${targetName}]的好友[${currentChatFriend}]。
-关系：${friendInfo.relation}。
-对方刚对你说：“${text}”。
-请以[${currentChatFriend}]的口吻快速回复。要求极短、生活化、口语化，不要废话！直接输出回复。`;
-
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            body: JSON.stringify({ 
+                model: aiConfig.model || "gpt-3.5-turbo", 
+                messages: [{ role: "user", content: `你现在是机主好友[${currentChatFriend}]（关系:${friendInfo.relation}）。机主对你说：“${text}”。请口语化简短回复，不带引号。` }] 
+            })
         });
+        if (!res.ok) { console.error("QQ API Error:", res.status); return; }
         const data = await res.json();
-        const replyText = data.choices[0].message.content.trim().replace(/^"(.*)"$/, '$1');
-        qqChatHistories[currentChatFriend].push({ type: 'friend', text: replyText });
-        renderMessages();
+        const replyText = (data.choices?.[0]?.message?.content || data.content || "").trim().replace(/^"(.*)"$/, '$1');
+        if (replyText) {
+            qqChatHistories[currentChatFriend].push({ type: 'friend', text: replyText });
+            renderMessages();
+        }
     } catch (e) {
-        console.error(e);
-        qqChatHistories[currentChatFriend].push({ type: 'friend', text: '网络有点忙，待会聊~' });
-        renderMessages();
+        console.error("QQ Chat Error:", e);
     }
 }
 
 /* ================= 核心分析逻辑 (triggerAI) ================= */
 async function triggerAI() {
     const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
-    if (!aiConfig.key) return alert("请先在主设置中配置 API Key");
+    if (!aiConfig.key) return alert("请先在主设置中通过【主页下滑-设置】配置 API Key");
     
-    const targetName = localStorage.getItem('target_check_name') || "神秘人";
+    const targetName = localStorage.getItem('target_check_name') || "机主";
     const friendsData = JSON.parse(localStorage.getItem('qq_friends')) || [];
     const targetPersona = (friendsData.find(f => f.name === targetName) || { persona: "普通人" }).persona;
     
     const btn = document.getElementById('ai-scan-btn');
+    const oldBtnHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
     try {
+        const url = `${aiConfig.url.replace(/\/$/, "")}/chat/completions`;
+        const headers = { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' };
+
         if (currentAppId === 'qq') {
-            const sysPrompt = `你是手机取证专家。必须输出 6 位机主[${targetName}]的关系网。
-格式：名字:关系:话1#话2#话3#话4#话5#话6|名字2:关系2:...
-要求：每位必须有 6 条对话。直接输出数据，禁止任何开场白或代码块标签！`;
+            const sysPrompt = `你现在是手机取证专家。必须输出机主[${targetName}]的6位好友互动数据。
+严格格式（禁止输出任何多余文字或代码块标签）：
+名字1:关系1:对话1#对话2#对话3#对话4#对话5#对话6|名字2:关系2:对话1#对话2#对话3#对话4#对话5#对话6|...
+要求：总共6人，每人6对话。直接输出纯文本数据！`;
 
-            const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            const res = await fetch(url, {
+                method: 'POST', headers: headers,
+                body: JSON.stringify({ 
+                    model: aiConfig.model || "gpt-3.5-turbo", 
+                    messages: [{ role: "user", content: sysPrompt }] 
+                })
             });
-            const data = await res.json();
-            let rawData = data.choices[0].message.content.trim();
-            // 清理 Markdown 代码块
-            rawData = rawData.replace(/```(json|text)?/g, '').replace(/```/g, '').trim();
 
-            const items = rawData.split('|');
+            if (!res.ok) {
+                const errorJson = await res.json().catch(() => ({}));
+                throw new Error(errorJson.error?.message || `HTTP错误 ${res.status}`);
+            }
+
+            const data = await res.json();
+            console.log("AI Response:", data); // 控制台可见原始响应
+
+            let rawData = "";
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                rawData = data.choices[0].message.content.trim();
+            } else if (data.content) {
+                rawData = data.content.trim();
+            } else {
+                throw new Error("接口未返回 choices 内容，请检查 API 配置或余额");
+            }
+
+            // 清理干扰符号
+            rawData = rawData.replace(/^```.*$/gm, '').replace(/```/g, '').trim();
+
+            const items = rawData.split('|').filter(i => i.includes(':'));
+            if (items.length === 0) throw new Error("数据格式解析失败，AI 返回了非预期内容");
+
             currentQQFriends = [];
             qqChatHistories = {};
 
@@ -602,7 +662,8 @@ async function triggerAI() {
                 if (parts.length >= 3) {
                     const name = parts[0].trim();
                     const relation = parts[1].trim();
-                    const msgs = parts[2].split('#').filter(m => m.trim());
+                    const msgsStr = parts.slice(2).join(':'); 
+                    const msgs = msgsStr.split('#').filter(m => m.trim());
                     if (name && msgs.length > 0) {
                         currentQQFriends.push({ name, relation });
                         qqChatHistories[name] = msgs.map((text, idx) => ({
@@ -613,66 +674,122 @@ async function triggerAI() {
             });
             renderQQList();
         } else if (currentAppId === 'browser') {
-            const sysPrompt = `暴露隐私：虚构8条[${targetName}]的搜索记录。人设：${targetPersona}。格式：标题|网址|时间。用#隔开。只输出数据！`;
-            const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            const res = await fetch(url, {
+                method: 'POST', headers: headers,
+                body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `暴露隐私：虚构8条[${targetName}]的搜索记录。人设：${targetPersona}。格式：标题|网址|时间。用#隔开。不要代码块！` }] })
             });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
             const data = await res.json();
-            browserHistory = data.choices[0].message.content.split('#').map(item => {
+            console.log("Browser AI Response:", data);
+            const content = (data.choices?.[0]?.message?.content || data.content || "").replace(/^```.*$/gm, '').replace(/```/g, '').trim();
+            browserHistory = content.split('#').filter(i => i.trim()).map(item => {
                 const p = item.split('|');
-                return { title: p[0], url: p[1] || "google.com", time: p[2] || "刚刚" };
+                return { title: p[0]?.trim() || "无标题", url: p[1]?.trim() || "link", time: p[2]?.trim() || "刚刚" };
             });
             renderBrowserList();
         } else if (currentAppId === 'shop') {
-            const sysPrompt = `虚构5个[${targetName}]的私密购物清单。格式：名|价|规格|动机。用#隔开。直接输出！`;
-            const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            const res = await fetch(url, {
+                method: 'POST', headers: headers,
+                body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `虚构5个[${targetName}]的私密购物清单。格式：名|价|规格|动机。用#隔开。不要代码块！` }] })
             });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
             const data = await res.json();
-            shopCartData = data.choices[0].message.content.split('#').map(item => {
+            console.log("Shop AI Response:", data);
+            const content = (data.choices?.[0]?.message?.content || data.content || "").replace(/^```.*$/gm, '').replace(/```/g, '').trim();
+            shopCartData = content.split('#').filter(i => i.trim()).map(item => {
                 const p = item.split('|');
-                return { name: p[0], price: p[1], option: p[2], why: p[3] };
+                return { name: p[0]?.trim(), price: p[1]?.trim(), option: p[2]?.trim(), why: p[3]?.trim() };
             });
             renderShopList();
         } else if (currentAppId === 'diary') {
-            const sysPrompt = `写一篇今日日记。人设：${targetPersona}。格式：日期|正文|秘密|心情。只输出内容数据！`;
-            const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            const res = await fetch(url, {
+                method: 'POST', headers: headers,
+                body: JSON.stringify({ 
+                    model: aiConfig.model || "gpt-3.5-turbo", 
+                    messages: [{ role: "user", content: `写一篇非常详尽的日记。
+人设背景：${targetPersona}。
+要求：
+1. 正文必须包含丰富的心理活动和细节，字数超过600字。
+2. 必须且只能按以下标记包裹内容（禁止代码块，禁止任何前导语）：
+[日期]内容[/日期]
+[正文]内容[/正文]
+[秘密]内容[/秘密]
+[心情]内容[/心情]` }] 
+                })
             });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
             const data = await res.json();
-            const p = data.choices[0].message.content.split('|');
-            if (p.length >= 4) { currentDiaryData = { date: p[0], body: p[1], secret: p[2], mood: p[3] }; renderDiary(); }
+            const content = (data.choices?.[0]?.message?.content || data.content || "").trim();
+            
+            const extract = (tag) => {
+                const reg = new RegExp(`\\[${tag}\\]([\\s\\S]*?)\\[\\/${tag}\\]`);
+                return (content.match(reg)?.[1] || "").trim();
+            };
+
+            const body = extract("正文");
+            if (!body && content) {
+                // 如果标签匹配失败，尝试通过内容猜测
+                currentDiaryData = { date: "今日", body: content, secret: "暂无", mood: "平常" };
+            } else {
+                currentDiaryData = { 
+                    date: extract("日期") || "今日", 
+                    body: body, 
+                    secret: extract("秘密") || "暂无", 
+                    mood: extract("心情") || "未知" 
+                };
+            }
+            renderDiary();
         } else if (currentAppId === 'photo') {
-            const sysPrompt = `虚构6张彻底删除的照片描述。人设：${targetPersona}。格式：描述1#描述2#描述3... 只输出描述！`;
-            const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            const res = await fetch(url, {
+                method: 'POST', headers: headers,
+                body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `虚构6张彻底删除的照片描述。人设：${targetPersona}。格式：描述1#描述2#描述3... 不要代码块！` }] })
             });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
             const data = await res.json();
-            albumData = data.choices[0].message.content.split('#').map(desc => ({ desc, flipped: false }));
+            console.log("Photo AI Response:", data);
+            const content = (data.choices?.[0]?.message?.content || data.content || "").replace(/^```.*$/gm, '').replace(/```/g, '').trim();
+            albumData = content.split('#').filter(i => i.trim()).map(desc => ({ desc: desc.trim(), flipped: false }));
             renderPhotoList();
         } else if (currentAppId === 'wallet') {
-            const sysPrompt = `余额|项目:金额:时间:评价#项目... 只输出符合格式的内容数据！`;
-            const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: sysPrompt }] })
+            const res = await fetch(url, {
+                method: 'POST', headers: headers,
+                body: JSON.stringify({ 
+                    model: aiConfig.model || "gpt-3.5-turbo", 
+                    messages: [{ role: "user", content: `虚构机主[${targetName}]的流水。人设：${targetPersona}。
+请按照以下特殊分隔符输出，严禁任何代码块：
+总余额 >>> 项目一 @@@ 金额一 @@@ 时间一 @@@ 内心想法一 ### 项目二 @@@ 金额二 @@@ 时间二 @@@ 内心想法二 ...
+要求：
+1. 必须生成至少6条记录。
+2. 内心想法严禁输出数字，必须是基于人设的碎碎念或感悟。` }] 
+                })
             });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
             const data = await res.json();
-            const main = data.choices[0].message.content.split('|');
-            walletHistory = { balance: main[0].trim(), list: (main[1] || "").split('#').map(str => {
-                const p = str.split(':');
-                return { title: p[0], price: p[1], time: p[2], comment: p[3] };
-            }) };
+            const content = (data.choices?.[0]?.message?.content || data.content || "").replace(/^```.*$/gm, '').replace(/```/g, '').trim();
+            
+            const parts = content.split('>>>');
+            const balance = (parts[0] || "0.00").trim();
+            const items = (parts[1] || "").split('###').filter(i => i.trim());
+
+            walletHistory = { 
+                balance: balance, 
+                list: items.map(str => {
+                    const fields = str.split('@@@').map(f => f.trim());
+                    return { 
+                        title: fields[0] || "消费", 
+                        price: fields[1] || "0.00", 
+                        time: fields[2] || "刚刚", 
+                        comment: fields[3] || "基于人设的想法" 
+                    };
+                }) 
+            };
             renderWallet();
         }
     } catch (e) {
         console.error(e);
-        alert("取证链路不稳定，请重试");
+        alert("取证失败：" + e.message);
     } finally {
-        btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        btn.innerHTML = oldBtnHtml;
     }
 }
 
@@ -685,8 +802,25 @@ function renderShopList() {
 }
 function renderDiary() {
     if(!currentDiaryData) return;
-    const clean = t => t.replace(/日期：|正文：|秘密：/g, '').trim();
-    document.getElementById('app-content').innerHTML = `<div class="scrapbook"><div class="scrapbook-date">${clean(currentDiaryData.date)}</div><div class="scrapbook-section"><span class="scrapbook-label">☁️ 碎碎念</span>${clean(currentDiaryData.body)}</div><div class="scrapbook-section"><span class="scrapbook-label">💡 内心</span>${clean(currentDiaryData.secret)}</div><div style="text-align:right;">心情：${clean(currentDiaryData.mood)}</div></div>`;
+    // 移除可能存在的标签
+    const clean = t => t.replace(/\[\/?(日期|正文|秘密|心情)\]/g, '').replace(/日期：|正文：|秘密：/g, '').trim();
+    document.getElementById('app-content').innerHTML = `
+        <div class="scrapbook">
+            <div class="scrapbook-date" style="font-weight:bold; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                ${clean(currentDiaryData.date)}
+            </div>
+            <div class="scrapbook-section">
+                <span class="scrapbook-label">☁️ 碎碎念</span>
+                <div style="text-indent: 2em;">${clean(currentDiaryData.body)}</div>
+            </div>
+            <div class="scrapbook-section" style="background:#fff0f0; border-color:#ffccc7;">
+                <span class="scrapbook-label">💡 无法对Ta说出口的秘密</span>
+                <i>${clean(currentDiaryData.secret)}</i>
+            </div>
+            <div style="text-align:right; font-size:12px; color:#888; margin-top:10px;">
+                记录时的心情：<span style="color:#262626">${clean(currentDiaryData.mood)}</span>
+            </div>
+        </div>`;
 }
 function renderPhotoList() {
     document.getElementById('app-content').innerHTML = '<div class="photo-grid">' + albumData.map((p, i) => `<div class="photo-card" onclick="togglePhoto(${i})"><div class="photo-card-inner">${p.flipped ? p.desc : '<i class="fas fa-image" style="font-size:24px; color:#ddd;"></i>'}</div></div>`).join('') + '</div>';
@@ -694,7 +828,32 @@ function renderPhotoList() {
 function togglePhoto(i) { albumData[i].flipped = !albumData[i].flipped; renderPhotoList(); }
 function renderWallet() {
     if(!walletHistory) return;
-    document.getElementById('app-content').innerHTML = `<div class="wallet-card"><div class="wallet-balance-num">￥ ${walletHistory.balance}</div></div>` + walletHistory.list.map(t => `<div class="trans-item"><div class="trans-main"><span>${t.title}</span><span style="color:red">-${t.price}</span></div><div class="trans-comment">${t.comment || ""}</div></div>`).join('');
+    const listHtml = walletHistory.list.map(t => {
+        const isIncome = !t.price.includes('-');
+        return `
+            <div class="trans-item">
+                <div class="trans-main">
+                    <span class="trans-title">${t.title}</span>
+                    <span class="trans-price ${isIncome ? 'income' : ''}">${t.price.includes('-') ? t.price : '+' + t.price}</span>
+                </div>
+                <div class="trans-time">${t.time}</div>
+                <div class="trans-comment">
+                    <i class="fas fa-quote-left" style="font-size:10px; opacity:0.3; margin-right:5px;"></i>
+                    ${t.comment}
+                </div>
+            </div>`;
+    }).join('');
+
+    document.getElementById('app-content').innerHTML = `
+        <div class="wallet-container">
+            <div class="wallet-card">
+                <div class="wallet-label">账户余额 (CNY)</div>
+                <div class="wallet-balance-num">￥ ${walletHistory.balance}</div>
+                <div style="margin-top:20px; font-size:12px; opacity:0.6;">**** **** **** ${Math.floor(Math.random()*9000+1000)}</div>
+            </div>
+            <div class="trans-section-title">收支明细</div>
+            ${listHtml || '<div style="text-align:center; color:#999; margin-top:20px;">暂无最近交易记录</div>'}
+        </div>`;
 }
 function renderCollections() {
     document.getElementById('app-content').innerHTML = '<div class="fav-grid">' + savedDiaries.map((d, i) => `<div class="fav-card" onclick="viewSavedDiary(${i})"><div class="fav-card-date">${d.date}</div><div class="fav-card-preview">${d.body}</div></div>`).join('') + '</div>';
@@ -711,10 +870,15 @@ async function refreshMood() {
     try {
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST', headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: aiConfig.model, messages: [{ role: "system", content: "俏皮吐槽查手机行为，20字以内。" }] })
+            body: JSON.stringify({ 
+                model: aiConfig.model || "gpt-3.5-turbo", 
+                messages: [{ role: "user", content: "俏皮吐槽查手机行为，20字以内。" }] 
+            })
         });
+        if (!res.ok) return;
         const data = await res.json();
-        document.getElementById('mood-text').innerText = data.choices[0].message.content.trim();
+        const content = (data.choices?.[0]?.message?.content || data.content || "").trim();
+        if (content) document.getElementById('mood-text').innerText = content;
     } catch (e) {}
 }
 </script>
