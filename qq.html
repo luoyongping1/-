@@ -1961,33 +1961,46 @@ async function sendPetMsg() {
             
                         let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
             
-// 加强版时间感知与空档判断逻辑
-let timePrompt = "";
-if (friend.timeAwareness) {
-    const now = new Date();
-    const hours = now.getHours();
-    // 细化时间段
-    let timePhase = "";
-    if (hours >= 5 && hours < 8) timePhase = "清晨（刚起床，可能带点困意）";
-    else if (hours >= 8 && hours < 11) timePhase = "上午";
-    else if (hours >= 11 && hours < 13) timePhase = "中午（该吃午饭了）";
-    else if (hours >= 13 && hours < 18) timePhase = "下午";
-    else if (hours >= 18 && hours < 23) timePhase = "晚上";
-    else timePhase = "深夜（你应该让用户早点休息，或者表现得疲惫）";
+            // 顶级时间感知增强逻辑
+            let timePrompt = "";
+            if (friend.timeAwareness) {
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes().toString().padStart(2, '0'); // 确保分钟是两位数
+                const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+                const dayName = dayNames[now.getDay()];
 
-    const timeStr = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate() + " " + now.getHours() + ":" + now.getMinutes();
-    
-    // 判断聊天时间间隔
-    let gapPrompt = "";
-    if (friend.lastUserChatTime) {
-        const diffMin = (Date.now() - friend.lastUserChatTime) / 1000 / 60;
-        if (diffMin >= 30) {
-            gapPrompt = `\n【系统提醒】：距离上次用户发消息已经过去了${Math.round(diffMin)}分钟。请在回复时先意识到时间的流逝，并根据现在的“${timePhase}”时段给出一个符合逻辑的问候或反应（如：问刚才干嘛去了、感叹时间过得快等）。`;
-        }
-    }
-    
-    timePrompt = `\n【当前现实时间】：${timeStr}\n【当前时间时段】：${timePhase}${gapPrompt}\n请严格遵守当前时段的人类逻辑，严禁在白天提睡觉，严禁在深夜说早安。`;
-}
+                // 极度细化时间段，防止 AI 乱说话
+                let timePhase = "";
+                if (hours >= 5 && hours < 9) timePhase = "清晨/早晨（刚起床，如果是休息日可能在赖床）";
+                else if (hours >= 9 && hours < 11) timePhase = "上午（工作/学习的高峰期）";
+                else if (hours >= 11 && hours < 14) timePhase = "中午（午饭时间/午休时间）";
+                else if (hours >= 14 && hours < 18) timePhase = "下午（工作时间/下午茶时间）";
+                else if (hours >= 18 && hours < 20) timePhase = "傍晚/晚餐时间";
+                else if (hours >= 20 && hours < 23) timePhase = "晚上（休息、刷手机、夜生活时间）";
+                else timePhase = "深夜/凌晨（极度安静，人类应该在睡觉的时间）";
+
+                // 判断聊天时间间隔
+                let gapPrompt = "";
+                if (friend.lastUserChatTime) {
+                    const diffMin = (Date.now() - friend.lastUserChatTime) / 1000 / 60;
+                    if (diffMin >= 30) {
+                        gapPrompt = `\n【时间差感知】：距离上次用户找你已经过去了 ${Math.round(diffMin)} 分钟。请注意，你已经有一段时间没和用户说话了。如果是从一个时段跨越到了另一个时段（比如从下午到了晚上），请在回复中体现出这种跨度感（如：“天都黑了呀”）。`;
+                    }
+                }
+                
+                timePrompt = `
+【当前精确时间表】：
+- 日期：${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日
+- 星期：${dayName}
+- 时刻：${hours}点${minutes}分 (请严格以此分钟数为准，严禁四舍五入)
+- 当前时段状况：${timePhase}${gapPrompt}
+
+【时间回复规则】：
+1. 你必须先看清楚上面的“时刻”再说话。如果现在是 ${hours}:${minutes}，你绝不能说“快要${hours + 1}点”了。
+2. 严禁在白天的时段问用户为什么不睡觉。
+3. 如果 30 分钟没聊了，你必须表现出“刚看到消息”或“重新开启话题”的样子。`;
+            }
 
             // 新增：金钱感知逻辑
             let moneyPrompt = "";
@@ -2194,117 +2207,63 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
     msgs = replyPart.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, isTheater: false }));
 }
 
-                                        for (let mObj of msgs) {
-await new Promise(r => setTimeout(r, 100)); // 大幅缩短等待时间
-// 统一提取文本内容
-let rawText = mObj.text.trim();
+for (let mObj of msgs) {
+    await new Promise(r => setTimeout(r, 100));
+    let rawText = mObj.text.trim();
+    if (!rawText) continue;
 
-// --- core修正：彻底屏蔽所有方括号提示词标签（如 [JEALOUSY], [ACTION] 等） ---
-let cleanText = rawText.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\].*?(\s|$)|\[.*?\]/g, "").trim();
-
-// 如果这行文字被屏蔽完后变空了（比如原本只有标签），就跳过不显示这个气泡
-if (!cleanText) continue;
-
-// --- 新增：解析 AI 主动转账指令 ---
-if (cleanText.includes("[SEND_MONEY]")) {
-    const moneyMatch = cleanText.match(/\[SEND_MONEY\](\d+\.?\d*)\|?([\s\S]*)/);
-    if (moneyMatch) {
-        const amount = moneyMatch[1];
-        const note = moneyMatch[2] || "微信转账";
-        chatHistories[currentFriendName].push({ 
-            type: 'friend', 
-            text: amount, 
-            isTransfer: true, 
-            transferNote: note,
-            status: 'unclaimed' // 标记为待领取状态
-        });
-        friend.lastMsg = "[微信转账] ￥" + amount;
-        saveData(); renderMessages();
-        continue; // 跳过这一条，不显示原本的指令文字
-    }
-}
-
-// 只要我们刚才标记了是剧场，或者内容包含 html，就判定为剧场消息
-    let isTheaterMsg = mObj.isTheater || /<html|<!DOCTYPE|<body/i.test(cleanText);
-    
-    let isDescribeCard = false;
-                    if (cleanText.startsWith('[图片描述]：') || cleanText.startsWith('[图片描述]:')) {
-                        isDescribeCard = true;
-                        cleanText = cleanText.replace(/\[图片描述\]：|\[图片描述\]:/, '').trim();
-                    }
-
-                    let isVoice = !isTheaterMsg && !isDescribeCard && (Math.random() > 0.8);
-
-                    // 将AI回复存入聊天记录
-chatHistories[currentFriendName].push({ 
-    type: 'friend', 
-    text: cleanText,
-    isVoice: isVoice, 
-    isDescribeCard: isDescribeCard,
-    expanded: false,
-    action: actionPart,
-    thoughts: thoughtsPart,
-    emotion: emotionPart,
-    jealousy: jealousyPart
-});
-
-// 更新最后一条消息预览
-friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
-saveData(); 
-
-// --- 核心修复：更强力的后台通知触发逻辑 ---
-if (localStorage.getItem('allow_notifications') === 'true' && document.visibilityState !== 'visible') {
-    // 获取 Service Worker 注册对象，无论是在主页还是 iframe 都能更稳妥地发送
-    navigator.serviceWorker.ready.then(registration => {
-        if (registration.active) {
-            registration.active.postMessage({
-                type: 'SHOW_NOTIFICATION',
-                title: currentFriendName + ' 发来QQ消息',
-                body: isTheaterMsg ? "[发送了一个小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText),
-                icon: friend.avatarUrl || 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+    // 1. 解析转账 (必须在清理所有标签前，先在原始文本 rawText 中查找)
+    if (rawText.includes("[SEND_MONEY]")) {
+        const moneyMatch = rawText.match(/\[SEND_MONEY\](\d+\.?\d*)\|?([\s\S]*?)(?=\]|$)/);
+        if (moneyMatch) {
+            const amount = moneyMatch[1];
+            const note = moneyMatch[2] || "微信转账";
+            chatHistories[currentFriendName].push({ 
+                type: 'friend', text: amount, isTransfer: true, transferNote: note, status: 'unclaimed' 
             });
+            friend.lastMsg = "[微信转账] ￥" + amount;
+            saveData(); renderMessages();
+            // 处理完转账后，把 rawText 里的转账标签删掉，剩下的文字继续往下走
+            rawText = rawText.replace(/\[SEND_MONEY\].*?\]/g, "").trim();
+            if (!rawText) continue; 
         }
+    }
+
+    // 2. 清理系统标签，但暂时保留图片描述标签
+    let cleanText = rawText.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\].*?(\s|$)/g, "").trim();
+
+    // 3. 判断是否为图片描述便签
+    let isDescribeCard = false;
+    if (cleanText.includes('[图片描述]')) {
+        isDescribeCard = true;
+        // 删掉图片描述标签和可能冒出来的冒号
+        cleanText = cleanText.replace(/\[图片描述\][:：]?/, '').trim();
+    }
+
+    // 4. 最后彻底清理掉所有剩下的方括号内容
+    cleanText = cleanText.replace(/\[.*?\]/g, "").trim();
+    if (!cleanText) continue;
+
+    let isTheaterMsg = mObj.isTheater || /<html|<!DOCTYPE|<body/i.test(cleanText);
+    let isVoice = !isTheaterMsg && !isDescribeCard && (Math.random() > 0.8);
+
+    // 存入聊天记录
+    chatHistories[currentFriendName].push({ 
+        type: 'friend', 
+        text: cleanText,
+        isVoice: isVoice, 
+        isDescribeCard: isDescribeCard,
+        expanded: false,
+        action: actionPart,
+        thoughts: thoughtsPart,
+        emotion: emotionPart,
+        jealousy: jealousyPart
     });
+
+    friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
+    saveData(); renderMessages();
+    renderChatList();
 }
-// --- 修复结束 ---
-
-// 无论是否在后台，都尝试更新内存和界面（这能维持JS引擎活跃度）
-renderMessages();
-renderChatList();
-
-// --- 新增：离线弹窗推送逻辑 ---
-const sub = JSON.parse(localStorage.getItem('web_push_subscription'));
-if (sub && document.visibilityState !== 'visible') {
-    fetch('/api/push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            subscription: sub,
-            title: currentFriendName + ' 发来QQ消息',
-            body: isTheaterMsg ? "[发送了一个小剧场]" : cleanText 
-        })
-    }).catch(err => console.error("推送失败:", err));
-}
-// ----------------------------
-// 自动记忆总结逻辑
-                    const curHist = chatHistories[currentFriendName] || [];
-                    if (curHist.length - (friend.lastSummaryIdx || 0) >= (friend.memoryFreq || 20)) {
-                        triggerManualSummary();
-                    }
-
-                    // 充值判断逻辑
-                    if (cleanText.includes("已转") || cleanText.includes("好滴")) {
-                        const h = chatHistories[currentFriendName];
-                        for(let i = h.length - 1; i >= 0; i--) {
-                            if(h[i].isCard) {
-                                const amt = parseFloat(h[i].text.split('￥')[1]);
-                                walletData.balance += amt;
-                                walletData.history.push({ type: '收入', title: friend.name + '转账', amount: `+${amt.toFixed(2)}`, time: new Date().toLocaleString() });
-                                updateWalletUI(); break;
-                            }
-                        }
-                    }
-                }
 
                 // 表情包逻辑：如果允许使用表情包且库中有表情，且【不在追剧模式】下，才发送
         if (typeof isWatching !== 'undefined' && !isWatching && friend.allowStickers && stickers.length > 0) {
