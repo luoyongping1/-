@@ -587,6 +587,47 @@ input:checked + .slider:before {
             .dating-heart { color: #ff4d4f; font-size: 24px; animation: dating-heartbeat 1.5s infinite; }
             @keyframes dating-heartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
             .dating-content { flex: 1; overflow-y: auto; padding: 30px 20px; background: #fafafa; display: flex; flex-direction: column; gap: 40px; }
+/* 约会气泡管理菜单样式 */
+.dating-gear-box {
+    position: absolute;
+    top: 5px;
+    left: 10px;
+    z-index: 10;
+}
+.dating-gear-icon {
+    font-size: 16px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.3s;
+}
+.dating-gear-icon:hover { color: #ff4d4f; }
+
+.dating-frosted-menu {
+    display: none;
+    position: absolute;
+    top: 30px;
+    left: 0;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    padding: 5px;
+    width: 80px;
+    flex-direction: column;
+    gap: 2px;
+}
+.dating-menu-item {
+    font-size: 12px;
+    color: #333;
+    padding: 8px 10px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 8px;
+}
+.dating-menu-item:active { background: rgba(255, 255, 255, 0.5); }
             /* Ins 风消息卡片 */
             .dating-card { background: #ffffff; border-radius: 20px; padding: 25px 20px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.05); max-width: 90%; margin: 0 auto; width: 100%; box-sizing: border-box; }
             .dating-card-avatar { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); width: 44px; height: 44px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; background: #eee; }
@@ -3013,13 +3054,26 @@ function closeDatingPage() {
 function renderDatingMessages() {
     const container = document.getElementById('dating-container');
     const history = datingHistories[currentFriendName] || [];
-    container.innerHTML = history.map(m => {
+    container.innerHTML = history.map((m, idx) => {
         const friend = friends.find(f => f.name === currentFriendName);
         let av = m.type === 'self' ? 
             (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : 
             (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
+        
+        // 只有角色回复（type不是self）才显示齿轮菜单
+        const gearHtml = m.type !== 'self' ? `
+            <div class="dating-gear-box">
+                <div class="dating-gear-icon" onclick="toggleDatingMenu(${idx}, event)">⚙️</div>
+                <div id="dating-menu-${idx}" class="dating-frosted-menu">
+                    <div class="dating-menu-item" onclick="deleteDatingMsg(${idx})">删除</div>
+                    <div class="dating-menu-item" onclick="redoDatingReply(${idx})">重回</div>
+                    <div class="dating-menu-item" onclick="editDatingMsg(${idx})">编辑</div>
+                </div>
+            </div>` : '';
+
         return `
-            <div class="dating-card">
+            <div class="dating-card" style="position:relative">
+                ${gearHtml}
                 <div class="dating-card-avatar">${av}</div>
                 <div class="dating-text">${m.text}</div>
             </div>`;
@@ -3152,6 +3206,53 @@ async function getDatingAiReply() {
         saveData();
         renderDatingMessages();
     } catch (e) { alert("约会互动失败"); }
+}
+
+// 控制约会菜单显示/隐藏
+function toggleDatingMenu(idx, event) {
+    event.stopPropagation();
+    const menu = document.getElementById(`dating-menu-${idx}`);
+    const allMenus = document.querySelectorAll('.dating-frosted-menu');
+    allMenus.forEach(m => { if(m.id !== `dating-menu-${idx}`) m.style.display = 'none'; });
+    menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+    
+    // 点击页面其他地方关闭菜单
+    document.addEventListener('click', function closeMenu() {
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeMenu);
+    }, { once: true });
+}
+
+// 删除功能
+function deleteDatingMsg(idx) {
+    if(confirm("确定删除这条约会信息吗？")) {
+        datingHistories[currentFriendName].splice(idx, 1);
+        saveData();
+        renderDatingMessages();
+    }
+}
+
+// 编辑功能
+function editDatingMsg(idx) {
+    const currentText = datingHistories[currentFriendName][idx].text;
+    const newText = prompt("编辑角色回复的内容：", currentText);
+    if (newText !== null && newText.trim() !== "") {
+        datingHistories[currentFriendName][idx].text = newText.trim();
+        saveData();
+        renderDatingMessages();
+    }
+}
+
+// 重回功能
+async function redoDatingReply(idx) {
+    if(confirm("将删除此条回复并请求重新生成，确定吗？")) {
+        // 删除当前这条AI消息
+        datingHistories[currentFriendName].splice(idx, 1);
+        saveData();
+        renderDatingMessages();
+        // 触发重新生成
+        await getDatingAiReply();
+    }
 }
 
 // 打开群聊列表页
