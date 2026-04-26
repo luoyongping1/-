@@ -3486,14 +3486,14 @@ function applyFriendBubbleStyle() {
         document.head.appendChild(styleTag);
     }
     
-    // 逻辑：如果存在自定义气泡代码，就在代码末尾自动加上“隐藏小尾巴”的指令
+    // 逻辑：如果存在自定义气泡代码，只去掉边框（即去掉三角尾巴），但不隐藏元素（保留贴纸）
     if (friend && friend.bubbleCss && friend.bubbleCss.trim() !== "") {
         styleTag.innerHTML = friend.bubbleCss + `
-            .msg.friend .bubble::before { display: none !important; }
-            .msg.self .bubble::after { display: none !important; }
+            .msg.friend .bubble::before { border: none !important; }
+            .msg.self .bubble::after { border: none !important; }
         `;
     } else {
-        // 如果没有自定义代码（默认微信气泡），则清空样式标签，让默认的小尾巴显示
+        // 如果没有自定义代码，则清空样式，恢复默认
         styleTag.innerHTML = "";
     }
 }
