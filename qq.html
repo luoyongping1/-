@@ -3486,19 +3486,14 @@ function applyFriendBubbleStyle() {
         document.head.appendChild(styleTag);
     }
     
-    // 逻辑：如果自定义 CSS 不为空，就额外加上隐藏小尾巴的代码
+    // 逻辑：如果存在自定义气泡代码，就在代码末尾自动加上“隐藏小尾巴”的指令
     if (friend && friend.bubbleCss && friend.bubbleCss.trim() !== "") {
-        styleTag.innerHTML = `
-            /* 强制隐藏默认微信气泡的小尾巴 */
-            .msg.friend .bubble::before, 
-            .msg.self .bubble::after {
-                display: none !important;
-            }
-            /* 应用你自己的气泡代码 */
-            ${friend.bubbleCss}
+        styleTag.innerHTML = friend.bubbleCss + `
+            .msg.friend .bubble::before { display: none !important; }
+            .msg.self .bubble::after { display: none !important; }
         `;
     } else {
-        // 如果自定义 CSS 是空的，就清空样式，恢复默认微信气泡（带尾巴）
+        // 如果没有自定义代码（默认微信气泡），则清空样式标签，让默认的小尾巴显示
         styleTag.innerHTML = "";
     }
 }
