@@ -485,7 +485,23 @@ input:checked + .slider:before {
             position: relative;
         }
         .voice-bar:active { background: #f2f2f2; }
-        .voice-icon { font-size: 16px; transform: rotate(180deg); display: inline-block; }
+        /* 新的柱状图语音图标样式 */
+.voice-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 16px;
+    margin-right: 5px;
+}
+.voice-bars span {
+    width: 3px;
+    background-color: #333;
+    border-radius: 1px;
+}
+/* 设置三个柱子的高度不等，形成柱状图感 */
+.voice-bars span:nth-child(1) { height: 6px; }
+.voice-bars span:nth-child(2) { height: 14px; }
+.voice-bars span:nth-child(3) { height: 10px; }
         .translate-trigger { font-size: 11px; color: var(--blue-link); cursor: pointer; padding: 2px 5px; }
         .translated-content {
             display: none; background: rgba(255,255,255,0.7); padding: 8px 12px;
@@ -1676,10 +1692,15 @@ if (m.isShoppingPay) {
                         <div class="msg friend">
                             <div class="avatar" style="width:35px;height:35px;font-size:12px;background:#ccc">${avHtml}</div>
                             <div class="voice-wrap">
-                                <div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}', this)">
-                                    <span class="voice-icon">(((</span>
-                                    <span style="font-size:12px; color:#999;">${Math.min(m.text.length, 60)}''</span>
-                                </div>
+<div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}', this)">
+    <!-- 这里改成了柱状图结构 -->
+    <div class="voice-bars">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <span style="font-size:12px; color:#999;">${Math.min(m.text.length, 60)}''</span>
+</div>
                                 <div class="translate-trigger" onclick="document.getElementById('trans-${realIndex}').classList.toggle('active')">转文字</div>
                                 <div id="trans-${realIndex}" class="translated-content">${m.text}</div>
                             </div>
