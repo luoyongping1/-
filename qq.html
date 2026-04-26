@@ -1961,13 +1961,33 @@ async function sendPetMsg() {
             
                         let longMemoryPrompt = friend.longMemory ? "\n长期记忆：\n" + friend.longMemory : "";
             
-            // 新增：时间感知逻辑
-            let timePrompt = "";
-            if (friend.timeAwareness) {
-                const now = new Date();
-                const timeStr = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate() + " " + now.getHours() + ":" + now.getMinutes();
-                timePrompt = `\n【当前现实时间】：${timeStr}\n请在聊天中参考此时间（例如：如果现在是深夜，你可以表现得困倦或说晚安）。`;
-            }
+// 加强版时间感知与空档判断逻辑
+let timePrompt = "";
+if (friend.timeAwareness) {
+    const now = new Date();
+    const hours = now.getHours();
+    // 细化时间段
+    let timePhase = "";
+    if (hours >= 5 && hours < 8) timePhase = "清晨（刚起床，可能带点困意）";
+    else if (hours >= 8 && hours < 11) timePhase = "上午";
+    else if (hours >= 11 && hours < 13) timePhase = "中午（该吃午饭了）";
+    else if (hours >= 13 && hours < 18) timePhase = "下午";
+    else if (hours >= 18 && hours < 23) timePhase = "晚上";
+    else timePhase = "深夜（你应该让用户早点休息，或者表现得疲惫）";
+
+    const timeStr = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate() + " " + now.getHours() + ":" + now.getMinutes();
+    
+    // 判断聊天时间间隔
+    let gapPrompt = "";
+    if (friend.lastUserChatTime) {
+        const diffMin = (Date.now() - friend.lastUserChatTime) / 1000 / 60;
+        if (diffMin >= 30) {
+            gapPrompt = `\n【系统提醒】：距离上次用户发消息已经过去了${Math.round(diffMin)}分钟。请在回复时先意识到时间的流逝，并根据现在的“${timePhase}”时段给出一个符合逻辑的问候或反应（如：问刚才干嘛去了、感叹时间过得快等）。`;
+        }
+    }
+    
+    timePrompt = `\n【当前现实时间】：${timeStr}\n【当前时间时段】：${timePhase}${gapPrompt}\n请严格遵守当前时段的人类逻辑，严禁在白天提睡觉，严禁在深夜说早安。`;
+}
 
             // 新增：金钱感知逻辑
             let moneyPrompt = "";
@@ -2935,6 +2955,8 @@ function executeTransfer() {
     } else {
         const friend = friends.find(f => f.name === currentFriendName);
         friend.lastMsg = val; 
+        // 新增：记录用户发消息的绝对时间戳
+        friend.lastUserChatTime = Date.now();
         // 增加聊天点数和更新天数
         updateFireOnChat(friend);
     }
