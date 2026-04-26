@@ -2464,7 +2464,35 @@ if (sub && document.visibilityState !== 'visible') {
         function openAddMenu() { document.getElementById('add-menu-modal').style.display = 'flex'; }
         function addFriend() { const n=prompt("昵称:"); if(n){ friends.push({name:n, initial:n[0], lastMsg:'', persona:'普通人', freq:0, lastMoment:Date.now(), avatarUrl:'', mountedBooks:[], group:'我的好友', memoryFreq:20, lastSummaryIdx:0, longMemory:''}); saveData(); renderContactList(); document.getElementById('add-menu-modal').style.display='none'; }}
         function clearChatHistory() { if (confirm("确定要清空聊天记录吗？")) { chatHistories[currentFriendName] = []; const friend = friends.find(f => f.name === currentFriendName); if (friend) friend.lastMsg = ""; saveData(); renderMessages(); alert("已清空记录"); } }
-        function deleteFriend() { if(confirm("删除?")){ friends=friends.filter(f=>f.name!==currentFriendName); delete chatHistories[currentFriendName]; saveData(); closeSettings(); closeChat(); renderContactList();}}
+        function deleteFriend() {
+    if (isGroupMode) {
+        // 群聊删除逻辑
+        if (confirm("确定要解散并删除该群聊吗？此操作将清空所有群聊记录和记忆。")) {
+            // 从群聊列表中移除
+            groupChats = groupChats.filter(g => g.id !== currentFriendName);
+            // 删除对应的聊天记录和记忆
+            delete chatHistories[currentFriendName];
+            
+            saveData();
+            closeSettings();
+            closeChat();
+            // 刷新群聊列表页面
+            renderGroupList();
+            alert("群聊已解散");
+        }
+    } else {
+        // 原有的好友删除逻辑
+        if (confirm("确定删除好友吗？")) {
+            friends = friends.filter(f => f.name !== currentFriendName);
+            delete chatHistories[currentFriendName];
+            
+            saveData();
+            closeSettings();
+            closeChat();
+            renderContactList();
+        }
+    }
+}
 function toggleToolBox() {
     const box = document.getElementById('tool-box');
     document.getElementById('sticker-panel').style.display = 'none'; // 互斥
@@ -3500,6 +3528,14 @@ closeChat = function() {
             <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
         `;
     }
+    // 新增：根据是否是群聊，修改底部删除按钮的文字
+    const deleteBtn = document.querySelector('#settings-page .list-group:last-child .list-item');
+    if (isGroupMode) {
+        deleteBtn.innerText = "解散并删除群聊";
+    } else {
+        deleteBtn.innerText = "删除好友";
+    }
+
     document.getElementById('settings-page').classList.add('active');
 }
 
