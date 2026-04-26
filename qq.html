@@ -3485,7 +3485,22 @@ function applyFriendBubbleStyle() {
         styleTag.id = 'friend-bubble-style';
         document.head.appendChild(styleTag);
     }
-    styleTag.innerHTML = friend ? (friend.bubbleCss || "") : "";
+    
+    // 逻辑：如果自定义 CSS 不为空，就额外加上隐藏小尾巴的代码
+    if (friend && friend.bubbleCss && friend.bubbleCss.trim() !== "") {
+        styleTag.innerHTML = `
+            /* 强制隐藏默认微信气泡的小尾巴 */
+            .msg.friend .bubble::before, 
+            .msg.self .bubble::after {
+                display: none !important;
+            }
+            /* 应用你自己的气泡代码 */
+            ${friend.bubbleCss}
+        `;
+    } else {
+        // 如果自定义 CSS 是空的，就清空样式，恢复默认微信气泡（带尾巴）
+        styleTag.innerHTML = "";
+    }
 }
 
 // 在打开聊天窗时应用样式
