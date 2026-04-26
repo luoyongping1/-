@@ -603,6 +603,25 @@ input:checked + .slider:before {
 }
 .dating-gear-icon:hover { color: #ff4d4f; }
 
+/* 新增：约会编辑确认按钮样式 */
+.dating-confirm-btn {
+    display: none;
+    margin: 10px auto 0;
+    background: #07c160;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+/* 编辑时的文字边框状态 */
+.dating-text[contenteditable="true"] {
+    outline: 2px dashed #07c160;
+    background: #fff;
+    padding: 5px;
+    border-radius: 8px;
+}
+
 .dating-frosted-menu {
     display: none;
     position: absolute;
@@ -3060,22 +3079,24 @@ function renderDatingMessages() {
             (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : 
             (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
         
-        // 修改：齿轮里删掉“编辑”选项，因为现在点气泡就能改
+        // 齿轮：把“编辑”按钮加回来了
         const gearHtml = m.type !== 'self' ? `
             <div class="dating-gear-box">
                 <div class="dating-gear-icon" onclick="toggleDatingMenu(${idx}, event)">⚙️</div>
                 <div id="dating-menu-${idx}" class="dating-frosted-menu">
                     <div class="dating-menu-item" onclick="deleteDatingMsg(${idx})">删除</div>
                     <div class="dating-menu-item" onclick="redoDatingReply(${idx})">重回</div>
+                    <div class="dating-menu-item" onclick="startInlineEdit(${idx})">编辑</div>
                 </div>
             </div>` : '';
 
-        // 修改：在 dating-card 上增加了 onclick 事件，点击即可编辑
         return `
-            <div class="dating-card" style="position:relative; cursor:pointer;" onclick="editDatingMsg(${idx})">
+            <div class="dating-card" style="position:relative;">
                 ${gearHtml}
                 <div class="dating-card-avatar">${av}</div>
-                <div class="dating-text">${m.text}</div>
+                <!-- 增加了 ID 方便定位文字，增加了确认按钮 -->
+                <div id="dating-text-${idx}" class="dating-text">${m.text}</div>
+                <button id="dating-confirm-${idx}" class="dating-confirm-btn" onclick="finishInlineEdit(${idx})">保存修改</button>
             </div>`;
     }).join('');
     container.scrollTop = container.scrollHeight;
@@ -3240,14 +3261,37 @@ function deleteDatingMsg(idx) {
     }
 }
 
-// 编辑功能
-function editDatingMsg(idx) {
-    const currentText = datingHistories[currentFriendName][idx].text;
-    const newText = prompt("编辑角色回复的内容：", currentText);
-    if (newText !== null && newText.trim() !== "") {
-        datingHistories[currentFriendName][idx].text = newText.trim();
-        saveData();
-        renderDatingMessages();
+// 开启行内编辑模式
+function startInlineEdit(idx) {
+    const textDiv = document.getElementById(`dating-text-${idx}`);
+    const confirmBtn = document.getElementById(`dating-confirm-${idx}`);
+    
+    // 让文字区域变得可以点击编辑
+    textDiv.contentEditable = "true";
+    textDiv.focus(); // 自动弹出输入法
+    
+    // 显示确认按钮
+    confirmBtn.style.display = "block";
+}
+
+// 完成行内编辑并保存
+function finishInlineEdit(idx) {
+    const textDiv = document.getElementById(`dating-text-${idx}`);
+    const confirmBtn = document.getElementById(`dating-confirm-${idx}`);
+    const newText = textDiv.innerText.trim();
+
+    if (newText !== "") {
+        // 更新约会临时历史记录（退出时总结记忆才会进角色脑子）
+        datingHistories[currentFriendName][idx].text = newText;
+        
+        // 恢复状态
+        textDiv.contentEditable = "false";
+        confirmBtn.style.display = "none";
+        
+        saveData(); // 保存到浏览器缓存
+        alert("修改已生效（仅限本次约会）");
+    } else {
+        alert("内容不能为空哦！");
     }
 }
 
