@@ -1682,9 +1682,10 @@ if (m.isShoppingPay) {
                     contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">`;
                     useBubble = false;
                 } else if (m.isDescribeCard) {
-                    contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${realIndex})"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
-                    useBubble = false;
-                } else if (isTheater) {
+    // 注意：这里在 toggleDescribeCard 后面增加了 , event
+    contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${realIndex}, event)"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
+    useBubble = false;
+} else if (isTheater) {
                     let theaterTitle = "精彩小剧场";
                     const match = m.text.match(/<title>(.*?)<\/title>/i) || m.text.match(/<h1>(.*?)<\/h1>/i);
                     if (match) theaterTitle = match[1];
@@ -3539,7 +3540,19 @@ function toggleTimeAwareness(val) {
     }
 }
         function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
-        function toggleDescribeCard(index) { chatHistories[currentFriendName][index].expanded = !chatHistories[currentFriendName][index].expanded; renderMessages(); }
+        function toggleDescribeCard(index, event) {
+    // 阻止事件冒泡，防止触发聊天气泡的长按菜单
+    if (event) event.stopPropagation();
+    
+    const history = chatHistories[currentFriendName] || [];
+    if (history[index]) {
+        // 切换展开/折叠状态
+        history[index].expanded = !history[index].expanded;
+        // 核心修改：必须调用 saveData() 保存状态，否则 renderMessages 刷新时会读取旧的折叠状态
+        saveData(); 
+        renderMessages();
+    }
+}
 
         function openImageChoiceModal() { document.getElementById('image-choice-modal').style.display = 'flex'; }
         function closeImageChoiceModal() { document.getElementById('image-choice-modal').style.display = 'none'; }
