@@ -3060,19 +3060,19 @@ function renderDatingMessages() {
             (myInfo.avatar ? `<img src="${myInfo.avatar}">` : '我') : 
             (friend.avatarUrl ? `<img src="${friend.avatarUrl}">` : friend.initial);
         
-        // 只有角色回复（type不是self）才显示齿轮菜单
+        // 修改：齿轮里删掉“编辑”选项，因为现在点气泡就能改
         const gearHtml = m.type !== 'self' ? `
             <div class="dating-gear-box">
                 <div class="dating-gear-icon" onclick="toggleDatingMenu(${idx}, event)">⚙️</div>
                 <div id="dating-menu-${idx}" class="dating-frosted-menu">
                     <div class="dating-menu-item" onclick="deleteDatingMsg(${idx})">删除</div>
                     <div class="dating-menu-item" onclick="redoDatingReply(${idx})">重回</div>
-                    <div class="dating-menu-item" onclick="editDatingMsg(${idx})">编辑</div>
                 </div>
             </div>` : '';
 
+        // 修改：在 dating-card 上增加了 onclick 事件，点击即可编辑
         return `
-            <div class="dating-card" style="position:relative">
+            <div class="dating-card" style="position:relative; cursor:pointer;" onclick="editDatingMsg(${idx})">
                 ${gearHtml}
                 <div class="dating-card-avatar">${av}</div>
                 <div class="dating-text">${m.text}</div>
@@ -3192,6 +3192,10 @@ async function getDatingAiReply() {
     const history = (datingHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
     let sys = `# Role\n你现在正和用户进行[线下约会]。人设：${friend.persona}。\n# 任务\n请进行沉浸式的互动描述，包括你的动作、神态、环境和对话。使用长文字输出，严禁拆分成短句。不要发送HTML代码。`;
     
+    // 新增：显示正在输入状态
+    const typingStatus = document.getElementById('dating-typing');
+    if(typingStatus) typingStatus.style.display = 'block';
+
     try {
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST',
@@ -3201,11 +3205,15 @@ async function getDatingAiReply() {
         const data = await res.json();
         const aiReply = data.choices[0].message.content.trim();
         
-        // 直接存入一个完整的长气泡
         datingHistories[currentFriendName].push({ type: 'friend', text: aiReply });
         saveData();
         renderDatingMessages();
-    } catch (e) { alert("约会互动失败"); }
+    } catch (e) { 
+        alert("约会互动失败"); 
+    } finally {
+        // 新增：隐藏输入状态
+        if(typingStatus) typingStatus.style.display = 'none';
+    }
 }
 
 // 控制约会菜单显示/隐藏
@@ -4469,15 +4477,23 @@ openUserPersonaSelect = async function() {
 <div id="dating-page" class="page">
     <div class="dating-header">
         <span onclick="closeDatingPage()" style="position:absolute; left:15px; font-size:18px; color:#999;">✕</span>
-        <div class="dating-avatar-wrap" id="dating-user-avatar"></div>
-        <div class="dating-heart">❤️</div>
-        <div class="dating-avatar-wrap" id="dating-friend-avatar"></div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="dating-avatar-wrap" id="dating-user-avatar"></div>
+                <div class="dating-heart">❤️</div>
+                <div class="dating-avatar-wrap" id="dating-friend-avatar"></div>
+            </div>
+            <!-- 新增：输入状态显示 -->
+            <div id="dating-typing" style="display:none; font-size: 11px; color: #ff4d4f; margin-top: 5px;">对方正在输入中...</div>
+        </div>
     </div>
     <div id="dating-container" class="dating-content"></div>
     <div class="dating-input-bar">
-        <input type="text" id="dating-input-field" class="dating-input" placeholder="写下这一刻的互动..." onkeydown="if(event.key==='Enter') sendDatingMsg()">
-        <div class="dating-send-btn" onclick="sendDatingMsg()">发送</div>
-    </div>
+    <!-- 新增：信封样式的重发按钮 -->
+    <div onclick="getDatingAiReply()" style="font-size: 24px; cursor: pointer; padding-right: 10px; color: #333;">✉️</div>
+    <input type="text" id="dating-input-field" class="dating-input" placeholder="写下这一刻的互动..." onkeydown="if(event.key==='Enter') sendDatingMsg()">
+    <div class="dating-send-btn" onclick="sendDatingMsg()">发送</div>
+</div>
 </div>
 <!-- 退出约会确认弹窗 -->
 <div id="dating-exit-modal" class="glass-modal" style="z-index: 8000;">
