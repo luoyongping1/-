@@ -148,18 +148,35 @@ input, textarea {
 
 .grid-item.dragging {
     z-index: 9999 !important;
-    opacity: 0.8;
-    transform: scale(1.05);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    opacity: 0.7;
+    transform: scale(1.1);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.3);
     position: fixed !important; 
     pointer-events: none;
-    /* 保持原有比例，不强制死宽高，由脚本动态处理 */
     margin: 0 !important;
-    transition: transform 0.1s;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
 }
-/* 拖拽时给下方图标一个稍微位移的预感（可选，增加流畅感） */
+
 .grid-item {
     transition: transform 0.3s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.2s;
+    /* 解决点击不灵敏：确保背景图不拦截事件 */
+    pointer-events: auto;
+}
+
+/* 平滑落位动画类 */
+.grid-item.dropping {
+    transition: all 0.3s cubic-bezier(0.2, 1, 0.2, 1) !important;
+    z-index: 9998 !important;
+}
+
+.drag-placeholder {
+    border: 2px dashed rgba(79, 172, 254, 0.6);
+    background: rgba(79, 172, 254, 0.15);
+    border-radius: 24px;
+    transition: all 0.25s cubic-bezier(0.2, 1, 0.2, 1);
+    pointer-events: none;
+    box-sizing: border-box;
+    z-index: 1;
 }
 
         .time-widget { 
@@ -1082,160 +1099,235 @@ async function handlePaste(targetId) {
 
 function initGridSortable() {
     window.oncontextmenu = function(e) {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-};
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+        e.preventDefault(); e.stopPropagation(); return false;
+    };
+
     let draggingItem = null;
-    let startX, startY;
-    let moveDist = 0;
+    let placeholder = document.createElement('div');
+    placeholder.className = 'drag-placeholder';
+    
     let initialRect = null;
+    let offsetX = 0, offsetY = 0;
+    let currentX = 0, currentY = 0;
+    let isMoving = false;
+    let rafId = null;
+    let longPressTimer = null;
 
-    document.addEventListener('touchstart', (e) => {
-        const item = e.target.closest('.grid-item');
-        if (item || e.target.classList.contains('content')) {
-            longPressTimer = setTimeout(() => { enterEditMode(); }, 800);
-        }
-        if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
-        draggingItem = item;
-        initialRect = draggingItem.getBoundingClientRect();
-        const touch = e.touches[0];
-        startX = touch.clientX; 
-        startY = touch.clientY;
-        moveDist = 0;
-    }, {passive: false});
+    const getWidgetSpan = (el) => {
+        let sx = 1, sy = 1;
+        if (el.id === 'item-time' || el.classList.contains('time-widget') || el.classList.contains('widget-minimal-clock')) { sx = 4; sy = 1; }
+        else if (el.classList.contains('widget-ios-info')) { sx = 4; sy = 2; }
+        else if (el.classList.contains('left-widget') || el.classList.contains('widget-ios-photo') || el.classList.contains('progress-widgets')) { sx = 2; sy = 2; }
+        return { sx, sy };
+    };
 
-    document.addEventListener('touchmove', (e) => {
-        clearTimeout(longPressTimer); 
+    const updatePosition = () => {
         if (!draggingItem) return;
-        const touch = e.touches[0];
-        const dx = touch.clientX - startX;
-        const dy = touch.clientY - startY;
-        moveDist = Math.hypot(dx, dy);
-        if (moveDist > 10) {
-            e.preventDefault(); 
-            draggingItem.classList.add('dragging');
-            draggingItem.style.width = initialRect.width + 'px';
-            draggingItem.style.height = initialRect.height + 'px';
-            draggingItem.style.left = (touch.clientX - initialRect.width / 2) + 'px';
-            draggingItem.style.top = (touch.clientY - initialRect.height / 2) + 'px';
+        draggingItem.style.left = (currentX - offsetX) + 'px';
+        draggingItem.style.top = (currentY - offsetY) + 'px';
+        
+        const screenWidth = window.innerWidth;
+        const wrapper = document.getElementById('swiper-wrapper');
+        const dots = document.querySelectorAll('.dot');
+        const grid1 = document.getElementById('main-grid');
+        const grid2 = document.getElementById('page-2');
+
+        const edgeThreshold = 40;
+        if (currentX > screenWidth - edgeThreshold && currentPageIndex === 0) {
+            currentPageIndex = 1;
+            wrapper.style.transform = `translateX(-50%)`; 
+            dots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
+            if (draggingItem.parentElement !== grid2) grid2.appendChild(draggingItem);
+        } else if (currentX < edgeThreshold && currentPageIndex === 1) {
+            currentPageIndex = 0;
+            wrapper.style.transform = `translateX(0%)`; 
+            dots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
+            if (draggingItem.parentElement !== grid1) grid1.appendChild(draggingItem);
+        }
+
+        updatePlaceholder();
+        rafId = requestAnimationFrame(updatePosition);
+    };
+
+    const updatePlaceholder = () => {
+        if (!draggingItem) return;
+        const container = draggingItem.parentElement;
+        const gridRect = container.getBoundingClientRect();
+        const padding = 20, gap = 15;
+        const colWidth = (gridRect.width - padding * 2 - gap * 3) / 4;
+        const rowHeight = colWidth + 28;
+
+        let col = Math.floor((currentX - gridRect.left - padding + gap / 2) / (colWidth + gap)) + 1;
+        let row = Math.floor((currentY - gridRect.top - padding + gap / 2) / (rowHeight + gap)) + 1;
+
+        const { sx, sy } = getWidgetSpan(draggingItem);
+        col = Math.max(1, Math.min(4 - sx + 1, col));
+        if (sx === 4) col = 1;
+        row = Math.max(1, row);
+
+        if (placeholder.style.gridColumnStart != col || placeholder.style.gridRowStart != row) {
+            placeholder.style.gridColumn = `${col} / span ${sx}`;
+            placeholder.style.gridRow = `${row} / span ${sy}`;
+            placeholder.style.gridColumnStart = col;
+            placeholder.style.gridRowStart = row;
             
-            const screenWidth = window.innerWidth;
-            const wrapper = document.getElementById('swiper-wrapper');
-            const pageDots = document.querySelectorAll('.dot');
-            const grid1 = document.getElementById('main-grid');
-            const grid2 = document.getElementById('page-2');
-            
-            if (touch.clientX > screenWidth - 40 && currentPageIndex === 0) {
-                currentPageIndex = 1;
-                wrapper.style.transform = `translateX(-50%)`; 
-                pageDots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
-                if (draggingItem.parentElement !== grid2) grid2.appendChild(draggingItem); 
-            } 
-            else if (touch.clientX < 40 && currentPageIndex === 1) {
-                currentPageIndex = 0;
-                wrapper.style.transform = `translateX(0%)`; 
-                pageDots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
-                if (draggingItem.parentElement !== grid1) grid1.appendChild(draggingItem); 
+            if (placeholder.parentElement !== container) {
+                container.appendChild(placeholder);
+            }
+            // 只有位置变化时才执行碰撞检测，提高性能
+            resolveCollisions(container, col, row, sx, sy, draggingItem);
+        }
+    };
+
+    const resolveCollisions = (container, col, row, sx, sy, skipItem) => {
+        const items = container.querySelectorAll('.grid-item:not(.dragging)');
+        let hasCollision = true;
+        let occupied = [{ c: col, r: row, sx, sy }];
+        
+        // 收集所有组件的当前位置
+        let itemPositions = Array.from(items).map(item => ({
+            el: item,
+            ...getItemGridPos(item, container)
+        }));
+
+        // 简单的自动避让逻辑：如果占位符覆盖了某个组件，将该组件移到下一个空位
+        itemPositions.forEach(pos => {
+            if (isOverlapping(col, row, sx, sy, pos.c, pos.r, pos.sx, pos.sy)) {
+                const newPos = findEmptySlot(container, pos.sx, pos.sy, occupied);
+                pos.el.style.gridColumn = `${newPos.c} / span ${pos.sx}`;
+                pos.el.style.gridRow = `${newPos.r} / span ${pos.sy}`;
+                pos.el.style.gridColumnStart = newPos.c;
+                pos.el.style.gridRowStart = newPos.r;
+                occupied.push({ c: newPos.c, r: newPos.r, sx: pos.sx, sy: pos.sy });
+            } else {
+                occupied.push({ c: pos.c, r: pos.r, sx: pos.sx, sy: pos.sy });
+            }
+        });
+    };
+
+    const getItemGridPos = (el, container) => {
+        if (el.style.gridColumnStart) {
+            const { sx, sy } = getWidgetSpan(el);
+            return { c: parseInt(el.style.gridColumnStart), r: parseInt(el.style.gridRowStart), sx, sy };
+        }
+        const rect = el.getBoundingClientRect();
+        const gridRect = container.getBoundingClientRect();
+        const padding = 20, gap = 15;
+        const cw = (gridRect.width - padding * 2 - gap * 3) / 4;
+        const rh = cw + 28;
+        return {
+            c: Math.round((rect.left - gridRect.left - padding) / (cw + gap)) + 1,
+            r: Math.round((rect.top - gridRect.top - padding) / (rh + gap)) + 1,
+            ...getWidgetSpan(el)
+        };
+    };
+
+    const isOverlapping = (c1, r1, sx1, sy1, c2, r2, sx2, sy2) => {
+        return !(c1 + sx1 <= c2 || c1 >= c2 + sx2 || r1 + sy1 <= r2 || r1 >= r2 + sy2);
+    };
+
+    const findEmptySlot = (container, sx, sy, occupied) => {
+        for (let r = 1; r < 20; r++) {
+            for (let c = 1; c <= (4 - sx + 1); c++) {
+                if (sx === 4 && c !== 1) continue;
+                let collision = false;
+                for (let occ of occupied) {
+                    if (isOverlapping(c, r, sx, sy, occ.c, occ.r, occ.sx, occ.sy)) {
+                        collision = true; break;
+                    }
+                }
+                if (!collision) return { c, r };
             }
         }
-    }, {passive: false});
+        return { c: 1, r: 1 };
+    };
 
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(longPressTimer);
-        if (!draggingItem) return;
-
-        if (moveDist > 10) {
-            const touch = e.changedTouches[0];
-            const currentContainer = draggingItem.parentElement;
-            const gridRect = currentContainer.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(currentContainer);
-            const paddingLeft = parseFloat(computedStyle.paddingLeft) || 20;
-            const paddingTop = parseFloat(computedStyle.paddingTop) || 20;
-            const gap = 15;
-            const colWidth = (gridRect.width - paddingLeft * 2 - gap * 3) / 4;
-            const rowHeight = colWidth + 28; 
-
-            let col = Math.floor((touch.clientX - gridRect.left - paddingLeft + gap / 2) / (colWidth + gap)) + 1;
-            let row = Math.floor((touch.clientY - gridRect.top - paddingTop + gap / 2) / (rowHeight + gap)) + 1;
-
-            const getWidgetSpan = (el) => {
-                let sx = 1, sy = 1;
-                if (el.id === 'item-time' || el.classList.contains('time-widget') || el.classList.contains('widget-minimal-clock')) { sx = 4; sy = 1; }
-                else if (el.classList.contains('widget-ios-info')) { sx = 4; sy = 2; }
-                else if (el.classList.contains('left-widget') || el.classList.contains('widget-ios-photo') || el.classList.contains('progress-widgets')) { sx = 2; sy = 2; }
-                return { sx, sy };
-            };
-
-            const { sx: spanX, sy: spanY } = getWidgetSpan(draggingItem);
-            col = Math.max(1, Math.min(4 - spanX + 1, col));
-            row = Math.max(1, row);
-            if (spanX === 4) col = 1;
-
-            const inferGridPos = (el, container) => {
-                const r = el.getBoundingClientRect();
-                const cr = container.getBoundingClientRect();
-                const cw = (cr.width - 40 - 45) / 4; 
-                const rh = cw + 28;
-                return {
-                    c: Math.round((r.left - cr.left - 20) / (cw + 15)) + 1,
-                    r: Math.round((r.top - cr.top - 20) / (rh + 15)) + 1,
-                    ...getWidgetSpan(el)
-                };
-            };
-
-            const isAreaOccupied = (c, r, sx, sy, currentItem, container) => {
-                const items = container.querySelectorAll('.grid-item');
-                for (let other of items) {
-                    if (other === currentItem || other.classList.contains('dragging')) continue;
-                    const pos = other.style.gridColumnStart ? 
-                        { c: parseInt(other.style.gridColumnStart), r: parseInt(other.style.gridRowStart), ...getWidgetSpan(other) } :
-                        inferGridPos(other, container);
-                    if (!(c + sx <= pos.c || c >= pos.c + pos.sx || r + sy <= pos.r || r >= pos.r + pos.sy)) return true;
-                }
-                return false;
-            };
-
-            // 碰撞自动移位逻辑：以拖动物品为优先
-            const others = currentContainer.querySelectorAll('.grid-item');
-            others.forEach(other => {
-                if (other === draggingItem) return;
-                const pos = other.style.gridColumnStart ? 
-                    { c: parseInt(other.style.gridColumnStart), r: parseInt(other.style.gridRowStart), ...getWidgetSpan(other) } :
-                    inferGridPos(other, currentContainer);
-
-                if (!(col + spanX <= pos.c || col >= pos.c + pos.sx || row + spanY <= pos.r || row >= pos.r + pos.sy)) {
-                    let newR = pos.r, newC = pos.c;
-                    const { sx: osx, sy: osy } = getWidgetSpan(other);
-                    while (isAreaOccupied(newC, newR, osx, osy, other, currentContainer) || 
-                           !(newC + osx <= col || newC >= col + spanX || newR + osy <= row || newR >= row + spanY)) {
-                        newC++;
-                        if (newC + osx - 1 > 4) { newC = 1; newR++; }
-                    }
-                    other.style.gridColumn = `${newC} / span ${osx}`;
-                    other.style.gridRow = `${newR} / span ${osy}`;
-                    other.style.gridColumnStart = newC;
-                    other.style.gridRowStart = newR;
-                }
-            });
-
-            draggingItem.style.gridColumn = `${col} / span ${spanX}`;
-            draggingItem.style.gridRow = `${row} / span ${spanY}`;
-            draggingItem.style.gridColumnStart = col;
-            draggingItem.style.gridRowStart = row;
+    document.addEventListener('pointerdown', (e) => {
+        const item = e.target.closest('.grid-item');
+        if (item || e.target.classList.contains('content')) {
+            if (longPressTimer) clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(() => { enterEditMode(); }, 500); // 稍微缩短长按感应
         }
-
-        draggingItem.classList.remove('dragging');
-        draggingItem.style.left = ''; 
-        draggingItem.style.top = ''; 
-        draggingItem.style.width = ''; 
-        draggingItem.style.height = '';
         
-        if (moveDist > 10) {
-            saveAllWidgets(); 
+        if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
+        
+        draggingItem = item;
+        initialRect = draggingItem.getBoundingClientRect();
+        offsetX = e.clientX - initialRect.left;
+        offsetY = e.clientY - initialRect.top;
+        currentX = e.clientX;
+        currentY = e.clientY;
+        isMoving = false;
+        
+        draggingItem.setPointerCapture(e.pointerId);
+    }, { passive: true });
+
+    document.addEventListener('pointermove', (e) => {
+        if (!draggingItem) return;
+        currentX = e.clientX;
+        currentY = e.clientY;
+        
+        const dist = Math.hypot(currentX - (initialRect.left + offsetX), currentY - (initialRect.top + offsetY));
+        if (dist > 15 || isMoving) {
+            if (!isMoving) {
+                isMoving = true;
+                if (longPressTimer) clearTimeout(longPressTimer);
+                draggingItem.classList.add('dragging');
+                const { sx, sy } = getWidgetSpan(draggingItem);
+                placeholder.style.gridColumn = draggingItem.style.gridColumn;
+                placeholder.style.gridRow = draggingItem.style.gridRow;
+                draggingItem.parentElement.appendChild(placeholder);
+                draggingItem.style.width = initialRect.width + 'px';
+                draggingItem.style.height = initialRect.height + 'px';
+                rafId = requestAnimationFrame(updatePosition);
+            }
         }
+    }, { passive: false });
+
+    document.addEventListener('pointerup', async (e) => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        if (rafId) cancelAnimationFrame(rafId);
+        
+        if (!draggingItem) return;
+        
+        if (isMoving) {
+            const finalCol = parseInt(placeholder.style.gridColumnStart);
+            const finalRow = parseInt(placeholder.style.gridRowStart);
+            const { sx, sy } = getWidgetSpan(draggingItem);
+
+            // 松手平滑落位逻辑
+            const container = draggingItem.parentElement;
+            const containerRect = container.getBoundingClientRect();
+            const padding = 20, gap = 15;
+            const cw = (containerRect.width - padding * 2 - gap * 3) / 4;
+            const rh = cw + 28;
+            
+            const targetLeft = containerRect.left + padding + (finalCol - 1) * (cw + gap);
+            const targetTop = containerRect.top + padding + (finalRow - 1) * (rh + gap);
+
+            draggingItem.classList.add('dropping');
+            draggingItem.style.left = targetLeft + 'px';
+            draggingItem.style.top = targetTop + 'px';
+
+            // 等待动画结束
+            await new Promise(r => setTimeout(r, 300));
+
+            draggingItem.style.gridColumn = `${finalCol} / span ${sx}`;
+            draggingItem.style.gridRow = `${finalRow} / span ${sy}`;
+            draggingItem.style.gridColumnStart = finalCol;
+            draggingItem.style.gridRowStart = finalRow;
+
+            placeholder.remove();
+            saveAllWidgets();
+        }
+
+        draggingItem.classList.remove('dragging', 'dropping');
+        draggingItem.style.left = ''; draggingItem.style.top = ''; 
+        draggingItem.style.width = ''; draggingItem.style.height = '';
+        draggingItem.releasePointerCapture(e.pointerId);
         draggingItem = null;
+        isMoving = false;
     });
 }
 
@@ -1973,13 +2065,13 @@ window.onload = function() {
     document.getElementById('notification-toggle').checked = isNotify;
 
     const savedBallCss = localStorage.getItem('custom_ball_css');
-    if(savedBallCss) {
-        document.getElementById('custom-ball-css').value = savedBallCss;
-        applyCustomBallCss(savedBallCss);
-    }
+if(savedBallCss) {
+    document.getElementById('custom-ball-css').value = savedBallCss;
+    applyCustomBallCss(savedBallCss);
+}
 
-    setInterval(updateTime, 1000); 
-    updateTime();
+setInterval(updateTime, 1000); 
+updateTime();
 
     const savedTimeColor = localStorage.getItem('time_display_color');
     if (savedTimeColor) {
