@@ -158,24 +158,28 @@ input, textarea {
 }
 
 .grid-item {
-    transition: transform 0.3s cubic-bezier(0.2, 1, 0.2, 1), box-shadow 0.2s;
-    /* 解决点击不灵敏：确保背景图不拦截事件 */
+    transition: transform 0.3s cubic-bezier(0.2, 1, 0.2, 1), grid-area 0.3s ease;
     pointer-events: auto;
+    touch-action: none; /* 关键：禁止原生滚动干扰拖拽 */
+    user-select: none;
 }
 
-/* 平滑落位动画类 */
-.grid-item.dropping {
-    transition: all 0.3s cubic-bezier(0.2, 1, 0.2, 1) !important;
-    z-index: 9998 !important;
+.grid-item.dragging {
+    transition: none !important; /* 拖拽时取消过渡，解决“粘手”感 */
+    z-index: 9999 !important;
+    opacity: 0.8;
+    position: fixed !important;
+    pointer-events: none;
+    margin: 0 !important;
+    transform: scale(1.05);
 }
 
 .drag-placeholder {
-    border: 2px dashed rgba(79, 172, 254, 0.6);
-    background: rgba(79, 172, 254, 0.15);
+    border: 2px dashed rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 24px;
-    transition: all 0.25s cubic-bezier(0.2, 1, 0.2, 1);
+    transition: grid-area 0.2s ease; /* 占位符移动要有动画 */
     pointer-events: none;
-    box-sizing: border-box;
     z-index: 1;
 }
 
