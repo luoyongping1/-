@@ -2081,6 +2081,7 @@ ${worldBookPrompt}
 # 语言风格
 1. 碎片化：普通聊天分段发送。将长句拆分成多条短句发出，但最长不超过5个气泡，HTML剧本必须作为一条消息完整发送，严禁拆分。
 2. 活人感：使用口语语气词，偶尔有同音错别字，不强制标点，严禁AI礼貌腔。
+3. 沉浸式扮演：严禁在回复中输出你的分析过程、思考过程、设计思路或解释说明（例如“* 气泡1：”、“* 注意标点：”等），绝对不能把提示词里的要求复述出来！必须直接以角色的口吻输出最终结果。
 
 # 图像发送指令
 如果你想发送图片或照片给用户，请在[REPLY]中使用以下格式：
@@ -2088,6 +2089,7 @@ ${worldBookPrompt}
 注意：不要发真正的图片链接，只发描述文字，系统会自动将其转化为便签
 
 # 输出格式
+严格按照以下标签格式输出，严禁输出任何多余的说明文字：
 [REPLY]对话或HTML
 [ACTION]动作
 [THOUGHTS]内心
@@ -3002,6 +3004,7 @@ ${shuraScenario}
 3. 你的回复绝对不能带任何名字前缀（禁用 "${friend.name}：" 等）。
 4. 像真实微信聊天，你可以分段发，一条消息最多拆分为 1~3 行（使用换行符）。
 5. 口语化，不必文绉绉，拒绝AI礼貌用语。
+6. 沉浸式扮演：严禁在回复中输出你的思考过程、分析思路或类似“* 气泡1：”、“* 注意：”等解释性说明文字，直接输出你要说的话。
 ${shuraPrompt}
 ${longMemoryPrompt}`;
 
@@ -3252,7 +3255,7 @@ async function getDatingAiReply() {
     if(!aiConfig.key) return;
     const friend = friends.find(f => f.name === currentFriendName);
     const history = (datingHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
-    let sys = `# Role\n你现在正和用户进行[线下约会]。人设：${friend.persona}。\n# 任务\n请进行沉浸式的互动描述，包括你的动作、神态、环境和对话。使用长文字输出，严禁拆分成短句。不要发送HTML代码。`;
+    let sys = `# Role\n你现在正和用户进行[线下约会]。人设：${friend.persona}。\n# 任务\n请进行沉浸式的互动描述，包括你的动作、神态、环境和对话。使用长文字输出，严禁拆分成短句。不要发送HTML代码。严禁输出任何分析过程或类似“* 注意：”的解释性文字。`;
     
     // 新增：显示正在输入状态
     const typingStatus = document.getElementById('dating-typing');
