@@ -703,67 +703,129 @@ input:checked + .slider:before {
             .rp-amount { font-size: 11px; opacity: 0.8; margin-top: 2px; }
             .rp-footer { font-size: 11px; border-top: 0.5px solid rgba(255,255,255,0.3); padding-top: 5px; margin-top: 5px; opacity: 0.7; }
 
-            /* 小火人页面样式 */
-            #fire-page {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: linear-gradient(to bottom, #a1c4fd 0%, #c2e9fb 100%);
-                z-index: var(--z-fire-page); display: none; flex-direction: column;
-                color: #333;
-            }
-            .fire-header {
-                height: 50px; display: flex; align-items: center; justify-content: space-between;
-                padding: 0 15px; font-weight: bold; border-bottom: 0.5px solid rgba(0,0,0,0.1);
-            }
-            .fire-content {
-                flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px;
-                background: url('https://img.js.design/assets/static/769d65759ef039ea22f66453982e0436') center bottom/cover no-repeat;
-            }
-            .fire-pet-container {
-                position: relative; width: 180px; height: 180px; margin-top: 40px;
-                display: flex; align-items: center; justify-content: center;
-            }
-            .fire-pet {
-                width: 120px; height: 120px; border-radius: 50%;
-                background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-                display: flex; align-items: center; justify-content: center; font-size: 60px;
-                animation: fire-bounce 2s infinite ease-in-out;
-            }
-            @keyframes fire-bounce {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-15px); }
-            }
-            .intimacy-bar-wrap {
-                width: 250px; height: 25px; background: rgba(255,255,255,0.5);
-                border-radius: 12px; overflow: hidden; margin-top: 20px; position: relative;
-                border: 2px solid white;
-            }
-            .intimacy-bar-fill {
-                height: 100%; background: linear-gradient(to right, #ff9a9e 0%, #fad0c4 100%);
-                width: 0%; transition: width 0.5s;
-            }
-            .intimacy-text {
-                position: absolute; width: 100%; text-align: center; line-height: 25px;
-                font-size: 12px; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-            }
-            .chat-points-badge {
-                padding: 5px 15px; background: rgba(255,255,255,0.8); border-radius: 20px;
-                margin-top: 15px; font-size: 14px; font-weight: bold; color: #ff6b6b;
-            }
-            .food-shelf {
-                display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
-                padding: 20px; width: 100%; box-sizing: border-box;
-                background: rgba(255,255,255,0.3); backdrop-filter: blur(10px);
-                border-radius: 20px 20px 0 0; margin-top: auto;
-            }
-            .food-item {
-                background: white; border-radius: 15px; padding: 10px;
-                display: flex; flex-direction: column; align-items: center; gap: 5px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer;
-            }
-            .food-item:active { transform: scale(0.95); }
-            .food-icon { font-size: 24px; }
-            .food-name { font-size: 12px; font-weight: bold; }
-            .food-cost { font-size: 11px; color: #999; }
+/* 小火人页面样式 - 冬日治愈3D版 */
+#fire-page {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(180deg, #e0f2ff 0%, #ffffff 100%);
+    z-index: var(--z-fire-page); display: none; flex-direction: column;
+    color: #576b95; font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.fire-header {
+    height: calc(60px + env(safe-area-inset-top));
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 0 20px 15px; box-sizing: border-box;
+}
+.fire-header-btn {
+    width: 40px; height: 40px; background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(10px); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer;
+}
+.fire-main-view {
+    flex: 1; display: flex; flex-direction: column; align-items: center; 
+    position: relative; padding-top: 20px;
+}
+/* 两侧功能图标 */
+.side-controls {
+    position: absolute; width: 100%; top: 40%; transform: translateY(-50%);
+    display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box;
+}
+.side-btn {
+    width: 55px; height: 55px; background: #fff; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 8px 15px rgba(173,216,230,0.3); border: 2px solid #f0f8ff;
+}
+.side-btn span { font-size: 20px; }
+
+.fire-pet-container {
+    position: relative; width: 240px; height: 240px;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+}
+/* 顶部动态爱心星星 */
+.pet-deco {
+    position: absolute; top: -20px; font-size: 24px;
+    animation: float-deco 3s infinite ease-in-out;
+}
+@keyframes float-deco {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
+    50% { transform: translateY(-15px) scale(1.2); opacity: 1; }
+}
+
+.fire-pet {
+    width: 160px; height: 160px; border-radius: 40px;
+    background: #fff; box-shadow: 0 20px 40px rgba(173,216,230,0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 80px;
+    animation: fire-bounce 2.5s infinite ease-in-out;
+    border: 4px solid #fff;
+}
+@keyframes fire-bounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+.pet-info-card {
+    text-align: center; margin-top: 30px; width: 80%;
+}
+.pet-name-tag {
+    background: #fff; padding: 6px 20px; border-radius: 20px;
+    font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    display: inline-block; margin-bottom: 15px; font-size: 16px;
+}
+.intimacy-bar-wrap {
+    width: 100%; height: 14px; background: #e6f2ff;
+    border-radius: 10px; overflow: hidden; position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); border: 2px solid #fff;
+}
+.intimacy-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #a1c4fd 0%, #c2e9fb 100%);
+    width: 0%; transition: width 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 底部功能栏 */
+.fire-bottom-nav {
+    padding: 20px; display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 15px; align-items: center; background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(15px); border-radius: 30px 30px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.03);
+}
+.nav-btn {
+    background: #fff; border-radius: 20px; height: 50px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 14px; box-shadow: 0 6px 12px rgba(173,216,230,0.2);
+    cursor: pointer;
+}
+.nav-btn.main {
+    height: 65px; background: #576b95; color: #fff; font-size: 16px;
+    box-shadow: 0 10px 20px rgba(87, 107, 149, 0.3);
+}
+.full-width-btn {
+    grid-column: span 3; background: #f0f7ff; color: #576b95;
+    height: 45px; margin-top: 5px; border-radius: 15px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500;
+}
+/* 任务页面专属样式 */
+#fire-task-page {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f0f7ff; z-index: 100; display: none; flex-direction: column;
+}
+.task-list-container {
+    flex: 1; padding: 15px; overflow-y: auto;
+}
+.task-item {
+    background: #fff; border-radius: 18px; padding: 15px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 10px rgba(173,216,230,0.15);
+}
+.task-info { display: flex; flex-direction: column; gap: 4px; }
+.task-name { font-size: 14px; font-weight: bold; color: #576b95; }
+.task-reward { font-size: 12px; color: #ff9a9e; font-weight: bold; }
+.task-claim-btn {
+    background: #a1c4fd; color: white; padding: 6px 15px; border-radius: 15px;
+    font-size: 12px; font-weight: bold; cursor: pointer; border: none;
+}
+.task-claim-btn:active { transform: scale(0.95); opacity: 0.8; }
 </style>
 </head>
 <body>
@@ -3467,63 +3529,66 @@ closeChat = function() {
         function openSettings() {
     const listGroup = document.querySelector('#settings-page .list-group:nth-child(2)');
     
-    if (isGroupMode) {
-        const g = groupChats.find(x => x.id === currentFriendName);
-        document.getElementById('settings-avatar').innerHTML = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
-        document.getElementById('settings-name').innerText = g.name;
-        
-        listGroup.innerHTML = `
-            <div class="list-item" onclick="addMoreMembersToGroup()">
-                <div class="info">添加群成员</div><span>></span>
-            </div>
-            <div class="list-item">
-                <div class="info">允许群角色发送表情包</div>
-                <label class="wx-switch">
-                    <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="list-item">
-                <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
-                <label class="wx-switch">
-                    <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
-        `;
-    } else {
-        const f = friends.find(f => f.name === currentFriendName);
-        document.getElementById('settings-avatar').innerHTML = f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial;
-        document.getElementById('settings-name').innerText = f.name;
-        
-        // 核心修改：在这里把所有丢失的按钮都加回去了
-listGroup.innerHTML = `
-    <div class="list-item">
-        <div class="info">时间感知</div>
-        <label class="wx-switch">
-            <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
-            <span class="slider"></span>
-        </label>
-    </div>
-    <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
-    <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888">${f.voiceId || '未设置'}</div><span>></span></div>
-    <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
-    <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
-    <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
-    <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
-    <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
-    <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
-    <div class="list-item">
-        <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
-        <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
-            value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
-    </div>
-    <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
-    <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
-    <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
-`;
-    }
+if (isGroupMode) {
+    const g = groupChats.find(x => x.id === currentFriendName);
+    document.getElementById('settings-avatar').innerHTML = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
+    document.getElementById('settings-name').innerText = g.name;
+    
+    listGroup.innerHTML = `
+        <div class="list-item" onclick="renameGroup()">
+            <div class="info">群聊名称</div><div style="color:#888">${g.name}</div><span>></span>
+        </div>
+        <div class="list-item" onclick="addMoreMembersToGroup()">
+            <div class="info">添加群成员</div><span>></span>
+        </div>
+        <div class="list-item">
+            <div class="info">允许群角色发送表情包</div>
+            <label class="wx-switch">
+                <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="list-item">
+            <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
+            <label class="wx-switch">
+                <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+    `;
+} else {
+    const f = friends.find(f => f.name === currentFriendName);
+    document.getElementById('settings-avatar').innerHTML = f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial;
+    document.getElementById('settings-name').innerText = f.name;
+    
+    listGroup.innerHTML = `
+        <div class="list-item">
+            <div class="info">时间感知</div>
+            <label class="wx-switch">
+                <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
+        <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" style="color:#888">${f.group || '我的好友'}</div><span>></span></div>
+        <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888">${f.voiceId || '未设置'}</div><span>></span></div>
+        <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
+        <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
+        <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
+        <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
+        <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
+        <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
+        <div class="list-item">
+            <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
+            <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
+                value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
+        </div>
+        <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
+        <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
+        <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+    `;
+}
     // 新增：根据是否是群聊，修改底部删除按钮的文字
     const deleteBtn = document.querySelector('#settings-page .list-group:last-child .list-item');
     if (isGroupMode) {
@@ -4389,26 +4454,16 @@ function renderFirePage(friend) {
     currentFireFriend = friend;
     const data = friend.fireData;
     document.getElementById('fire-page').style.display = 'flex';
-    document.getElementById('fire-chat-points').innerText = `聊天点数: ${data.chatPoints || 0}`;
-    document.getElementById('intimacy-text').innerText = `亲密度: ${data.intimacy || 0} / 2000`;
+    // 自动更新点数
+    document.getElementById('fire-chat-points').innerText = `点数: ${data.chatPoints || 0}`;
+    // 自动更新进度条
     const percent = Math.min((data.intimacy || 0) / 2000 * 100, 100);
     document.getElementById('intimacy-bar-fill').style.width = percent + '%';
+    document.getElementById('intimacy-text').innerText = `亲密度: ${data.intimacy || 0} / 2000`;
     
-    const today = new Date().toLocaleDateString();
-    const isFirstFeed = data.lastFeedDate !== today;
-    
+    // 如果需要显示道具列表，可以在此处修改
     const shelf = document.getElementById('food-shelf');
-    shelf.innerHTML = FOODS.map((food, idx) => {
-        let costText = isFirstFeed && idx === 0 ? "当日首次元气满满(免费)" : `${food.cost}点数`;
-        return `
-            <div class="food-item" onclick="feedFirePet(${idx})">
-                <div class="food-icon">${food.icon}</div>
-                <div class="food-name">${food.name}</div>
-                <div class="food-cost">${costText}</div>
-                <div style="font-size:10px; color:var(--wechat-green);">+${food.intimacy}亲密</div>
-            </div>
-        `;
-    }).join('');
+    if(shelf) shelf.style.display = 'none'; // 暂时隐藏旧的简单列表，保持页面整洁
 }
 
 function feedFirePet(idx) {
@@ -4508,6 +4563,48 @@ function editVoiceId() {
         if (display) display.innerText = vid;
         alert("音色 ID 已更新为: " + vid);
     }
+}
+// 修改群聊名称功能
+function renameGroup() {
+    const g = groupChats.find(x => x.id === currentFriendName);
+    const n = prompt("请输入新群聊名称:", g.name);
+    if (n) {
+        g.name = n;
+        saveData();
+        openSettings(); // 刷新显示
+        alert("群聊名称已更新为: " + n);
+    }
+}
+
+// 修改好友分组功能
+function changeFriendGroup() {
+    const f = friends.find(f => f.name === currentFriendName);
+    const groupList = groups.join('、');
+    const n = prompt("将好友移至哪个分组？（当前：" + (f.group || "我的好友") + "）\n可选分组：" + groupList);
+    if (n && groups.includes(n)) {
+        f.group = n;
+        saveData();
+        openSettings(); // 刷新显示
+        alert("已将好友移至：" + n);
+    } else if (n) {
+        alert("该分组不存在，请先在菜单中添加该分组。");
+    }
+}
+// 小火人任务领取逻辑
+function claimFireTask(name, points) {
+    if (!currentFireFriend) return;
+    
+    // 增加点数
+    currentFireFriend.fireData.chatPoints = (currentFireFriend.fireData.chatPoints || 0) + points;
+    
+    // 保存数据
+    saveData();
+    
+    // 刷新主页面的点数显示
+    document.getElementById('fire-chat-points').innerText = `点数: ${currentFireFriend.fireData.chatPoints}`;
+    
+    // 弹出提示
+    alert(`恭喜领取 [${name}] 奖励：+${points} 星点！`);
 }
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
@@ -4832,28 +4929,98 @@ function editVoiceId() {
     </div>
 </div>
 
-<!-- 小火人主页面 -->
+<!-- 小火人养成APP主页面 -->
 <div id="fire-page">
+    <!-- 任务子页面 -->
+    <div id="fire-task-page">
+        <div class="fire-header">
+            <div class="fire-header-btn" onclick="document.getElementById('fire-task-page').style.display='none'">〈</div>
+            <div style="font-size:16px; font-weight:bold;">成长任务</div>
+            <div style="width:40px;"></div>
+        </div>
+        <div class="task-list-container">
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">每日签到</span>
+                    <span class="task-reward">+10 星点</span>
+                </div>
+                <button class="task-claim-btn" onclick="claimFireTask('每日签到', 10)">领取</button>
+            </div>
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">发送首条消息</span>
+                    <span class="task-reward">+5 星点</span>
+                </div>
+                <button class="task-claim-btn" onclick="claimFireTask('发送首条消息', 5)">领取</button>
+            </div>
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">聊天时长打卡</span>
+                    <span class="task-reward">+15 星点</span>
+                </div>
+                <button class="task-claim-btn" onclick="claimFireTask('聊天时长打卡', 15)">领取</button>
+            </div>
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">发送消息条数</span>
+                    <span class="task-reward">+10 星点</span>
+                </div>
+                <button class="task-claim-btn" onclick="claimFireTask('发送消息条数', 10)">领取</button>
+            </div>
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">连续登录奖励</span>
+                    <span class="task-reward">+30/80 星点</span>
+                </div>
+                <button class="task-claim-btn" onclick="claimFireTask('连续登录奖励', 30)">领取</button>
+            </div>
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">完成一次AI回复</span>
+                    <span class="task-reward">+8 星点</span>
+                </div>
+                <button class="task-claim-btn" onclick="claimFireTask('完成一次AI回复', 8)">领取</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部状态栏 -->
     <div class="fire-header">
-        <span onclick="closeFirePage()" style="cursor:pointer; font-size: 20px;">〈</span>
-        <span id="fire-page-title">小火人成长记</span>
-        <span style="opacity: 0;">〉</span>
+        <div class="fire-header-btn" onclick="closeFirePage()">✕</div>
+        <div id="fire-chat-points" style="font-size:14px; font-weight:bold; background:rgba(255,255,255,0.6); padding:5px 15px; border-radius:20px;">点数: 0</div>
+        <div class="fire-header-btn">⚙️</div>
     </div>
-    <div class="fire-content">
-        <div class="fire-pet-container" id="fire-pet-container">
-            <div class="fire-pet">🔥</div>
-        </div>
-        <div id="fire-pet-name" style="margin-top: 20px; font-weight: bold; color: #fff; font-size: 18px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">火灵儿</div>
-        
-        <div class="intimacy-bar-wrap">
-            <div class="intimacy-text" id="intimacy-text">亲密度: 0 / 1000</div>
-            <div class="intimacy-bar-fill" id="intimacy-bar-fill"></div>
+
+    <!-- 中间核心区 -->
+    <div class="fire-main-view">
+        <div class="side-controls">
+            <div class="side-btn" onclick="alert('种子正在发芽中...')"><span>🌱</span></div>
+            <div class="side-btn" onclick="alert('快去聊天赢取投喂道具吧！')"><span>🍲</span></div>
         </div>
         
-        <div class="chat-points-badge" id="fire-chat-points">聊天点数: 0</div>
+        <div class="fire-pet-container">
+            <div class="pet-deco">✨❤️⭐</div>
+            <div class="fire-pet">🐶</div>
+        </div>
+
+        <div class="pet-info-card">
+            <div class="pet-name-tag" id="fire-pet-name">火灵儿</div>
+            <div class="intimacy-bar-wrap">
+                <div class="intimacy-bar-fill" id="intimacy-bar-fill"></div>
+            </div>
+            <div id="intimacy-text" style="font-size:11px; margin-top:8px; opacity:0.7;">亲密度 0 / 2000</div>
+        </div>
     </div>
-    <div class="food-shelf" id="food-shelf">
-        <!-- 动态渲染食物列表 -->
+
+    <!-- 道具投喂区 -->
+    <div id="food-shelf" style="display:none;"></div>
+
+    <!-- 底部功能栏 -->
+    <div class="fire-bottom-nav">
+        <div class="nav-btn" onclick="alert('衣柜正在定制中...')">👗 装扮</div>
+        <div class="nav-btn main" onclick="alert('快通过发送消息赚取点数吧！')">🚀 赚点数</div>
+        <div class="nav-btn" onclick="document.getElementById('fire-task-page').style.display='flex'">📝 任务</div>
+        <div class="full-width-btn" onclick="alert('更多趣味玩法即将上线')">更多玩法 ➔</div>
     </div>
 </div>
 
