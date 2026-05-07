@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <title>WeChat AI Plus</title>
     <style>
+    .chat-editable-text { outline: none; min-width: 20px; word-break: break-all; }
 /* 微信风格开关 */
 .wx-switch {
     position: relative;
@@ -1256,6 +1257,7 @@ input:checked + .slider:before {
     </div>
 
     <div id="msg-context-menu">
+    <div class="menu-item" onclick="editChatMsg()">编辑</div>
     <div class="menu-item" onclick="redoReply()">重回</div>
     <div class="menu-item" onclick="enterMultiSelect()">多选</div>
     <div class="menu-item" onclick="deleteSingleMsg()">删除</div>
@@ -1786,15 +1788,18 @@ if (m.isShoppingPay) {
             <img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">
         </div>`);
                 } else {
-                    htmlArr.push(`
-                        <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
-                            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
-                            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
-                            <div class="${useBubble ? 'bubble' : ''}">
-                                ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
-                                ${contentHtml}
-                            </div>
-                        </div>`);
+htmlArr.push(`
+    <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+        <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
+        <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
+        <div class="${useBubble ? 'bubble' : ''}" style="position:relative;">
+            ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
+            <!-- 气泡文字区域，增加了用来控制编辑的ID和样式 -->
+            <div id="chat-text-${realIndex}" class="chat-editable-text">${contentHtml}</div>
+            <!-- 编辑确认按钮，平时隐藏 -->
+            <button id="chat-save-btn-${realIndex}" style="display:none; margin-top:8px; background:#07c160; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px;" onclick="finishChatMsgEdit(${realIndex})">保存修改</button>
+        </div>
+    </div>`);
                 }
             }
 const oldScrollHeight = container.scrollHeight;
@@ -2769,24 +2774,42 @@ await getAiReply(true);
 
         document.getElementById('my-avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{myInfo.avatar=e.target.result;saveData();renderMePage();}; r.readAsDataURL(this.files[0]);}}
         document.getElementById('avatar-upload').onchange = function(){ if(this.files[0]){ const r=new FileReader(); r.onload=e=>{friends.find(f=>f.name===currentFriendName).avatarUrl=e.target.result;saveData();openSettings();}; r.readAsDataURL(this.files[0]);}}
-        function changeChatBackground() {
-    const choice = prompt("请输入数字选择：\n1. 从本地相册上传\n2. 使用网络图片链接(URL)");
-    if (choice === "1") {
-        document.getElementById('chat-bg-upload').click();
-    } else if (choice === "2") {
-        const u = prompt("请直接粘贴图片的网络链接(URL):");
-        if (u && u.trim() !== "") {
-            const friend = friends.find(f => f.name === currentFriendName);
-            if (friend) {
-                friend.chatBg = u.trim();
-                saveData();
-                // 立即应用背景
-                const container = document.getElementById('message-container');
-                container.style.backgroundImage = `url("${u.trim()}")`;
-                container.style.backgroundSize = 'cover';
-                alert("背景设置成功！");
-            }
-        }
+function changeChatBackground() {
+    document.getElementById('chat-bg-config-modal').style.display = 'flex';
+}
+
+// 切换背景设置弹窗的选项卡
+function switchChatBgTab(type) {
+    // 1. 切换按钮的 active 状态
+    document.getElementById('btn-cbg-local').classList.toggle('active', type === 'local');
+    document.getElementById('btn-cbg-url').classList.toggle('active', type === 'url');
+    
+    // 2. 找到两个内容面板
+    const localContent = document.getElementById('content-cbg-local');
+    const urlContent = document.getElementById('content-cbg-url');
+    
+    // 3. 强制控制显示和隐藏（解决 display: none 覆盖问题）
+    if(type === 'local') {
+        localContent.style.display = 'block';
+        urlContent.style.display = 'none';
+    } else {
+        localContent.style.display = 'none';
+        urlContent.style.display = 'block';
+    }
+}
+
+// 应用URL背景
+function applyChatBgUrl() {
+    const u = document.getElementById('chat-bg-url-field').value.trim();
+    if (!u) return alert("内容不能为空");
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (friend) {
+        friend.chatBg = u;
+        saveData();
+        renderMessages();
+        alert("背景设置成功！");
+        document.getElementById('chat-bg-config-modal').style.display = 'none';
+        document.getElementById('chat-bg-url-field').value = '';
     }
 }
         document.getElementById('chat-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { friends.find(f => f.name === currentFriendName).chatBg = e.target.result; saveData(); renderMessages(); }; reader.readAsDataURL(this.files[0]); } };
@@ -4606,6 +4629,57 @@ function claimFireTask(name, points) {
     // 弹出提示
     alert(`恭喜领取 [${name}] 奖励：+${points} 星点！`);
 }
+// 聊天消息编辑功能
+// 开始行内编辑逻辑
+function editChatMsg() {
+    if (menuTargetIndex === -1) return;
+    const history = chatHistories[currentFriendName] || [];
+    const msg = history[menuTargetIndex];
+
+    if (msg.isSticker || msg.isRealImage || msg.isTheater) {
+        alert("这个内容不支持编辑哦");
+        return;
+    }
+
+    const textDiv = document.getElementById(`chat-text-${menuTargetIndex}`);
+    const saveBtn = document.getElementById(`chat-save-btn-${menuTargetIndex}`);
+
+    if (textDiv) {
+        textDiv.contentEditable = "true"; // 让文字变得可以像输入框一样点进去写
+        textDiv.style.background = "rgba(255,255,255,0.5)"; // 给个背景提示正在编辑
+        textDiv.style.padding = "5px";
+        textDiv.style.borderRadius = "4px";
+        textDiv.focus(); // 自动聚焦文字
+        saveBtn.style.display = "block"; // 显示保存按钮
+    }
+}
+
+// 完成并保存编辑
+function finishChatMsgEdit(index) {
+    const textDiv = document.getElementById(`chat-text-${index}`);
+    const saveBtn = document.getElementById(`chat-save-btn-${index}`);
+    const newText = textDiv.innerText.trim();
+
+    if (newText === "") return alert("内容不能为空");
+
+    const history = chatHistories[currentFriendName] || [];
+    history[index].text = newText; // 同步数据
+
+    // 同步更新列表左侧预览
+    if (index === history.length - 1) {
+        if (isGroupMode) {
+            const g = groupChats.find(x => x.id === currentFriendName);
+            if (g) g.lastMsg = (history[index].type === 'self' ? '我: ' : '') + newText;
+        } else {
+            const f = friends.find(f => f.name === currentFriendName);
+            if (f) f.lastMsg = newText;
+        }
+    }
+
+    saveData();
+    renderMessages(); // 刷新页面
+    alert("修改已保存");
+}
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -4721,6 +4795,36 @@ function claimFireTask(name, points) {
 </div>
 </div>
 <!-- 退出约会确认弹窗 -->
+<!-- 聊天背景设置弹窗 -->
+<div id="chat-bg-config-modal" class="glass-modal" style="z-index: 9500;">
+    <div class="glass-card" style="width: 85%; padding: 20px; border-radius: 20px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <h3 style="text-align: center; margin-bottom: 20px; color: #333;">设置聊天背景</h3>
+        
+        <div class="bg-tabs-header" style="display: flex; background: rgba(0,0,0,0.05); border-radius: 10px; padding: 4px; margin-bottom: 15px;">
+            <div class="bg-tab-btn active" id="btn-cbg-local" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 8px;" onclick="switchChatBgTab('local')">本地上传</div>
+            <div class="bg-tab-btn" id="btn-cbg-url" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 8px;" onclick="switchChatBgTab('url')">图片链接</div>
+        </div>
+
+        <!-- 本地上传面板 -->
+        <div id="content-cbg-local" class="bg-tab-content active" style="text-align: center;">
+            <div style="padding: 30px 20px; border: 2px dashed #ccc; border-radius: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.4);" onclick="document.getElementById('chat-bg-upload').click(); document.getElementById('chat-bg-config-modal').style.display='none';">
+                <div style="font-size: 40px; margin-bottom: 10px;">🖼️</div>
+                <div style="font-size: 14px; color: #576b95; font-weight: bold;">点击这里从相册选择</div>
+                <p style="font-size: 11px; color: #999; margin-top: 5px;">让聊天界面更具个性</p>
+            </div>
+        </div>
+
+        <!-- 图片URL面板 -->
+        <div id="content-cbg-url" class="bg-tab-content" style="text-align: center;">
+            <div style="padding: 10px 0 20px;">
+                <input type="text" id="chat-bg-url-field" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; outline: none; box-sizing: border-box; margin-bottom: 15px; font-size: 14px;" placeholder="请粘贴网络图片的直链 URL">
+                <button class="wx-btn" style="width: 100%; background: #07c160; color: white; border: none; height: 45px; border-radius: 12px; font-weight: bold;" onclick="applyChatBgUrl()">确定应用此链接</button>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px; color: #999; cursor: pointer; padding: 10px;" onclick="document.getElementById('chat-bg-config-modal').style.display='none'">以后再说</div>
+    </div>
+</div>
 <div id="dating-exit-modal" class="glass-modal" style="z-index: 8000;">
     <div class="glass-card" style="text-align: center;">
         <h3 style="margin-bottom: 20px; color: #333;">约会结束</h3>
