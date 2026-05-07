@@ -4251,19 +4251,26 @@ function openUserPersonaUrlInput() {
     document.getElementById('user-persona-avatar-choice-modal').style.display = 'none';
 }
 
-document.getElementById('user-persona-avatar-upload').onchange = function() {
-    if (this.files[0]) {
-        tempUserPersonaFile = this.files[0]; // 将原始 File 对象存储到临时变量
-        const reader = new FileReader();
-        reader.onload = e => {
-            // 预览依然使用 Base64，但实际存储到 IndexedDB
-            document.getElementById('edit-user-persona-avatar').value = e.target.result; 
-            const avatarDisplayDiv = document.getElementById('edit-user-persona-avatar-display');
-            avatarDisplayDiv.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+// 使用 setTimeout 延迟绑定，确保网页完全加载完后再寻找元素，防止找不到报错
+setTimeout(function() {
+    const uploadInput = document.getElementById('user-persona-avatar-upload');
+    if (uploadInput) {
+        uploadInput.onchange = function() {
+            if (this.files[0]) {
+                tempUserPersonaFile = this.files[0]; // 将原始 File 对象存储到临时变量
+                const reader = new FileReader();
+                reader.onload = e => {
+                    // 预览依然使用 Base64，但实际存储到 IndexedDB
+                    document.getElementById('edit-user-persona-avatar').value = e.target.result; 
+                    const avatarDisplayDiv = document.getElementById('edit-user-persona-avatar-display');
+                    avatarDisplayDiv.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                };
+                reader.readAsDataURL(this.files[0]);
+                this.value = ''; // 重置上传框状态，解决连续选同一张图片没反应的问题
+            }
         };
-        reader.readAsDataURL(this.files[0]);
     }
-};
+}, 100);
 
 async function deleteUserPersona(id) { // 注意这里加了 async
     if (confirm("确定要删除这个人设吗？")) {
