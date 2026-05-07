@@ -3495,30 +3495,31 @@ closeChat = function() {
         document.getElementById('settings-name').innerText = f.name;
         
         // 核心修改：在这里把所有丢失的按钮都加回去了
-        listGroup.innerHTML = `
-            <div class="list-item">
-                <div class="info">时间感知</div>
-                <label class="wx-switch">
-                    <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
-            <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
-            <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
-            <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
-            <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
-            <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
-            <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
-            <div class="list-item">
-                <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
-                <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
-                    value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
-            </div>
-            <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
-            <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
-            <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
-        `;
+listGroup.innerHTML = `
+    <div class="list-item">
+        <div class="info">时间感知</div>
+        <label class="wx-switch">
+            <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
+    <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888">${f.voiceId || '未设置'}</div><span>></span></div>
+    <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
+    <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
+    <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
+    <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
+    <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
+    <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
+    <div class="list-item">
+        <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
+        <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
+            value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
+    </div>
+    <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
+    <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
+    <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+`;
     }
     // 新增：根据是否是群聊，修改底部删除按钮的文字
     const deleteBtn = document.querySelector('#settings-page .list-group:last-child .list-item');
@@ -4486,6 +4487,18 @@ openUserPersonaSelect = async function() {
     await oldOpenUserPersonaSelect();
     loadAllDatabaseImages();
 };
+function editVoiceId() {
+    const f = friends.find(f => f.name === currentFriendName);
+    const vid = prompt("请输入 MiniMax 音色 ID (例如: cherry 或其它自定义ID):", f.voiceId || "cherry");
+    if (vid !== null) {
+        f.voiceId = vid;
+        saveData();
+        // 更新设置页面上的文字显示
+        const display = document.getElementById('settings-voice-display');
+        if (display) display.innerText = vid;
+        alert("音色 ID 已更新为: " + vid);
+    }
+}
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
