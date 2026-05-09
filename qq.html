@@ -2646,12 +2646,20 @@ if (rawText.includes("[SEND_MONEY]")) {
         function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
         function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
         function renderMoments() {
-            document.getElementById('moments-my-name').innerText = myInfo.name;
-            const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : myInfo.name[0];
-            document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
-            const momentsBg = localStorage.getItem('moments_bg_url');
-            if(momentsBg) document.getElementById('moments-bg-display').style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`;
-            const listArr = [];
+    document.getElementById('moments-my-name').innerText = myInfo.name;
+    const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : myInfo.name[0];
+    document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
+    // 核心修复：直接读取背景图，不再使用 replace 过滤，防止 Base64 编码损坏
+    const momentsBg = localStorage.getItem('moments_bg_url');
+    if (momentsBg) {
+        const bgEl = document.getElementById('moments-bg-display');
+        if (bgEl) {
+            bgEl.style.backgroundImage = "url('" + momentsBg.trim() + "')";
+            bgEl.style.backgroundSize = "cover";
+            bgEl.style.backgroundPosition = "center";
+        }
+    }
+    const listArr = [];
             moments.slice().reverse().forEach((m, idx) => {
                 const realIdx = moments.length - 1 - idx;
                 const friend = friends.find(f => f.name === m.name);
@@ -2867,7 +2875,20 @@ function checkStickerMatch(val) {
                 alert('请输入有效的图片 URL');
             }
         }
-        document.getElementById('moments-bg-upload').onchange = function() { if (this.files[0]) { const reader = new FileReader(); reader.onload = e => { localStorage.setItem('moments_bg_url', e.target.result); renderMoments(); }; reader.readAsDataURL(this.files[0]); } };
+        document.getElementById('moments-bg-upload').onchange = function() {
+    if (this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // 核心修复：调用压缩函数，将背景图宽度限制在 1000 像素内，画质 0.7，确保能存入浏览器
+            compressImage(e.target.result, 1000, function(compressedData) {
+                localStorage.setItem('moments_bg_url', compressedData);
+                renderMoments();
+                alert("朋友圈背景上传成功（已自动压缩）");
+            });
+        };
+        reader.readAsDataURL(this.files[0]);
+    }
+};
         function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); document.getElementById('worldbook-page').classList.add('active'); }
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
         function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
@@ -4190,17 +4211,19 @@ function applyAllBackgrounds() {
         { id: 'tab-me', key: 'qq_me_bg' }
     ];
     pages.forEach(p => {
-        const bgData = localStorage.getItem(p.key);
-        const el = document.getElementById(p.id);
-        if (el) {
-            const header = el.querySelector('.header');
-            const searchWrap = el.querySelector('.chat-search-wrap'); // 搜索栏外部容器
-            if (bgData) {
-                el.style.backgroundImage = `url("${bgData}")`;
-                el.style.backgroundSize = 'cover';
-                el.style.backgroundPosition = 'center';
-                el.style.backgroundRepeat = 'no-repeat';
-                if (header) {
+    const bgData = localStorage.getItem(p.key);
+    const el = document.getElementById(p.id);
+    if (el) {
+        const header = el.querySelector('.header');
+        const searchWrap = el.querySelector('.chat-search-wrap'); // 搜索栏外部容器
+        if (bgData) {
+            el.style.backgroundImage = `url("${bgData}")`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.style.backgroundRepeat = 'no-repeat';
+            // 核心修复：强制切除溢出的图片部分，确保圆角生效
+            el.style.overflow = 'hidden'; 
+            if (header) {
                     header.style.background = 'transparent';
                     header.style.borderBottom = 'none';
                 }
