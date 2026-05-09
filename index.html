@@ -606,6 +606,9 @@ input, textarea {
     box-shadow: var(--soft-shadow);
     box-sizing: border-box;
     position: relative;
+    /* 核心修复：强制在所有设备上生效的圆角切除 */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    z-index: 1;
 }
 .ios-banner {
     width: 100%;
@@ -709,6 +712,10 @@ input, textarea {
     box-shadow: var(--soft-shadow);
     position: relative;
     border: 1px solid #f0f0f0;
+    /* 核心修复：添加溢出隐藏和强制圆角切除 */
+    overflow: hidden;
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    z-index: 1;
 }
 .ios-photo-content {
     width: 100%;
