@@ -1494,24 +1494,68 @@ function initGridSortable() {
     };
 
     document.addEventListener('pointerdown', (e) => {
-        const item = e.target.closest('.grid-item');
-        if (item || e.target.classList.contains('content')) {
-            if (longPressTimer) clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => { enterEditMode(); }, 500);
-        }
+    const item = e.target.closest('.grid-item');
+    if ((item || e.target.classList.contains('content')) && !draggingItem) {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(() => { enterEditMode(); }, 500);
+    }
+    
+    if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
+    
+    draggingItem = item;
+    initialRect = draggingItem.getBoundingClientRect();
+    offsetX = e.clientX - initialRect.left;
+    offsetY = e.clientY - initialRect.top;
+    currentX = e.clientX;
+    currentY = e.clientY;
+    isMoving = false;
+    
+    draggingItem.setPointerCapture(e.pointerId);
+}, { passive: true });
+
+document.addEventListener('pointerup', async (e) => {
+    if (longPressTimer) clearTimeout(longPressTimer);
+    if (rafId) cancelAnimationFrame(rafId);
+    
+    if (!draggingItem) return;
+    
+    if (isMoving) {
+        const finalCol = parseInt(placeholder.style.gridColumnStart);
+        const finalRow = parseInt(placeholder.style.gridRowStart);
+        const { sx, sy } = getWidgetSpan(draggingItem);
+
+        const container = draggingItem.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        const padding = 20, gap = 15;
+        const cw = (containerRect.width - padding * 2 - gap * 3) / 4;
+        const rh = cw + 28;
         
-        if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
-        
-        draggingItem = item;
-        initialRect = draggingItem.getBoundingClientRect();
-        offsetX = e.clientX - initialRect.left;
-        offsetY = e.clientY - initialRect.top;
-        currentX = e.clientX;
-        currentY = e.clientY;
-        isMoving = false;
-        
-        draggingItem.setPointerCapture(e.pointerId);
-    }, { passive: true });
+        const targetLeft = containerRect.left + padding + (finalCol - 1) * (cw + gap);
+        const targetTop = containerRect.top + padding + (finalRow - 1) * (rh + gap);
+
+        draggingItem.classList.add('dropping');
+        draggingItem.style.left = targetLeft + 'px';
+        draggingItem.style.top = targetTop + 'px';
+
+        await new Promise(r => setTimeout(r, 300));
+
+        draggingItem.style.gridColumn = `${finalCol} / span ${sx}`;
+        draggingItem.style.gridRow = `${finalRow} / span ${sy}`;
+        draggingItem.style.gridColumnStart = finalCol;
+        draggingItem.style.gridRowStart = finalRow;
+
+        placeholder.remove();
+        saveAllWidgets();
+    }
+
+    draggingItem.classList.remove('dragging', 'dropping');
+    draggingItem.style.left = ''; draggingItem.style.top = ''; 
+    draggingItem.style.width = ''; draggingItem.style.height = '';
+    draggingItem.releasePointerCapture(e.pointerId);
+    draggingItem = null;
+    isMoving = false;
+    longPressTimer = null;
+});
 
     document.addEventListener('pointermove', (e) => {
         if (!draggingItem) return;
