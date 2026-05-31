@@ -2838,7 +2838,8 @@ function sendChosenSticker(url) {
     chatHistories[currentFriendName].push({
         type: 'self',
         text: url,
-        isSticker: true
+        isSticker: true,
+        initial: '我'  // 新增这一行
     });
     
     if (isGroupMode) {
