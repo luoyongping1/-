@@ -1316,7 +1316,7 @@ input:checked + .slider:before {
 
     <!-- 6. 聊天设置 -->
     <div id="settings-page" class="page">
-        <div class="header"><span onclick="closeSettings()">〈 返回</span><span>聊天信息</span><span></span></div>
+    <div class="header"><span onclick="closeSettings()">〈 返回</span><span>聊天信息</span><span></span></div>
         <div class="content">
             <div class="list-group" style="padding: 20px; display: flex; gap: 15px;">
                 <div style="text-align:center;">
@@ -1337,6 +1337,7 @@ input:checked + .slider:before {
                 <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" style="color:#888"></div><span>></span></div>
                 <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888"></div><span>></span></div>
                 <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
+                <div class="list-item" onclick="triggerPersonaDocUpload()"><div class="info">从文档导入人设</div><span>></span></div>
                 <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
                 <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
                 <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
@@ -1502,7 +1503,18 @@ input:checked + .slider:before {
     </div>
     <div id="api-config-page" class="page"><div class="header"><span onclick="closeApiConfig()">〈 取消</span><span>API 设置</span><span class="btn-green" onclick="saveApiConfig()">保存</span></div><div class="content"><div class="list-group"><div class="list-item">地址:<input type="text" id="api-url" style="border:none;flex:1;text-align:right;font-size:16px;"></div><div class="list-item">Key:<input type="password" id="api-key" style="border:none;flex:1;text-align:right;font-size:16px;"></div><div class="list-item" onclick="fetchModels()">当前模型: <b id="current-model-display"></b> <span class="btn-green" style="font-size:12px;margin-left:10px;">拉取</span></div></div></div></div>
     <div id="model-selector-page" class="page"><div class="header"><span onclick="closeModelSelector()">〈 取消</span><span>选择模型</span><span></span></div><div class="content" id="model-list-container"></div></div>
-    <div id="editor-page" class="page"><div class="header"><span onclick="closePersonaEditor()">取消</span><span>人设编辑</span><span class="btn-green" onclick="savePersona()">完成</span></div><textarea id="persona-input" style="width:100%;height:100%;border:none;padding:15px;font-size:16px;outline:none;"></textarea></div>
+    <div id="editor-page" class="page" style="z-index: 5500; background: #f1f1f1;">
+    <div class="header">
+        <span onclick="closePersonaEditor()">取消</span>
+        <span>AI 人设编辑</span>
+        <span class="btn-green" onclick="savePersona()">完成</span>
+    </div>
+    <div class="content" style="padding: 15px; display: flex; flex-direction: column;">
+        <button class="wx-btn" style="width: 100%; height: 40px; background: #4facfe; color: white; margin-bottom: 15px; border: none; border-radius: 10px; font-size: 14px;" onclick="triggerPersonaDocImport()">📄 从文档导入人设</button>
+        <textarea id="persona-input" style="flex: 1; border: 1px solid #ddd; padding: 15px; font-size: 16px; outline: none; border-radius: 10px; box-sizing: border-box; resize: none; background: white;"></textarea>
+    </div>
+    <input type="file" id="persona-doc-import-input" style="display:none" accept=".txt,.docx">
+</div>
     <div id="wallet-history-page" class="page"><div class="header" style="border:none;"><span onclick="document.getElementById('wallet-history-page').classList.remove('active')">〈 返回</span><span>零钱明细</span><span></span></div><div class="content" id="wallet-history-list"></div></div>
 
     <!-- 表情管理页面 -->
@@ -1554,6 +1566,7 @@ input:checked + .slider:before {
     <input type="file" id="avatar-upload" style="display:none" accept="image/*">
     <input type="file" id="my-avatar-upload" style="display:none" accept="image/*">
     <input type="file" id="chat-bg-upload" style="display:none" accept="image/*">
+    <input type="file" id="persona-doc-upload" style="display:none" accept=".txt,.doc,.docx">
     <input type="file" id="moments-bg-upload" style="display:none" accept="image/*">
     <input type="file" id="real-image-upload" style="display:none" accept="image/*">
     <input type="file" id="moment-image-upload" style="display:none" accept="image/*" multiple>
@@ -2936,9 +2949,134 @@ function checkStickerMatch(val) {
 
         // 基础功能
         function renameCurrentFriend() { const n = prompt("名字:"); if(n){ const f = friends.find(f => f.name===currentFriendName); chatHistories[n]=chatHistories[currentFriendName]; delete chatHistories[currentFriendName]; f.name=n; f.initial=n[0]; currentFriendName=n; saveData(); openSettings(); } }
-        function openPersonaEditor() { document.getElementById('persona-input').value = friends.find(f => f.name===currentFriendName).persona; document.getElementById('editor-page').classList.add('active'); }
-        function closePersonaEditor() { document.getElementById('editor-page').classList.remove('active'); }
-        function savePersona() { friends.find(f => f.name===currentFriendName).persona = document.getElementById('persona-input').value; saveData(); closePersonaEditor(); }
+        function openPersonaEditor() { 
+    document.getElementById('persona-input').value = friends.find(f => f.name===currentFriendName).persona; 
+    document.getElementById('editor-page').classList.add('active'); 
+}
+
+function closePersonaEditor() { 
+    document.getElementById('editor-page').classList.remove('active'); 
+}
+
+function savePersona() { 
+    friends.find(f => f.name===currentFriendName).persona = document.getElementById('persona-input').value; 
+    saveData(); 
+    closePersonaEditor(); 
+}
+
+// 新增：触发文档导入
+function triggerPersonaDocImport() {
+    document.getElementById('persona-doc-import-input').click();
+}
+
+// 新增：处理文档导入
+document.getElementById('persona-doc-import-input').onchange = async function() {
+    if (!this.files[0]) return;
+    const file = this.files[0];
+    const fileName = file.name.toLowerCase();
+    
+    try {
+        let content = '';
+        
+        if (fileName.endsWith('.txt')) {
+            // 处理 .txt 文件
+            content = await readTextFile(file);
+        } else if (fileName.endsWith('.docx')) {
+            // 处理 .docx 文件
+            content = await readDocxFile(file);
+        } else {
+            alert('只支持 .txt 和 .docx 文件');
+            return;
+        }
+        
+        // 将内容填入编辑器
+        document.getElementById('persona-input').value = content;
+        alert('文档已导入，请检查内容后点击完成保存');
+    } catch (e) {
+        console.error('导入失败:', e);
+        alert('导入失败：' + e.message);
+    }
+    
+    // 重置文件输入框
+    this.value = '';
+};
+
+// 新增：读取 .txt 文件（UTF-8 编码）
+function readTextFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                resolve(text);
+            } catch (err) {
+                reject(err);
+            }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+// 新增：读取 .docx 文件（需要 Mammoth 库）
+async function readDocxFile(file) {
+    // 动态加载 Mammoth 库
+    if (typeof mammoth === 'undefined') {
+        await loadMammothLibrary();
+    }
+    
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                resolve(result.value);
+            } catch (err) {
+                reject(new Error('Word 文档解析失败：' + err.message));
+            }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// 新增：动态加载 Mammoth 库
+function loadMammothLibrary() {
+    return new Promise((resolve, reject) => {
+        if (typeof mammoth !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Mammoth 库加载失败'));
+        document.head.appendChild(script);
+    });
+}
+        function triggerPersonaDocUpload() {
+    document.getElementById('persona-doc-upload').click();
+}
+
+document.getElementById('persona-doc-upload').onchange = function() {
+    if (this.files[0]) {
+        const file = this.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            const friend = friends.find(f => f.name === currentFriendName);
+            if (friend) {
+                friend.persona = content;
+                saveData();
+                alert("人设已从文档导入成功！");
+                openSettings(); // 刷新设置页面
+            }
+        };
+        reader.readAsText(file);
+    }
+};
 
 // 新增功能 1：保存主动发消息的分钟数设置
 function saveAutoMsgFreq(val) {

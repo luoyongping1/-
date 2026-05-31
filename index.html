@@ -785,6 +785,82 @@ input, textarea {
     background: none;
     cursor: pointer;
 }
+/* --- 新的 iOS 风格九宫格菜单样式 --- */
+#floating-menu {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    width: 280px; 
+    height: 400px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 45px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    justify-content: flex-start; 
+    align-items: center;
+    overflow: hidden; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#floating-menu.active {
+    display: flex;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+}
+
+#floating-menu-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 15px; 
+    width: 100%;
+    height: 100%;
+    padding: 25px 15px; 
+    box-sizing: border-box;
+    overflow-y: auto; 
+    scrollbar-width: none; 
+}
+
+#floating-menu-content::-webkit-scrollbar {
+    display: none;
+}
+
+.menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s;
+}
+
+.menu-item:active {
+    transform: scale(0.9);
+}
+
+.menu-item-icon {
+    width: 60px; 
+    height: 60px;
+    border-radius: 14px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.menu-item-name {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    white-space: nowrap;
+}
     </style>
 </head>
 <body>
@@ -839,7 +915,13 @@ input, textarea {
     </div>
 </div>
 
-        <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="closeApp()"></div>
+        <div id="floating-ball" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" onclick="handleFloatingBallClick()"></div>
+
+<div id="floating-menu" style="position: fixed; width: 200px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 20px; padding: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 998; display: none; border: 1px solid rgba(255, 255, 255, 0.5);">
+    <div id="floating-menu-content" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- 快捷应用图标将由 JavaScript 动态生成 -->
+    </div>
+</div>
 
 <div id="app-overlay" style="display: none;">
     <iframe id="iframe-qq" data-src="qq.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
@@ -867,23 +949,25 @@ input, textarea {
         </div>
 
         <div id="wb-modal">
-            <h3 style="margin-top:0; color:white;">添加小剧场/书籍</h3>
-            <label style="color:#aaa;">书籍/剧场名称</label>
-            <input type="text" id="new-wb-title" placeholder="输入名称">
-            
-            <label style="color:#aaa;">生效模式</label>
-            <div class="effect-selector">
-                <div class="effect-option active" id="mode-global" onclick="switchWbMode('global')">全局生效</div>
-                <div class="effect-option" id="mode-keyword" onclick="switchWbMode('keyword')">关键词触发</div>
-            </div>
+    <h3 style="margin-top:0; color:white;">添加小剧场/书籍</h3>
+    <label style="color:#aaa;">书籍/剧场名称</label>
+    <input type="text" id="new-wb-title" placeholder="输入名称">
+    
+    <label style="color:#aaa;">生效模式</label>
+    <div class="effect-selector">
+        <div class="effect-option active" id="mode-global" onclick="switchWbMode('global')">全局生效</div>
+        <div class="effect-option" id="mode-keyword" onclick="switchWbMode('keyword')">关键词触发</div>
+    </div>
 
-            <div id="keyword-input-wrap" style="display:none;">
-                <label style="color:#aaa;">触发关键词</label>
-                <input type="text" id="new-wb-keyword" placeholder="例如：去约会">
-            </div>
+    <div id="keyword-input-wrap" style="display:none;">
+        <label style="color:#aaa;">触发关键词</label>
+        <input type="text" id="new-wb-keyword" placeholder="例如：去约会">
+    </div>
 
-            <label style="color:#aaa;">内容 (支持 HTML 小剧场代码)</label>
-            <textarea id="new-wb-content" rows="6" placeholder="输入文字或 HTML 代码"></textarea>
+    <label style="color:#aaa;">内容 (支持 HTML 小剧场代码)</label>
+    <button style="width: 100%; padding: 8px; background: #4facfe; color: white; border: none; border-radius: 8px; font-size: 12px; margin-bottom: 10px; cursor: pointer;" onclick="triggerWbDocImport()">📄 从文档导入内容</button>
+    <textarea id="new-wb-content" rows="6" placeholder="输入文字或 HTML 代码"></textarea>
+    <input type="file" id="wb-doc-import-input" style="display:none" accept=".txt,.docx">
             
             <button class="action-btn" style="background:#4facfe; margin-bottom: 10px;" onclick="previewHtmlContent()">预览 HTML 效果</button>
 
@@ -958,6 +1042,15 @@ input, textarea {
         <input type="checkbox" id="notification-toggle" style="width:40px; margin:0;" onchange="toggleNotifications(this.checked)">
     </div>
     <p style="font-size:10px; color:#999; margin-top:5px;">开启后，当页面处于后台且收到 AI 消息时，将弹出系统通知。</p>
+</div>
+
+<div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <label>悬浮球快捷菜单</label>
+    <p style="font-size:12px; color:#666; margin-bottom:15px;">选择要在悬浮球快捷菜单中显示的应用</p>
+    <div id="floating-ball-shortcuts-container" style="display:flex; flex-direction:column; gap:10px;">
+        <!-- 快捷应用列表将由 JavaScript 动态生成 -->
+    </div>
+    <p style="font-size:10px; color:#999; margin-top:10px;">💡 提示：双击悬浮球即可打开快捷菜单</p>
 </div>
                 </div>
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
@@ -1089,33 +1182,160 @@ async function handlePaste(targetId) {
     }
 }
         let ball = document.getElementById('floating-ball');
-        let isDraggingBall = false;
-        function startDrag(e) {
-            isDraggingBall = false;
-            let startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-            let startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-            let shiftX = startX - ball.getBoundingClientRect().left;
-            let shiftY = startY - ball.getBoundingClientRect().top;
-            function moveAt(pageX, pageY) {
-                isDraggingBall = true;
-                ball.style.left = pageX - shiftX + 'px';
-                ball.style.top = pageY - shiftY + 'px';
-            }
-            function onMouseMove(e) {
-                let pX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-                let pY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-                moveAt(pX, pY);
-            }
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('touchmove', onMouseMove);
-            document.onmouseup = document.ontouchend = function() {
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('touchmove', onMouseMove);
-                document.onmouseup = null;
-                document.ontouchend = null;
-            };
-        }
+let isDraggingBall = false;
+let floatingBallClickCount = 0;
+let floatingBallClickTimer = null;
 
+// 悬浮球点击逻辑：区分单击和双击
+function handleFloatingBallClick() {
+    if (isDraggingBall) return;
+    
+    floatingBallClickCount++;
+    
+    if (floatingBallClickCount === 1) {
+        floatingBallClickTimer = setTimeout(() => {
+            // 单击：执行原有的关闭应用返回桌面
+            closeApp();
+            floatingBallClickCount = 0;
+        }, 300);
+    } else if (floatingBallClickCount === 2) {
+        clearTimeout(floatingBallClickTimer);
+        // 双击：弹出快捷菜单
+        showFloatingMenu();
+        floatingBallClickCount = 0;
+    }
+}
+
+// 显示快捷菜单面板
+// 修改后的居中显示函数
+function showFloatingMenu() {
+    const menu = document.getElementById('floating-menu');
+    const shortcuts = JSON.parse(localStorage.getItem('floating_ball_shortcuts') || '[]');
+    
+    if (shortcuts.length === 0) {
+        alert('请先在设置中勾选要显示的快捷应用');
+        return;
+    }
+    
+    const content = document.getElementById('floating-menu-content');
+    content.innerHTML = ''; // 清空内容
+    
+    // 应用配置映射
+    const appConfig = {
+        'item-qq': { name: 'QQ', func: 'openQQ()' },
+        'item-xhs': { name: '小红书', func: 'openApp()' },
+        'item-gacha': { name: '扭蛋机', func: 'openGacha()' },
+        'item-self': { name: '自律打卡', func: 'openSelfApp()' },
+        'item-checkphone': { name: '查手机', func: 'showFriendSelector()' },
+        'item-wl': { name: '网恋模拟', func: 'openWlApp()' },
+        'item-shop': { name: '购物商城', func: 'openShopApp()' },
+        'item-ddp': { name: '对对碰', func: 'openDDPApp()' },
+        'item-wb': { name: '世界书', func: 'openWorldBook()' }
+    };
+    
+    // 循环创建两列网格图标
+    shortcuts.forEach(appId => {
+        if (appConfig[appId]) {
+            const app = appConfig[appId];
+            const appEl = document.getElementById(appId);
+            // 获取你设置的自定义图标，如果没有则使用默认图
+            const bgImage = appEl ? appEl.style.backgroundImage : '';
+            
+            // 创建容器项
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'menu-item';
+            itemDiv.onclick = (e) => {
+                e.stopPropagation(); // 防止触发背景点击
+                eval(app.func);
+                hideFloatingMenu();
+            };
+            
+            // 创建图标
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'menu-item-icon';
+            iconDiv.style.backgroundImage = bgImage;
+            
+            // 创建文字
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'menu-item-name';
+            nameSpan.innerText = app.name;
+            
+            itemDiv.appendChild(iconDiv);
+            itemDiv.appendChild(nameSpan);
+            content.appendChild(itemDiv);
+        }
+    });
+    
+    // 显示菜单并添加动画类
+    menu.style.display = 'flex';
+    // 稍微延迟一下确保 display 已经生效，从而触发透明度过渡动画
+    setTimeout(() => {
+        menu.classList.add('active');
+    }, 10);
+}
+
+// 修改后的隐藏函数
+function hideFloatingMenu() {
+    const menu = document.getElementById('floating-menu');
+    menu.classList.remove('active');
+    // 等动画结束后再彻底隐藏 display
+    setTimeout(() => {
+        if (!menu.classList.contains('active')) {
+            menu.style.display = 'none';
+        }
+    }, 300);
+}
+
+// 点击外部关闭
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('floating-menu');
+    if (menu.style.display === 'flex' && !menu.contains(e.target) && !ball.contains(e.target)) {
+        hideFloatingMenu();
+    }
+});
+
+// 悬浮球拖拽函数
+function startDrag(e) {
+    isDraggingBall = false;
+    let startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    let startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+    let shiftX = startX - ball.getBoundingClientRect().left;
+    let shiftY = startY - ball.getBoundingClientRect().top;
+    
+    ball.style.opacity = '1';
+
+    function moveAt(pageX, pageY) {
+        isDraggingBall = true;
+        ball.style.left = pageX - shiftX + 'px';
+        ball.style.top = pageY - shiftY + 'px';
+    }
+
+    function onMouseMove(e) {
+        let pX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        let pY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+        moveAt(pX, pY);
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('touchmove', onMouseMove);
+
+    document.onmouseup = document.ontouchend = function() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('touchmove', onMouseMove);
+        
+        // 边缘智能透明逻辑
+        const ballRect = ball.getBoundingClientRect();
+        const edgeThreshold = 10;
+        if (ballRect.left < edgeThreshold || ballRect.right > window.innerWidth - edgeThreshold) {
+            ball.style.opacity = '0.3';
+        }
+        
+        document.onmouseup = null;
+        document.ontouchend = null;
+    };
+}
+
+// 桌面图标排序与拖拽逻辑
 function initGridSortable() {
     window.oncontextmenu = function(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
@@ -1177,7 +1397,6 @@ function initGridSortable() {
         const colWidth = (gridRect.width - padding * 2 - gap * 3) / 4;
         const rowHeight = colWidth + 28;
 
-        // 增加偏移修正，让感应中心点在组件中心偏上一点（符合手机操作习惯）
         let targetX = currentX - gridRect.left - padding;
         let targetY = currentY - gridRect.top - padding - 10;
 
@@ -1198,11 +1417,6 @@ function initGridSortable() {
             if (placeholder.parentElement !== container) {
                 container.appendChild(placeholder);
             }
-            // 触发生振动反馈（如果有 API 支持）
-            if (window.navigator && window.navigator.vibrate) {
-                window.navigator.vibrate(5);
-            }
-            // 只有位置变化时才执行碰撞检测
             resolveCollisions(container, col, row, sx, sy);
         }
     };
@@ -1211,7 +1425,6 @@ function initGridSortable() {
         const items = Array.from(container.querySelectorAll('.grid-item:not(.dragging)'));
         let occupied = [{ c: dragCol, r: dragRow, sx: dragSx, sy: dragSy }];
         
-        // 按照到桌面的自然顺序排序，确保挤兑逻辑的一致性（从上到下，从左到右）
         const sortedItems = items.sort((a, b) => {
             const posA = getItemGridPos(a, container);
             const posB = getItemGridPos(b, container);
@@ -1222,7 +1435,6 @@ function initGridSortable() {
             const { sx, sy } = getWidgetSpan(item);
             let { c, r } = getItemGridPos(item, container);
             
-            // 如果与当前占用的任何位置（包括拖拽占位符和其他已移动图标）重叠
             let needsMove = false;
             for (let occ of occupied) {
                 if (isOverlapping(c, r, sx, sy, occ.c, occ.r, occ.sx, occ.sy)) {
@@ -1232,7 +1444,6 @@ function initGridSortable() {
             }
 
             if (needsMove) {
-                // 寻找最接近的可用空位
                 const newPos = findEmptySlot(container, sx, sy, occupied);
                 item.style.gridColumn = `${newPos.c} / span ${sx}`;
                 item.style.gridRow = `${newPos.r} / span ${sy}`;
@@ -1286,7 +1497,7 @@ function initGridSortable() {
         const item = e.target.closest('.grid-item');
         if (item || e.target.classList.contains('content')) {
             if (longPressTimer) clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => { enterEditMode(); }, 500); // 稍微缩短长按感应
+            longPressTimer = setTimeout(() => { enterEditMode(); }, 500);
         }
         
         if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
@@ -1335,7 +1546,6 @@ function initGridSortable() {
             const finalRow = parseInt(placeholder.style.gridRowStart);
             const { sx, sy } = getWidgetSpan(draggingItem);
 
-            // 松手平滑落位逻辑
             const container = draggingItem.parentElement;
             const containerRect = container.getBoundingClientRect();
             const padding = 20, gap = 15;
@@ -1349,7 +1559,6 @@ function initGridSortable() {
             draggingItem.style.left = targetLeft + 'px';
             draggingItem.style.top = targetTop + 'px';
 
-            // 等待动画结束
             await new Promise(r => setTimeout(r, 300));
 
             draggingItem.style.gridColumn = `${finalCol} / span ${sx}`;
@@ -1473,27 +1682,58 @@ function renderWorldBook() {
     const container = document.getElementById('wb-list-container');
     const searchTerm = document.getElementById('wb-search-input').value.toLowerCase();
     container.innerHTML = "";
+    
+    // 先过滤所有符合条件的书籍
+    const allFilteredBooks = wbData.books.map((b, index) => ({...b, originalIndex: index}))
+        .filter(b => {
+            const matchScope = (b.scope === currentWbTab) || (!b.scope && currentWbTab === 'local');
+            const matchSearch = b.title.toLowerCase().includes(searchTerm) || b.content.toLowerCase().includes(searchTerm);
+            return matchScope && matchSearch;
+        });
+    
+    // 如果没有符合条件的书籍，显示提示
+    if (allFilteredBooks.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">暂无符合条件的书籍</div>';
+        return;
+    }
+    
+    // 按分组组织书籍
     wbData.groups.forEach(group => {
+        const groupBooks = allFilteredBooks.filter(b => b.group === group);
+        
+        if (groupBooks.length === 0) return;
+        
         const groupDiv = document.createElement('div');
         groupDiv.className = "wb-group";
-        const filteredBooks = wbData.books.map((b, index) => ({...b, originalIndex: index}))
-            .filter(b => {
-                const matchScope = (b.scope === currentWbTab) || (!b.scope && currentWbTab === 'local');
-                const matchSearch = b.title.toLowerCase().includes(searchTerm);
-                return b.group === group && matchScope && matchSearch;
-            });
-        if (filteredBooks.length === 0) return;
-        groupDiv.innerHTML = `
-            <div class="wb-group-title" onclick="toggleGroup(this)">
-                <span>📁 ${group}</span><span>${filteredBooks.length}</span>
-            </div>
-            <div class="wb-group-content">
-                ${filteredBooks.map(b => `
-                    <div class="wb-item" onclick="editBook(${b.originalIndex})">
-                        <div class="wb-item-name">${b.title} ${b.mode==='keyword'?`<small style='color:#ff6b6b; font-size:10px;'>[关键词: ${b.keyword}]</small>`:''}</div>
-                        <div class="wb-item-text">${b.content.substring(0,50)}...</div>
-                    </div>`).join('')}
-            </div>`;
+        
+        const groupTitle = document.createElement('div');
+        groupTitle.className = "wb-group-title";
+        groupTitle.onclick = function() { toggleGroup(this); };
+        groupTitle.innerHTML = `<span>📁 ${group}</span><span>${groupBooks.length}</span>`;
+        
+        const groupContent = document.createElement('div');
+        groupContent.className = "wb-group-content";
+        
+        groupBooks.forEach(b => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = "wb-item";
+            itemDiv.onclick = () => editBook(b.originalIndex);
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = "wb-item-name";
+            titleDiv.innerHTML = `${b.title} ${b.mode==='keyword'?`<small style='color:#ff6b6b; font-size:10px;'>[关键词: ${b.keyword}]</small>`:''} ${b.scope === 'global' ? '<small style="color:#4facfe; font-size:10px;">[全局]</small>' : ''}`;
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = "wb-item-text";
+            textDiv.innerText = b.content.substring(0, 50) + (b.content.length > 50 ? '...' : '');
+            
+            itemDiv.appendChild(titleDiv);
+            itemDiv.appendChild(textDiv);
+            groupContent.appendChild(itemDiv);
+        });
+        
+        groupDiv.appendChild(groupTitle);
+        groupDiv.appendChild(groupContent);
         container.appendChild(groupDiv);
     });
 }
@@ -1558,6 +1798,104 @@ function closeHtmlPreview() { document.getElementById('html-preview-container').
 function addNewGroup() {
     const name = prompt("请输入新分组名称:");
     if(name && !wbData.groups.includes(name)) { wbData.groups.push(name); showWbModal(); }
+}
+
+// 新增：触发世界书文档导入
+function triggerWbDocImport() {
+    document.getElementById('wb-doc-import-input').click();
+}
+
+// 新增：处理世界书文档导入
+document.getElementById('wb-doc-import-input').onchange = async function() {
+    if (!this.files[0]) return;
+    const file = this.files[0];
+    const fileName = file.name.toLowerCase();
+    
+    try {
+        let content = '';
+        
+        if (fileName.endsWith('.txt')) {
+            // 处理 .txt 文件
+            content = await readWbTextFile(file);
+        } else if (fileName.endsWith('.docx')) {
+            // 处理 .docx 文件
+            content = await readWbDocxFile(file);
+        } else {
+            alert('只支持 .txt 和 .docx 文件');
+            return;
+        }
+        
+        // 将内容追加到编辑器（如果已有内容则追加，否则替换）
+        const currentContent = document.getElementById('new-wb-content').value;
+        if (currentContent.trim()) {
+            document.getElementById('new-wb-content').value = currentContent + '\n\n' + content;
+        } else {
+            document.getElementById('new-wb-content').value = content;
+        }
+        alert('文档已导入，请检查内容后点击保存');
+    } catch (e) {
+        console.error('导入失败:', e);
+        alert('导入失败：' + e.message);
+    }
+    
+    // 重置文件输入框
+    this.value = '';
+};
+
+// 新增：读取世界书 .txt 文件（UTF-8 编码）
+function readWbTextFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                resolve(text);
+            } catch (err) {
+                reject(err);
+            }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+// 新增：读取世界书 .docx 文件（需要 Mammoth 库）
+async function readWbDocxFile(file) {
+    // 动态加载 Mammoth 库
+    if (typeof mammoth === 'undefined') {
+        await loadWbMammothLibrary();
+    }
+    
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                resolve(result.value);
+            } catch (err) {
+                reject(new Error('Word 文档解析失败：' + err.message));
+            }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// 新增：动态加载 Mammoth 库（世界书版本）
+function loadWbMammothLibrary() {
+    return new Promise((resolve, reject) => {
+        if (typeof mammoth !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Mammoth 库加载失败'));
+        document.head.appendChild(script);
+    });
 }
 
 function saveNewBook() {
@@ -2160,6 +2498,9 @@ if(savedBallCss) {
 setInterval(updateTime, 1000); 
 updateTime();
 
+// 初始化悬浮球快捷菜单设置
+initFloatingBallShortcuts();
+
     const savedTimeColor = localStorage.getItem('time_display_color');
     if (savedTimeColor) {
         document.getElementById('item-time').style.color = savedTimeColor;
@@ -2181,6 +2522,69 @@ updateTime();
         });
     }
 };
+
+function initFloatingBallShortcuts() {
+    const container = document.getElementById('floating-ball-shortcuts-container');
+    const shortcuts = JSON.parse(localStorage.getItem('floating_ball_shortcuts') || '[]');
+    
+    const appList = [
+        { id: 'item-qq', name: 'QQ' },
+        { id: 'item-xhs', name: '小红书' },
+        { id: 'item-gacha', name: '扭蛋机' },
+        { id: 'item-self', name: '自律打卡' },
+        { id: 'item-checkphone', name: '查手机' },
+        { id: 'item-wl', name: '网恋模拟' },
+        { id: 'item-shop', name: '购物商城' },
+        { id: 'item-ddp', name: '对对碰' },
+        { id: 'item-wb', name: '世界书' }
+    ];
+    
+    container.innerHTML = '';
+    
+    appList.forEach(app => {
+        const isChecked = shortcuts.includes(app.id);
+        
+        const itemDiv = document.createElement('div');
+        itemDiv.style = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: #f2f2f7;
+            border-radius: 10px;
+        `;
+        
+        const labelSpan = document.createElement('span');
+        labelSpan.innerText = app.name;
+        labelSpan.style = 'font-size: 14px; color: #333;';
+        
+        const toggleSwitch = document.createElement('input');
+        toggleSwitch.type = 'checkbox';
+        toggleSwitch.checked = isChecked;
+        toggleSwitch.style = 'width: 40px; margin: 0; cursor: pointer;';
+        toggleSwitch.onchange = () => {
+            updateFloatingBallShortcut(app.id, toggleSwitch.checked);
+        };
+        
+        itemDiv.appendChild(labelSpan);
+        itemDiv.appendChild(toggleSwitch);
+        container.appendChild(itemDiv);
+    });
+}
+
+function updateFloatingBallShortcut(appId, isChecked) {
+    let shortcuts = JSON.parse(localStorage.getItem('floating_ball_shortcuts') || '[]');
+    
+    if (isChecked) {
+        if (!shortcuts.includes(appId)) {
+            shortcuts.push(appId);
+        }
+    } else {
+        shortcuts = shortcuts.filter(id => id !== appId);
+    }
+    
+    localStorage.setItem('floating_ball_shortcuts', JSON.stringify(shortcuts));
+}
 
 async function toggleNotifications(enabled) {
     if (enabled) {
