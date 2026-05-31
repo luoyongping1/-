@@ -10,15 +10,37 @@
     const PUBLIC_VAPID_KEY = 'BO0XVLAKMy8TXgHxiGBJZxZ3cZ9AW3l7DKCVfA6obHpumKCHQt5fL0p9m4nidgNs7PCvz3OovH6XPA7RtM7o97U';
 
     // 1. 注册 Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('sw.js').then(registration => {
-                console.log('SW 注册成功');
-                // 注册成功后尝试询问权限
-                askPermission();
-            });
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').then(registration => {
+            console.log('SW 注册成功');
+            // 注册成功后尝试询问权限
+            askPermission();
         });
+    });
+}
+
+// --- 新增：接收来自 QQ 窗口的信号并弹出系统通知 ---
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+        // 只有当你在 [设置] 里开启了 “允许后台消息弹窗” 才会执行
+        const isNotify = localStorage.getItem('allow_notifications') === 'true';
+        if (!isNotify) return;
+
+        const { title, body } = event.data;
+        
+        // 如果浏览器已经获得了通知权限，就弹出气泡
+        if (Notification.permission === "granted") {
+            new Notification(title, {
+                body: body,
+                icon: 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vbJJ/1080X1080/image_1776692512012.png/webp' 
+            });
+        } else {
+            // 如果没权限，尝试再次申请
+            Notification.requestPermission();
+        }
     }
+});
 
     // 2. 转换密钥格式的工具函数
     function urlBase64ToUint8Array(base64String) {

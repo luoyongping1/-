@@ -2551,6 +2551,13 @@ if (rawText.includes("[SEND_MONEY]")) {
     friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
     saveData(); renderMessages();
     renderChatList();
+
+    // --- 新增：向主页面发送通知信号 ---
+    window.parent.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title: currentFriendName,
+        body: isTheaterMsg ? "[小剧场]" : cleanText
+    }, '*');
 }
 
                 // 表情包逻辑：如果允许使用表情包且库中有表情，且【不在追剧模式】下，才发送
@@ -3453,7 +3460,14 @@ let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, 3);
 }
 group.lastMsg = `${friend.name}: ${cleanText}`;
 saveData();
-                        renderMessages();
+renderMessages();
+
+// --- 新增：向主页面发送群聊通知信号 ---
+window.parent.postMessage({
+    type: 'SHOW_NOTIFICATION',
+    title: group.name,
+    body: friend.name + ": " + cleanText
+}, '*');
                     }
 
                     // 表情包机制（50%概率发送）
