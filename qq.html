@@ -1652,10 +1652,10 @@ function openUserPersonaAvatarDB() {
         };
 
         request.onerror = (event) => {
-            console.error("IndexedDB error:", event.target.errorCode);
-            alert("IndexedDB 初始化失败，可能无法保存大图片。错误代码: " + event.target.errorCode);
-            reject(event.target.errorCode);
-        };
+    console.error("IndexedDB error:", event.target.errorCode);
+    // 删掉了 alert 弹窗提示
+    reject(event.target.errorCode);
+};
     });
 }
 
@@ -2710,8 +2710,11 @@ if (rawText.includes("[SEND_MONEY]")) {
         function showCommentInput(idx, replyTo = null) { const txt = prompt(replyTo ? `回复 ${replyTo}:` : "评论:"); if(txt) { if(!moments[idx].comments) moments[idx].comments = []; moments[idx].comments.push({ name: myInfo.name, text: txt, replyTo: replyTo }); saveData(); renderMoments(); aiReactToMoment(idx, 'comment', txt, replyTo); } }
 
         function renderChatList() {
-    // 增加这一行：每次画列表前，先从存储里同步最新的好友数据
-    friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
+    // 核心修改：如果 localStorage 是空的，就使用当前内存里的 friends（包含默认的AI助手）
+    const storedFriends = localStorage.getItem('qq_friends');
+    if (storedFriends) {
+        friends = JSON.parse(storedFriends);
+    }
     
     const list = document.getElementById('chat-session-list');
     const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
@@ -4066,14 +4069,42 @@ function toggleTimeAwareness(val) {
             document.getElementById('sticker-permission-modal').style.display = 'none';
         }
 
-        window.onload = async () => { // 注意这里加了 async
-    await openUserPersonaAvatarDB(); // 初始化 IndexedDB
+        window.onload = async () => { 
+    // 请求系统通知权限
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+
+    try {
+        await openUserPersonaAvatarDB(); 
+    } catch (e) {
+        console.warn("数据库初始化被跳过:", e);
+    }
+
     renderChatList(); 
     renderContactList(); 
     renderMePage(); 
+    
     const momentsBg = localStorage.getItem('moments_bg_url');
-    if(momentsBg) { const bgEl = document.getElementById('moments-bg-display'); if(bgEl) bgEl.style.backgroundImage = `url("${momentsBg.replace(/(\r\n|\n|\r)/gm, "")}")`; }
+    if (momentsBg) { 
+        const bgEl = document.getElementById('moments-bg-display'); 
+        if (bgEl) {
+            bgEl.style.backgroundImage = "url('" + momentsBg.trim() + "')";
+            bgEl.style.backgroundSize = "cover";
+            bgEl.style.backgroundPosition = "center";
+        }
+    }
 };
+
+// 新增：发送系统通知的函数
+function sendSystemNotification(title, body) {
+    if (document.visibilityState === 'hidden' && "Notification" in window && Notification.permission === "granted") {
+        new Notification(title, {
+            body: body,
+            icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png' // 这里可以换成你喜欢的图标URL
+        });
+    }
+}
         function openBubbleEditor() {
     const friend = friends.find(f => f.name === currentFriendName);
     document.getElementById('bubble-css-input').value = friend.bubbleCss || "";
@@ -4595,15 +4626,13 @@ async function saveUserPersona() { // 注意这里加了 async
     if (tempUserPersonaFile) {
         const uniqueId = `indexeddb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         try {
-            await saveAvatarBlob(uniqueId, tempUserPersonaFile);
-            avatarValue = uniqueId; // 存储 IndexedDB 的 ID
-            tempUserPersonaFile = null; // 清空临时文件
-        } catch (e) {
-            alert("保存头像到本地数据库失败，可能是 IndexedDB 权限问题或存储异常。");
-            console.error("IndexedDB save error:", e);
-            // 如果IndexedDB保存失败，退回到Base64，但可能会遇到localStorage限制
-            // 此时avatarValue仍然是Base64，会尝试保存到localStorage
-        }
+    await saveAvatarBlob(uniqueId, tempUserPersonaFile);
+    avatarValue = uniqueId; // 存储 IndexedDB 的 ID
+    tempUserPersonaFile = null; // 清空临时文件
+} catch (e) {
+    // 删掉了 alert 弹窗提示，让它静默执行备用逻辑
+    console.error("IndexedDB save error:", e);
+}
     }
 
     if (idInput) {

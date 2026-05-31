@@ -110,24 +110,25 @@ input, textarea {
         }
 
         /* --- 核心：网格布局容器 --- */
-.content {
-    position: relative;
-    z-index: 2;
-    padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 60px) 20px;
-    height: 100%;
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: auto;
-    grid-auto-rows: calc((100vw - 85px) / 4 + 28px); 
-    gap: 15px;
-    box-sizing: border-box;
-    align-content: start;
-    overflow: hidden;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-.content::-webkit-scrollbar { display: none; }
+        .content {
+            position: relative;
+            z-index: 2;
+            padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 60px) 20px;
+            height: 100%;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: auto; /* 允许第一行（时间行）根据内容自适应高度，防止重叠 */
+            /* 固定行高：(屏幕宽-边距-间隙)/4 + 28px标签空间 */
+            grid-auto-rows: calc((100vw - 85px) / 4 + 28px); 
+            gap: 15px;
+            box-sizing: border-box;
+            align-content: start;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .content::-webkit-scrollbar { display: none; }
 
         .overlay {
             position: absolute;
@@ -147,41 +148,39 @@ input, textarea {
 
 .grid-item.dragging {
     z-index: 9999 !important;
-    opacity: 0.7;
-    transform: scale(1.1);
-    box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+    opacity: 0.8;
+    transform: scale(1.15);
+    box-shadow: 0 35px 70px rgba(0,0,0,0.35);
     position: fixed !important; 
     pointer-events: none;
     margin: 0 !important;
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+    /* 移除位移变换的过渡，让跟随手指更精准 */
+    transition: transform 0.15s ease-out;
+    will-change: left, top;
 }
 
 .grid-item {
-    transition: transform 0.3s cubic-bezier(0.2, 1, 0.2, 1), grid-area 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), box-shadow 0.2s;
+    /* 解决点击不灵敏：确保背景图不拦截事件 */
     pointer-events: auto;
-    touch-action: none; /* 关键：禁止原生滚动干扰拖拽 */
-    user-select: none;
+    will-change: transform;
 }
 
-.grid-item.dragging {
-    transition: none !important; /* 拖拽时取消过渡，解决“粘手”感 */
-    z-index: 9999 !important;
-    opacity: 0.8;
-    position: fixed !important;
-    pointer-events: none;
-    margin: 0 !important;
-    transform: scale(1.05);
+/* 平滑落位动画类 */
+.grid-item.dropping {
+    transition: all 0.3s cubic-bezier(0.2, 1, 0.2, 1) !important;
+    z-index: 9998 !important;
 }
 
 .drag-placeholder {
-    border: 2px dashed #8B4513;
-    background: rgba(139, 69, 19, 0.2);
+    border: 2px dashed rgba(79, 172, 254, 0.6);
+    background: rgba(79, 172, 254, 0.15);
     border-radius: 24px;
-    transition: grid-area 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.2, 1, 0.2, 1);
     pointer-events: none;
+    box-sizing: border-box;
     z-index: 1;
 }
-
 
         .time-widget { 
             grid-column: span 4; 
@@ -606,9 +605,6 @@ input, textarea {
     box-shadow: var(--soft-shadow);
     box-sizing: border-box;
     position: relative;
-    /* 核心修复：强制在所有设备上生效的圆角切除 */
-    -webkit-mask-image: -webkit-radial-gradient(white, black);
-    z-index: 1;
 }
 .ios-banner {
     width: 100%;
@@ -712,10 +708,6 @@ input, textarea {
     box-shadow: var(--soft-shadow);
     position: relative;
     border: 1px solid #f0f0f0;
-    /* 核心修复：添加溢出隐藏和强制圆角切除 */
-    overflow: hidden;
-    -webkit-mask-image: -webkit-radial-gradient(white, black);
-    z-index: 1;
 }
 .ios-photo-content {
     width: 100%;
@@ -771,26 +763,6 @@ input, textarea {
     background: none;
     cursor: pointer;
 }
-/* 拖拽影子元素样式 */
-.drag-ghost {
-    border-radius: 24px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-    pointer-events: none;
-    will-change: left, top;
-}
-
-/* 占位虚框样式（已有类名但补充一下确保生效） */
-.drag-placeholder {
-    border: 2px dashed #8B4513;
-    background: rgba(139, 69, 19, 0.2);
-    border-radius: 24px;
-    pointer-events: none;
-    grid-column: span 1;
-    grid-row: span 1;
-    z-index: 1;
-    transition: none;
-}
-
     </style>
 </head>
 <body>
@@ -955,21 +927,15 @@ input, textarea {
     <span style="font-size:14px;">启用静音音频保活</span>
     <input type="checkbox" id="keep-alive-toggle" style="width:40px; margin:0;" onchange="toggleKeepAlive(this.checked)">
 </div>
-<div class="setting-group" style="margin-top:15px;">
-    <label>消息通知</label>
-    <div style="display:flex; align-items:center; justify-content:space-between; background:#f2f2f7; padding:10px; border-radius:10px;">
-        <span style="font-size:14px;">开启后台消息弹窗</span>
-        <input type="checkbox" id="notification-toggle" style="width:40px; margin:0;" onchange="toggleNotifications(this.checked)">
-    </div>
-</div>
-                    <p style="font-size:10px; color:#999; margin-top:5px;">开启后将循环播放静音音频。</p>
+<p style="font-size:10px; color:#999; margin-top:5px;">开启后将通过静音音频和心跳包防止 JS 引擎深度休眠。</p>
+
 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
     <label>消息通知</label>
     <div style="display:flex; align-items:center; justify-content:space-between; background:#f2f2f7; padding:10px; border-radius:10px;">
         <span style="font-size:14px;">允许后台消息弹窗</span>
         <input type="checkbox" id="notification-toggle" style="width:40px; margin:0;" onchange="toggleNotifications(this.checked)">
     </div>
-    <p style="font-size:10px; color:#999; margin-top:5px;">开启后，当你在后台时收到AI消息会弹出系统通知。</p>
+    <p style="font-size:10px; color:#999; margin-top:5px;">开启后，当页面处于后台且收到 AI 消息时，将弹出系统通知。</p>
 </div>
                 </div>
                 <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
@@ -1135,167 +1101,250 @@ function initGridSortable() {
     };
 
     let draggingItem = null;
-    let ghostEl = null;
-    let placeholder = null;
+    let placeholder = document.createElement('div');
+    placeholder.className = 'drag-placeholder';
+    
+    let initialRect = null;
     let offsetX = 0, offsetY = 0;
+    let currentX = 0, currentY = 0;
+    let isMoving = false;
+    let rafId = null;
     let longPressTimer = null;
-    let isDragging = false;
-    let currentGrid = null;
-    let pageChangeTimer = null; // 用于翻页延迟
 
-    function getSpan(el) {
-        if (!el) return { sx: 1, sy: 1 };
-        if (el.classList.contains('time-widget')) return { sx: 4, sy: 1 };
-        if (el.classList.contains('widget-ios-info')) return { sx: 4, sy: 2 };
-        if (el.classList.contains('left-widget') || el.classList.contains('widget-ios-photo') || el.classList.contains('progress-widgets')) return { sx: 2, sy: 2 };
-        return { sx: 1, sy: 1 };
-    }
+    const getWidgetSpan = (el) => {
+        let sx = 1, sy = 1;
+        if (el.id === 'item-time' || el.classList.contains('time-widget') || el.classList.contains('widget-minimal-clock')) { sx = 4; sy = 1; }
+        else if (el.classList.contains('widget-ios-info')) { sx = 4; sy = 2; }
+        else if (el.classList.contains('left-widget') || el.classList.contains('widget-ios-photo') || el.classList.contains('progress-widgets')) { sx = 2; sy = 2; }
+        return { sx, sy };
+    };
 
-    // 碰撞检测：检查某个位置是否被占用
-    function isAreaOccupied(grid, col, row, sx, sy, skipEl) {
-        const items = grid.querySelectorAll('.grid-item');
-        for (let item of items) {
-            if (item === skipEl || item.style.opacity === '0.15') continue;
-            const itemSx = getSpan(item).sx;
-            const itemSy = getSpan(item).sy;
-            const itemCol = parseInt(item.style.gridColumnStart) || 1;
-            const itemRow = parseInt(item.style.gridRowStart) || 1;
+    const updatePosition = () => {
+        if (!draggingItem) return;
+        draggingItem.style.left = (currentX - offsetX) + 'px';
+        draggingItem.style.top = (currentY - offsetY) + 'px';
+        
+        const screenWidth = window.innerWidth;
+        const wrapper = document.getElementById('swiper-wrapper');
+        const dots = document.querySelectorAll('.dot');
+        const grid1 = document.getElementById('main-grid');
+        const grid2 = document.getElementById('page-2');
 
-            if (!(col + sx <= itemCol || col >= itemCol + itemSx || row + sy <= itemRow || row >= itemRow + itemSy)) {
-                return true;
+        const edgeThreshold = 40;
+        if (currentX > screenWidth - edgeThreshold && currentPageIndex === 0) {
+            currentPageIndex = 1;
+            wrapper.style.transform = `translateX(-50%)`; 
+            dots.forEach((dot, i) => dot.style.opacity = (i === 1 ? "1" : "0.3"));
+            if (draggingItem.parentElement !== grid2) grid2.appendChild(draggingItem);
+        } else if (currentX < edgeThreshold && currentPageIndex === 1) {
+            currentPageIndex = 0;
+            wrapper.style.transform = `translateX(0%)`; 
+            dots.forEach((dot, i) => dot.style.opacity = (i === 0 ? "1" : "0.3"));
+            if (draggingItem.parentElement !== grid1) grid1.appendChild(draggingItem);
+        }
+
+        updatePlaceholder();
+        rafId = requestAnimationFrame(updatePosition);
+    };
+
+    const updatePlaceholder = () => {
+        if (!draggingItem) return;
+        const container = draggingItem.parentElement;
+        const gridRect = container.getBoundingClientRect();
+        const padding = 20, gap = 15;
+        const colWidth = (gridRect.width - padding * 2 - gap * 3) / 4;
+        const rowHeight = colWidth + 28;
+
+        // 增加偏移修正，让感应中心点在组件中心偏上一点（符合手机操作习惯）
+        let targetX = currentX - gridRect.left - padding;
+        let targetY = currentY - gridRect.top - padding - 10;
+
+        let col = Math.round(targetX / (colWidth + gap)) + 1;
+        let row = Math.round(targetY / (rowHeight + gap)) + 1;
+
+        const { sx, sy } = getWidgetSpan(draggingItem);
+        col = Math.max(1, Math.min(4 - sx + 1, col));
+        if (sx === 4) col = 1;
+        row = Math.max(1, row);
+
+        if (placeholder.style.gridColumnStart != col || placeholder.style.gridRowStart != row) {
+            placeholder.style.gridColumn = `${col} / span ${sx}`;
+            placeholder.style.gridRow = `${row} / span ${sy}`;
+            placeholder.style.gridColumnStart = col;
+            placeholder.style.gridRowStart = row;
+            
+            if (placeholder.parentElement !== container) {
+                container.appendChild(placeholder);
+            }
+            // 触发生振动反馈（如果有 API 支持）
+            if (window.navigator && window.navigator.vibrate) {
+                window.navigator.vibrate(5);
+            }
+            // 只有位置变化时才执行碰撞检测
+            resolveCollisions(container, col, row, sx, sy);
+        }
+    };
+
+    const resolveCollisions = (container, dragCol, dragRow, dragSx, dragSy) => {
+        const items = Array.from(container.querySelectorAll('.grid-item:not(.dragging)'));
+        let occupied = [{ c: dragCol, r: dragRow, sx: dragSx, sy: dragSy }];
+        
+        // 按照到桌面的自然顺序排序，确保挤兑逻辑的一致性（从上到下，从左到右）
+        const sortedItems = items.sort((a, b) => {
+            const posA = getItemGridPos(a, container);
+            const posB = getItemGridPos(b, container);
+            return (posA.r - posB.r) || (posA.c - posB.c);
+        });
+
+        sortedItems.forEach(item => {
+            const { sx, sy } = getWidgetSpan(item);
+            let { c, r } = getItemGridPos(item, container);
+            
+            // 如果与当前占用的任何位置（包括拖拽占位符和其他已移动图标）重叠
+            let needsMove = false;
+            for (let occ of occupied) {
+                if (isOverlapping(c, r, sx, sy, occ.c, occ.r, occ.sx, occ.sy)) {
+                    needsMove = true;
+                    break;
+                }
+            }
+
+            if (needsMove) {
+                // 寻找最接近的可用空位
+                const newPos = findEmptySlot(container, sx, sy, occupied);
+                item.style.gridColumn = `${newPos.c} / span ${sx}`;
+                item.style.gridRow = `${newPos.r} / span ${sy}`;
+                item.style.gridColumnStart = newPos.c;
+                item.style.gridRowStart = newPos.r;
+                occupied.push({ c: newPos.c, r: newPos.r, sx, sy });
+            } else {
+                occupied.push({ c, r, sx, sy });
+            }
+        });
+    };
+
+    const getItemGridPos = (el, container) => {
+        if (el.style.gridColumnStart) {
+            const { sx, sy } = getWidgetSpan(el);
+            return { c: parseInt(el.style.gridColumnStart), r: parseInt(el.style.gridRowStart), sx, sy };
+        }
+        const rect = el.getBoundingClientRect();
+        const gridRect = container.getBoundingClientRect();
+        const padding = 20, gap = 15;
+        const cw = (gridRect.width - padding * 2 - gap * 3) / 4;
+        const rh = cw + 28;
+        return {
+            c: Math.round((rect.left - gridRect.left - padding) / (cw + gap)) + 1,
+            r: Math.round((rect.top - gridRect.top - padding) / (rh + gap)) + 1,
+            ...getWidgetSpan(el)
+        };
+    };
+
+    const isOverlapping = (c1, r1, sx1, sy1, c2, r2, sx2, sy2) => {
+        return !(c1 + sx1 <= c2 || c1 >= c2 + sx2 || r1 + sy1 <= r2 || r1 >= r2 + sy2);
+    };
+
+    const findEmptySlot = (container, sx, sy, occupied) => {
+        for (let r = 1; r < 20; r++) {
+            for (let c = 1; c <= (4 - sx + 1); c++) {
+                if (sx === 4 && c !== 1) continue;
+                let collision = false;
+                for (let occ of occupied) {
+                    if (isOverlapping(c, r, sx, sy, occ.c, occ.r, occ.sx, occ.sy)) {
+                        collision = true; break;
+                    }
+                }
+                if (!collision) return { c, r };
             }
         }
-        return false;
-    }
-
-    // 寻找最近的空位
-function findNearestEmptySlot(grid, col, row, sx, sy, skipEl) {
-    // 先直接检查手指拖拽的目标位置是不是空的，如果是，直接放在这里
-    if (!isAreaOccupied(grid, col, row, sx, sy, skipEl)) {
-        return { col: col, row: row };
-    }
-    // 如果目标位置已经被占用了，再按顺序找附近的空位
-    for (let r = row; r < row + 5; r++) {
-        for (let c = 1; c <= 4 - sx + 1; c++) {
-            if (!isAreaOccupied(grid, c, r, sx, sy, skipEl)) return { col: c, row: r };
-        }
-    }
-    return { col, row }; // 实在没位就原地落位
-}
+        return { c: 1, r: 1 };
+    };
 
     document.addEventListener('pointerdown', (e) => {
-        if (e.target.classList.contains('delete-widget-btn')) return;
         const item = e.target.closest('.grid-item');
         if (item || e.target.classList.contains('content')) {
             if (longPressTimer) clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => enterEditMode(), 600);
+            longPressTimer = setTimeout(() => { enterEditMode(); }, 500); // 稍微缩短长按感应
         }
-        if (!item || item.classList.contains('time-widget')) return;
+        
+        if (!item || item.id === 'item-time' || !item.parentElement.classList.contains('content')) return;
         
         draggingItem = item;
-        const rect = item.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
-        isDragging = false;
-        currentGrid = item.parentElement;
-        item.setPointerCapture(e.pointerId);
+        initialRect = draggingItem.getBoundingClientRect();
+        offsetX = e.clientX - initialRect.left;
+        offsetY = e.clientY - initialRect.top;
+        currentX = e.clientX;
+        currentY = e.clientY;
+        isMoving = false;
+        
+        draggingItem.setPointerCapture(e.pointerId);
     }, { passive: true });
 
     document.addEventListener('pointermove', (e) => {
         if (!draggingItem) return;
-
-        if (!isDragging) {
-            if (Math.hypot(e.movementX, e.movementY) < 2) return;
-            isDragging = true;
-            if (longPressTimer) clearTimeout(longPressTimer);
-
-            const rect = draggingItem.getBoundingClientRect();
-            ghostEl = draggingItem.cloneNode(true);
-            ghostEl.style.cssText = `
-                position: fixed !important; z-index: 9999; pointer-events: none;
-                width: ${rect.width}px; height: ${rect.height}px;
-                left: ${rect.left}px; top: ${rect.top}px;
-                opacity: 0.8; transform: scale(1.1); transition: none; margin:0;
-                background-image: ${draggingItem.style.backgroundImage};
-                background-size: cover; background-position: center;
-                background-color: ${getComputedStyle(draggingItem).backgroundColor};
-                border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            `;
-            document.body.appendChild(ghostEl);
-            draggingItem.style.opacity = '0.15';
-
-            placeholder = document.createElement('div');
-            placeholder.className = 'drag-placeholder';
-            currentGrid.appendChild(placeholder);
-        }
-
-        ghostEl.style.left = (e.clientX - offsetX) + 'px';
-        ghostEl.style.top = (e.clientY - offsetY) + 'px';
-
-        // 翻页逻辑优化：边缘停留 0.5 秒才翻页
-        const screenWidth = window.innerWidth;
-        const edge = 40;
-        if ((e.clientX > screenWidth - edge && currentPageIndex === 0) || (e.clientX < edge && currentPageIndex === 1)) {
-            if (!pageChangeTimer) {
-                pageChangeTimer = setTimeout(() => {
-                    currentPageIndex = currentPageIndex === 0 ? 1 : 0;
-                    document.getElementById('swiper-wrapper').style.transform = `translateX(-${currentPageIndex * 50}%)`;
-                    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === currentPageIndex));
-                    currentGrid = currentPageIndex === 0 ? document.getElementById('main-grid') : document.getElementById('page-2');
-                    currentGrid.appendChild(placeholder);
-                    currentGrid.appendChild(draggingItem);
-                }, 500);
+        currentX = e.clientX;
+        currentY = e.clientY;
+        
+        const dist = Math.hypot(currentX - (initialRect.left + offsetX), currentY - (initialRect.top + offsetY));
+        if (dist > 5 || isMoving) {
+            if (!isMoving) {
+                isMoving = true;
+                if (longPressTimer) clearTimeout(longPressTimer);
+                draggingItem.classList.add('dragging');
+                const { sx, sy } = getWidgetSpan(draggingItem);
+                placeholder.style.gridColumn = draggingItem.style.gridColumn;
+                placeholder.style.gridRow = draggingItem.style.gridRow;
+                draggingItem.parentElement.appendChild(placeholder);
+                draggingItem.style.width = initialRect.width + 'px';
+                draggingItem.style.height = initialRect.height + 'px';
+                rafId = requestAnimationFrame(updatePosition);
             }
-        } else {
-            clearTimeout(pageChangeTimer);
-            pageChangeTimer = null;
         }
+    }, { passive: false });
 
-        // 计算目标网格坐标
-        const gRect = currentGrid.getBoundingClientRect();
-        const padding = 20, gap = 15;
-        const cw = (gRect.width - padding * 2 - gap * 3) / 4;
-        const rh = cw + 28;
+    document.addEventListener('pointerup', async (e) => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        if (rafId) cancelAnimationFrame(rafId);
         
-        let tCol = Math.floor((e.clientX - gRect.left - padding) / (cw + gap)) + 1;
-        let tRow = Math.floor((e.clientY - gRect.top - padding) / (rh + gap)) + 1;
-        const { sx, sy } = getSpan(draggingItem);
-        
-        tCol = Math.max(1, Math.min(4 - sx + 1, tCol));
-        if (sx === 4) tCol = 1;
-        tRow = Math.max(1, tRow);
-
-        // 智能避让：如果目标位置被占用，寻找最近空位
-        const finalPos = findNearestEmptySlot(currentGrid, tCol, tRow, sx, sy, draggingItem);
-
-        placeholder.style.gridColumn = `${finalPos.col} / span ${sx}`;
-        placeholder.style.gridRow = `${finalPos.row} / span ${sy}`;
-        placeholder.style.gridColumnStart = finalPos.col;
-        placeholder.style.gridRowStart = finalPos.row;
-    });
-
-    document.addEventListener('pointerup', (e) => {
-        clearTimeout(longPressTimer);
-        clearTimeout(pageChangeTimer);
         if (!draggingItem) return;
+        
+        if (isMoving) {
+            const finalCol = parseInt(placeholder.style.gridColumnStart);
+            const finalRow = parseInt(placeholder.style.gridRowStart);
+            const { sx, sy } = getWidgetSpan(draggingItem);
 
-        if (isDragging) {
-            const fCol = placeholder.style.gridColumnStart;
-            const fRow = placeholder.style.gridRowStart;
-            const { sx, sy } = getSpan(draggingItem);
-
-            draggingItem.style.gridColumn = `${fCol} / span ${sx}`;
-            draggingItem.style.gridRow = `${fRow} / span ${sy}`;
-            draggingItem.style.gridColumnStart = fCol;
-            draggingItem.style.gridRowStart = fRow;
+            // 松手平滑落位逻辑
+            const container = draggingItem.parentElement;
+            const containerRect = container.getBoundingClientRect();
+            const padding = 20, gap = 15;
+            const cw = (containerRect.width - padding * 2 - gap * 3) / 4;
+            const rh = cw + 28;
             
-            draggingItem.style.opacity = '1';
-            ghostEl.remove();
+            const targetLeft = containerRect.left + padding + (finalCol - 1) * (cw + gap);
+            const targetTop = containerRect.top + padding + (finalRow - 1) * (rh + gap);
+
+            draggingItem.classList.add('dropping');
+            draggingItem.style.left = targetLeft + 'px';
+            draggingItem.style.top = targetTop + 'px';
+
+            // 等待动画结束
+            await new Promise(r => setTimeout(r, 300));
+
+            draggingItem.style.gridColumn = `${finalCol} / span ${sx}`;
+            draggingItem.style.gridRow = `${finalRow} / span ${sy}`;
+            draggingItem.style.gridColumnStart = finalCol;
+            draggingItem.style.gridRowStart = finalRow;
+
             placeholder.remove();
             saveAllWidgets();
         }
+
+        draggingItem.classList.remove('dragging', 'dropping');
+        draggingItem.style.left = ''; draggingItem.style.top = ''; 
+        draggingItem.style.width = ''; draggingItem.style.height = '';
+        draggingItem.releasePointerCapture(e.pointerId);
         draggingItem = null;
-        isDragging = false;
+        isMoving = false;
     });
 }
 
@@ -1799,21 +1848,46 @@ function clearAllData() {
 
 let silentAudio = null;
 let wakeLock = null;
+let keepAliveTimer = null;
+
 async function toggleKeepAlive(enabled) {
     if (enabled) {
         try {
+            // 1. 播放静音音频，防止浏览器挂起音频上下文
             if (!silentAudio) {
                 const silentData = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ";
                 silentAudio = new Audio(silentData);
                 silentAudio.loop = true;
             }
             await silentAudio.play();
-            if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
+
+            // 2. 申请屏幕唤醒锁（防止锁屏）
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                // 监听唤醒锁释放，如果是因为切屏释放的，切回来自动补申请
+                wakeLock.addEventListener('release', () => {
+                    console.log('Wake Lock was released');
+                });
+            }
+
+            // 3. 开启心跳包定时器：每 5 秒执行一次轻量任务，强制 JS 引擎保持活跃
+            if (!keepAliveTimer) {
+                keepAliveTimer = setInterval(() => {
+                    const beat = Date.now();
+                    window.dispatchEvent(new CustomEvent('heartbeat', { detail: beat }));
+                }, 5000);
+            }
+
             localStorage.setItem('background_keep_alive', 'true');
-        } catch (err) { alert("保活开启失败"); document.getElementById('keep-alive-toggle').checked = false; }
+            console.log("后台保活已强化启动");
+        } catch (err) { 
+            console.error("保活开启失败:", err); 
+            document.getElementById('keep-alive-toggle').checked = false; 
+        }
     } else {
-        if (silentAudio) silentAudio.pause();
-        if (wakeLock) wakeLock.release().then(() => wakeLock = null);
+        if (silentAudio) { silentAudio.pause(); silentAudio = null; }
+        if (wakeLock) { wakeLock.release().then(() => wakeLock = null); }
+        if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
         localStorage.setItem('background_keep_alive', 'false');
     }
 }
@@ -1975,6 +2049,29 @@ window.onload = function() {
         { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>` },
         { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` }
     ];
+    
+    // 监听来自 App（如 qq.html）的消息，用于后台发送通知
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+        const isNotify = localStorage.getItem('allow_notifications') === 'true';
+        if (!isNotify) return;
+
+        const { title, body } = event.data;
+        
+        // 优先尝试 Service Worker 通知
+        if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, {
+                    body: body,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+                });
+            });
+        } else {
+            // Fallback 方案：普通通知
+            new Notification(title, { body: body });
+        }
+    }
+});
 
     defaultApps.forEach(app => {
         const instances = document.querySelectorAll(`#${app.id}`);
