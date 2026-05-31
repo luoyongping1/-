@@ -1963,10 +1963,18 @@ if (m.isShoppingPay) {
             <div class="rp-footer">${m.rpOpened ? '红包已被领取' : '微信红包'}</div>
         </div>`;
     useBubble = false;
-} else if (m.isRealImage) {
+} else if (m.isSticker) {
+                    // 表情包：直接显示，不用气泡
+                    contentHtml = `<img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">`;
+                    useBubble = false;
+                } else if (m.isRealImage) {
                     contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">`;
                     useBubble = false;
                 } else if (m.isDescribeCard) {
+    // 注意：这里在 toggleDescribeCard 后面增加了 , event
+    contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${realIndex}, event)"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
+    useBubble = false;
+} else if (isTheater) {
     // 注意：这里在 toggleDescribeCard 后面增加了 , event
     contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${realIndex}, event)"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
     useBubble = false;
@@ -2001,14 +2009,17 @@ if (m.isShoppingPay) {
                                 <div id="trans-${realIndex}" class="translated-content">${m.text}</div>
                             </div>
                         </div>`);
-                } else if (m.isSticker) {
-    htmlArr.push(`
-        <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
-            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
-            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
-            <img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">
-        </div>`);
-                } else {
+                            } else if (m.isSticker) {
+// 表情包单独处理：不显示在气泡中，直接作为独立元素
+htmlArr.push(`
+    <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+        <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
+        <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
+        <div style="margin-${isSelf?'right':'left'}:12px;">
+            <img src="${m.text}" style="max-width:150px; border-radius:8px;" decoding="async">
+        </div>
+    </div>`);
+            } else {
 htmlArr.push(`
     <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
         <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
