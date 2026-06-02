@@ -3475,12 +3475,11 @@ function executeTransfer() {
     }
     
     document.getElementById('msg-input').value = ''; 
+    // 【新增】发送后隐藏表情联想建议框
+    document.getElementById('sticker-match-box').style.display = 'none'; 
     clearQuote(); 
     saveData(); 
     renderMessages(); 
-    
-    // 发送后不再自动判断是调人回复还是调群回复
-    // AI回复现在需要点击小话筒图标手动触发
 }
 
         // 2. 新增：专门处理小话筒点击的函数

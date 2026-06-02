@@ -1563,6 +1563,15 @@ document.addEventListener('pointerup', async (e) => {
         currentY = e.clientY;
         
         const dist = Math.hypot(currentX - (initialRect.left + offsetX), currentY - (initialRect.top + offsetY));
+        
+        // 【新增/优化逻辑】如果手指移动距离超过5像素，说明用户在滑动，立刻取消进入编辑模式的定时器
+        if (dist > 5) {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+
         if (dist > 5 || isMoving) {
             if (!isMoving) {
                 isMoving = true;
