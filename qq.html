@@ -2250,14 +2250,29 @@ async function sendPetMsg() {
     await displayPetBubbles(aiReplies);
 }
 
-                async function getAiReply(isProactive = false) {
+async function getAiReply(isProactive = false) {
     // 强制同步主页面的 API 设置
     aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
     if(!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
-            const friend = friends.find(f => f.name === currentFriendName);
-            const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
-            
-            let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
+    const friend = friends.find(f => f.name === currentFriendName);
+    
+    // 预处理聊天历史，将表情包、图片等非文本消息翻译为纯文本描述后再发给 AI
+    const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => {
+        let contentText = m.text;
+        if (m.isSticker) {
+            contentText = `[发送了表情包: ${m.stickerDesc || '表情'}]`;
+        } else if (m.isRealImage) {
+            contentText = `[发送了图片]`;
+        } else if (m.isDescribeCard) {
+            contentText = `[发送了图片描述: ${m.text}]`;
+        }
+        return {
+            role: m.type === 'self' ? 'user' : 'assistant',
+            content: contentText
+        };
+    });
+    
+    let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
             let worldBookPrompt = "";
             const globalBooks = wb.books.filter(b => b.scope === 'global');
             const mountedLocalBooks = wb.books.filter(b => b.scope === 'local' && (friend.mountedBooks || []).includes(b.title));
@@ -2592,6 +2607,7 @@ if (rawText.includes("[SEND_MONEY]")) {
                 type: 'friend',
                 text: randomSticker.url,
                 isSticker: true,
+                stickerDesc: randomSticker.desc || "表情", // 新增：保存表情包的中文描述
                 action: actionPart,
                 thoughts: thoughtsPart
             });
@@ -2835,10 +2851,16 @@ function renderStickerPanel() {
 
 function sendChosenSticker(url) {
     if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    
+    // 从已导入的表情包数据中，寻找该 URL 对应的文字描述
+    const matchedSticker = stickers.find(s => s.url === url);
+    const desc = matchedSticker ? matchedSticker.desc : "表情";
+    
     chatHistories[currentFriendName].push({
         type: 'self',
         text: url,
         isSticker: true,
+        stickerDesc: desc, // 新增：保存表情包的中文描述（如“开心”、“哭泣”）
         initial: '我'  // 新增这一行
     });
     
@@ -3499,25 +3521,35 @@ function executeTransfer() {
             const group = groupChats.find(g => g.id === currentFriendName);
             if (!group) return;
 
-            for (const memberName of group.members) {
-                const friend = friends.find(f => f.name === memberName);
-                if (!friend) continue;
+for (const memberName of group.members) {
+    const friend = friends.find(f => f.name === memberName);
+    if (!friend) continue;
 
-                // --- 极其核心的修复：重塑 AI 视角 ---
-                // 对于此刻正在思考的 AI 来说：只有它自己发的消息才算 `assistant`
-                // 你（用户）和其他 AI 发的消息，全都是抛给它的问题，统统算作 `user`
-                const freshHistory = (chatHistories[currentFriendName] || []).slice(-20).map(m => {
-                    const isMyOwnMsg = (m.type === 'friend' && m.sender === friend.name);
-                    const role = isMyOwnMsg ? 'assistant' : 'user';
-                    const prefixName = m.type === 'self' ? '用户' : (m.sender || '某人');
-                    
-                    return {
-                        role: role,
-                        content: isMyOwnMsg ? m.text : `[${prefixName} 说]: ${m.text}`
-                    };
-                });
+    // --- 极其核心的修复：重塑 AI 视角 ---
+    // 对于此刻正在思考 of AI 来说：只有它自己发的消息才算 `assistant`
+    // 你（用户）和其他 AI 发的消息，全都是抛给它的问题，统统算作 `user`
+    const freshHistory = (chatHistories[currentFriendName] || []).slice(-20).map(m => {
+        const isMyOwnMsg = (m.type === 'friend' && m.sender === friend.name);
+        const role = isMyOwnMsg ? 'assistant' : 'user';
+        const prefixName = m.type === 'self' ? '用户' : (m.sender || '某人');
+        
+        // 预处理聊天历史，将表情包、图片等非文本消息翻译为纯文本描述
+        let contentText = m.text;
+        if (m.isSticker) {
+            contentText = `[发送了表情包: ${m.stickerDesc || '表情'}]`;
+        } else if (m.isRealImage) {
+            contentText = `[发送了图片]`;
+        } else if (m.isDescribeCard) {
+            contentText = `[发送了图片描述: ${m.text}]`;
+        }
 
-                const typingEl = document.getElementById('chat-typing');
+        return {
+            role: role,
+            content: isMyOwnMsg ? contentText : `[${prefixName} 说]: ${contentText}`
+        };
+    });
+
+    const typingEl = document.getElementById('chat-typing');
                 typingEl.innerText = `${friend.name} 正在输入...`;
                 typingEl.style.display = 'block';
 
@@ -3627,6 +3659,7 @@ if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
                             type: 'friend',
                             text: randomSticker.url,
                             isSticker: true,
+                            stickerDesc: randomSticker.desc || "表情", // 新增：保存表情包的中文描述
                             sender: friend.name,
                             initial: friend.initial || friend.name[0]
                         });
