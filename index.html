@@ -55,16 +55,26 @@ window.addEventListener('message', function(event) {
     }
 
     // 3. 申请通知权限
-    function askPermission() {
-        if ('Notification' in window) {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    console.log('用户允许通知');
-                    subscribeUser();
-                }
+function askPermission() {
+    if ('Notification' in window) {
+        var handlePermission = function(permission) {
+            if (permission === 'granted') {
+                console.log('用户允许通知');
+                subscribeUser();
+            }
+        };
+        try {
+            // 优先尝试现代浏览器的 Promise 语法
+            Notification.requestPermission().then(handlePermission).catch(function() {
+                // 如果失败，则降级使用回调函数语法
+                Notification.requestPermission(handlePermission);
             });
+        } catch (e) {
+            // 浏览器完全不支持 Promise 返回值时直接退回到回调函数语法
+            Notification.requestPermission(handlePermission);
         }
     }
+}
 
     // 4. 正式向推送服务器订阅
     async function subscribeUser() {
@@ -2605,17 +2615,52 @@ function updateFloatingBallShortcut(appId, isChecked) {
     localStorage.setItem('floating_ball_shortcuts', JSON.stringify(shortcuts));
 }
 
+
 async function toggleNotifications(enabled) {
     if (enabled) {
-        if (!("Notification" in window)) { alert("不支持通知"); return; }
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-            localStorage.setItem('allow_notifications', 'true');
-            await subscribeUser(); 
-            navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification('系统提示', { body: '后台消息通知已开启！', icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png' });
+        if (!("Notification" in window)) {
+            alert("不支持通知");
+            document.getElementById('notification-toggle').checked = false;
+            return;
+        }
+        
+        // 定义处理通知权限结果的函数
+        var handlePermission = async function(permission) {
+            if (permission === "granted") {
+                localStorage.setItem('allow_notifications', 'true');
+                
+                // 增加 try-catch 保护，防止因部分安卓机型不支持推送而导致整个开关卡死
+                try {
+                    await subscribeUser();
+                } catch (e) {
+                    console.warn("离线推送订阅失败，但不影响系统通知启用:", e);
+                }
+                
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification('系统提示', { 
+                        body: '后台消息通知已开启！', 
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png' 
+                    });
+                }).catch(err => {
+                    console.error('发送通知失败:', err);
+                });
+            } else {
+                // 如果用户或系统拒绝了通知权限，给出友好的弹窗引导
+                alert("申请通知权限失败。\n\n请检查是否在手机的【系统设置 -> 应用管理 -> Edge浏览器 -> 通知管理】中关闭了通知权限。请手动开启通知权限后，再次尝试开启此功能。");
+                document.getElementById('notification-toggle').checked = false;
+            }
+        };
+
+        try {
+            // 优先使用 Promise 语法获取权限
+            Notification.requestPermission().then(handlePermission).catch(function() {
+                // 发生异常时，降级使用旧版 Callback 回调函数语法
+                Notification.requestPermission(handlePermission);
             });
-        } else { document.getElementById('notification-toggle').checked = false; }
+        } catch (e) {
+            // 如果浏览器直接报错不支持 Promise，退回到旧版 Callback 语法
+            Notification.requestPermission(handlePermission);
+        }
     } else {
         localStorage.setItem('allow_notifications', 'false');
         localStorage.removeItem('web_push_subscription');
