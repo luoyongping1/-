@@ -963,6 +963,90 @@ input:checked + .slider:before {
     color: #777;
     font-weight: 500;
 }
+/* 投喂货架托盘专属样式 */
+#food-shelf {
+    display: none;
+    position: absolute;
+    bottom: 95px;
+    left: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    overflow-x: auto;
+    white-space: nowrap;
+    gap: 12px;
+    z-index: 1300;
+    align-items: center;
+    box-sizing: border-box;
+}
+/* 美化自定义滑动条 */
+#food-shelf::-webkit-scrollbar {
+    height: 4px;
+}
+#food-shelf::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+}
+/* 单个食物卡片样式 */
+.food-card {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 14px;
+    padding: 10px 8px;
+    min-width: 80px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+    flex-shrink: 0;
+}
+.food-card:active {
+    transform: scale(0.95);
+}
+/* 余额不足时置灰无法点击 */
+.food-card.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.food-card-icon {
+    font-size: 28px;
+    margin-bottom: 4px;
+}
+.food-card-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+}
+.food-card-cost {
+    font-size: 11px;
+    color: #ff9a9e;
+    font-weight: bold;
+    margin-top: 3px;
+}
+.food-card-cost.free {
+    color: #07c160;
+}
+.food-card-intimacy {
+    font-size: 10px;
+    color: #999;
+    margin-top: 1px;
+}
+/* 宠物专属缩放弹性动画 */
+@keyframes pet-bounce-scale {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-25px) scale(1.25); }
+}
+.pet-eat-anim {
+    animation: pet-bounce-scale 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
 </style>
 </head>
 <body>
@@ -2588,6 +2672,23 @@ if (rawText.includes("[SEND_MONEY]")) {
     });
 
     friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
+    
+    // 增加今日AI回复计数 (小火人任务)
+    if (friend.fireData && friend.fireData.isStarted) {
+        if (!friend.fireData.taskStatus) {
+            friend.fireData.taskStatus = { lastCheckDate: '', dailyChecked: false, chatCount: 0, aiReplyCount: 0, claimedTasks: [] };
+        }
+        const today = new Date().toLocaleDateString();
+        if (friend.fireData.taskStatus.lastCheckDate !== today) {
+            friend.fireData.taskStatus.lastCheckDate = today;
+            friend.fireData.taskStatus.dailyChecked = false;
+            friend.fireData.taskStatus.chatCount = 0;
+            friend.fireData.taskStatus.aiReplyCount = 0;
+            friend.fireData.taskStatus.claimedTasks = [];
+        }
+        friend.fireData.taskStatus.aiReplyCount = (friend.fireData.taskStatus.aiReplyCount || 0) + 1;
+    }
+
     saveData(); renderMessages();
     renderChatList();
 
@@ -4968,16 +5069,31 @@ function selectUserPersona(id) {
 function updateFireOnChat(friend) {
     if (!friend.fireData) friend.fireData = { isStarted: false, chatPoints: 0, intimacy: 0, chatDays: 0, lastChatDate: '', lastFeedDate: '' };
     
+    // 初始化或更新每日任务的聊天计数
+    if (!friend.fireData.taskStatus) {
+        friend.fireData.taskStatus = { lastCheckDate: '', dailyChecked: false, chatCount: 0, aiReplyCount: 0, claimedTasks: [] };
+    }
+    const today = new Date().toLocaleDateString();
+    if (friend.fireData.taskStatus.lastCheckDate !== today) {
+        friend.fireData.taskStatus.lastCheckDate = today;
+        friend.fireData.taskStatus.dailyChecked = false;
+        friend.fireData.taskStatus.chatCount = 0;
+        friend.fireData.taskStatus.aiReplyCount = 0;
+        friend.fireData.taskStatus.claimedTasks = [];
+    }
+    
+    // 今日发送消息数递增
+    friend.fireData.taskStatus.chatCount = (friend.fireData.taskStatus.chatCount || 0) + 1;
+
     // 随机增加聊天点数 1-9
     const points = Math.floor(Math.random() * 9) + 1;
     friend.fireData.chatPoints = (friend.fireData.chatPoints || 0) + points;
     
-    // 更新天数
-    const today = new Date().toLocaleDateString();
+    // 更新共养天数
     if (friend.fireData.isStarted && friend.fireData.lastChatDate !== today) {
         friend.fireData.chatDays = (friend.fireData.chatDays || 0) + 1;
         friend.fireData.lastChatDate = today;
-        // 更新标题
+        // 更新标题显示火焰天数
         document.getElementById('chat-title').innerHTML = friend.name + `<span style="color:#ff4500; margin-left:5px;">🔥${friend.fireData.chatDays}</span>`;
     }
     saveData();
@@ -5003,27 +5119,102 @@ function handleFireEntry() {
     }
 }
 
+// 重新平衡后的道具消耗与亲密度产出数组
 const FOODS = [
     { name: '小火花', icon: '✨', cost: 10, intimacy: 5 },
-    { name: '爱心便当', icon: '🍱', cost: 50, intimacy: 30 },
-    { name: '火龙果', icon: '🐉', cost: 100, intimacy: 70 },
-    { name: '灿烂星光', icon: '🌟', cost: 200, intimacy: 150 }
+    { name: '爱心便当', icon: '🍱', cost: 30, intimacy: 20 },
+    { name: '火龙果', icon: '🐉', cost: 70, intimacy: 55 },
+    { name: '灿烂星光', icon: '🌟', cost: 120, intimacy: 100 }
 ];
 
 function renderFirePage(friend) {
     currentFireFriend = friend;
     const data = friend.fireData;
+    
+    // 初始化每日任务对象
+    if (!data.taskStatus) {
+        data.taskStatus = { lastCheckDate: '', dailyChecked: false, chatCount: 0, aiReplyCount: 0, claimedTasks: [] };
+    }
+    const today = new Date().toLocaleDateString();
+    if (data.taskStatus.lastCheckDate !== today) {
+        data.taskStatus.lastCheckDate = today;
+        data.taskStatus.dailyChecked = false;
+        data.taskStatus.chatCount = 0;
+        data.taskStatus.aiReplyCount = 0;
+        data.taskStatus.claimedTasks = [];
+        saveData();
+    }
+
     document.getElementById('fire-page').style.display = 'flex';
-    // 自动更新点数
+    // 更新点数
     document.getElementById('fire-chat-points').innerText = `点数: ${data.chatPoints || 0}`;
-    // 自动更新进度条
+    // 更新进度条
     const percent = Math.min((data.intimacy || 0) / 2000 * 100, 100);
     document.getElementById('intimacy-bar-fill').style.width = percent + '%';
     document.getElementById('intimacy-text').innerText = `亲密度: ${data.intimacy || 0} / 2000`;
     
-    // 如果需要显示道具列表，可以在此处修改
+    // 更新小火人自定义昵称
+    document.getElementById('fire-pet-name').innerText = data.name || "火灵儿";
+    
+    // 更新小火人形象（如果有自定义头像就显示头像，否则默认为 Emoji）
+    const petEl = document.querySelector('.fire-pet');
+    if (data.avatar) {
+        petEl.innerHTML = `<img src="${data.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:36px;" decoding="async">`;
+    } else {
+        petEl.innerHTML = `🐶`;
+    }
+
+    // 动态刷新渲染投喂面板数据（维持用户已展开货架的显示状态）
+    renderFoodShelf();
+}
+
+// 展开/折叠食物货架面板
+function toggleFoodShelf() {
     const shelf = document.getElementById('food-shelf');
-    if(shelf) shelf.style.display = 'none'; // 暂时隐藏旧的简单列表，保持页面整洁
+    if (shelf.style.display === 'none' || shelf.style.display === '') {
+        shelf.style.display = 'flex';
+        renderFoodShelf();
+    } else {
+        shelf.style.display = 'none';
+    }
+}
+
+// 动态渲染货架面板中的食物列表
+function renderFoodShelf() {
+    const shelf = document.getElementById('food-shelf');
+    if (!shelf || shelf.style.display === 'none') return;
+    
+    const friend = currentFireFriend;
+    const data = friend.fireData;
+    const today = new Date().toLocaleDateString();
+    
+    // 判定小火花今日是否第一次投喂（判定是否免费）
+    const isFirstFeed = data.lastFeedDate !== today;
+
+    shelf.innerHTML = FOODS.map((food, idx) => {
+        let displayCost = food.cost;
+        let isFree = false;
+        
+        if (idx === 0 && isFirstFeed) {
+            displayCost = "今日免费";
+            isFree = true;
+        } else {
+            displayCost = `${food.cost}点`;
+        }
+
+        // 检测星点余额是否足够，不足则添加 disabled 类置灰
+        const actualCost = (idx === 0 && isFirstFeed) ? 0 : food.cost;
+        const isDisabled = data.chatPoints < actualCost;
+
+        return `
+            <div class="food-card ${isDisabled ? 'disabled' : ''}" onclick="feedFirePet(${idx})">
+                <div class="food-card-icon">${food.icon}</div>
+                <div class="food-card-name">${food.name}</div>
+                <div class="food-card-cost ${isFree ? 'free' : ''}">${displayCost}</div>
+                <div class="food-card-intimacy">+${food.intimacy} 亲密</div>
+            </div>
+        `;
+    }).join('');
 }
 
 function feedFirePet(idx) {
@@ -5031,40 +5222,202 @@ function feedFirePet(idx) {
     const data = friend.fireData;
     const food = FOODS[idx];
     const today = new Date().toLocaleDateString();
-    const isFirstFeed = data.lastFeedDate !== today;
     
+    // 计算本次需要消耗的实际点数
+    const isFirstFeed = data.lastFeedDate !== today;
     let actualCost = food.cost;
-    if (isFirstFeed && idx === 0) {
+    if (idx === 0 && isFirstFeed) {
         actualCost = 0;
     }
     
     if (data.chatPoints < actualCost) {
-        return alert("聊天点数不足，快去和角色聊天获得吧！");
+        return alert("您的星点余额不足，快去聊天和做任务获取吧！");
     }
     
-    // 执行喂食
+    // 扣除点数并增加亲密度
     data.chatPoints -= actualCost;
     data.intimacy = (data.intimacy || 0) + food.intimacy;
     data.lastFeedDate = today;
     
-    // 动画效果
+    // 触发中央小宠物的缩放弹跳动画
     const pet = document.querySelector('.fire-pet');
-    pet.style.animation = 'none';
-    setTimeout(() => pet.style.animation = 'fire-bounce 0.5s 2 ease-in-out', 10);
+    pet.classList.remove('pet-eat-anim');
+    void pet.offsetWidth; // 触发回流以重置动画
+    pet.classList.add('pet-eat-anim');
+    
+    // 定时移除动画类以方便下次触发
+    setTimeout(() => {
+        pet.classList.remove('pet-eat-anim');
+    }, 600);
     
     saveData();
     renderFirePage(friend);
     
-    // 飘字提示
+    // 生成飘浮文字特效
     const tip = document.createElement('div');
     tip.innerText = `+${food.intimacy} 亲密度`;
-    tip.style.cssText = `position:fixed; left:50%; top:40%; transform:translateX(-50%); color:#ff4500; font-weight:bold; font-size:20px; z-index:10000; animation: fade-up 1s forwards;`;
+    tip.style.cssText = `position:fixed; left:50%; top:35%; transform:translateX(-50%); color:#ff4d4f; font-weight:bold; font-size:24px; z-index:10000; animation: fade-up 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;`;
     document.body.appendChild(tip);
-    setTimeout(() => tip.remove(), 1000);
+    setTimeout(() => tip.remove(), 800);
 }
 
 function closeFirePage() {
     document.getElementById('fire-page').style.display = 'none';
+    // 退出小火人页面时顺便收起货架
+    document.getElementById('food-shelf').style.display = 'none';
+}
+
+// === 小火人设置面板逻辑 ===
+function openFireSettingsModal() {
+    const friend = currentFireFriend || friends.find(f => f.name === currentFriendName);
+    if (!friend || !friend.fireData) return;
+    
+    currentFireFriend = friend;
+    const data = friend.fireData;
+    
+    // 回显名字
+    document.getElementById('fire-name-input').value = data.name || "火灵儿";
+    
+    // 回显形象预览
+    const preview = document.getElementById('fire-avatar-preview');
+    if (data.avatar) {
+        preview.innerHTML = `<img src="${data.avatar}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+        preview.innerHTML = "🐶";
+    }
+    
+    document.getElementById('fire-settings-modal').style.display = 'flex';
+    switchFireSettingsTab('avatar');
+}
+
+function closeFireSettingsModal() {
+    document.getElementById('fire-settings-modal').style.display = 'none';
+}
+
+function switchFireSettingsTab(tab) {
+    document.getElementById('btn-fire-avatar').classList.toggle('active', tab === 'avatar');
+    document.getElementById('btn-fire-name').classList.toggle('active', tab === 'name');
+    
+    document.getElementById('content-fire-avatar').style.display = tab === 'avatar' ? 'block' : 'none';
+    document.getElementById('content-fire-name').style.display = tab === 'name' ? 'block' : 'none';
+}
+
+function handleFireAvatarUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            compressImage(e.target.result, 300, function(compressedData) {
+                const friend = currentFireFriend;
+                if (friend && friend.fireData) {
+                    friend.fireData.avatar = compressedData;
+                    saveData();
+                    
+                    document.getElementById('fire-avatar-preview').innerHTML = `<img src="${compressedData}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    renderFirePage(friend);
+                    alert("形象上传成功并已自动压缩！");
+                }
+            });
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function saveFireName() {
+    const nameVal = document.getElementById('fire-name-input').value.trim();
+    if (!nameVal) return alert("名字不能为空");
+    
+    const friend = currentFireFriend;
+    if (friend && friend.fireData) {
+        friend.fireData.name = nameVal;
+        saveData();
+        renderFirePage(friend);
+        alert("名字修改成功！");
+        closeFireSettingsModal();
+    }
+}
+
+// === 小火人真实任务逻辑 ===
+function openFireTaskPage() {
+    document.getElementById('fire-task-page').style.display = 'flex';
+    renderFireTasks();
+}
+
+function renderFireTasks() {
+    const friend = currentFireFriend;
+    if (!friend || !friend.fireData) return;
+    const data = friend.fireData;
+    
+    if (!data.taskStatus) {
+        data.taskStatus = { lastCheckDate: '', dailyChecked: false, chatCount: 0, aiReplyCount: 0, claimedTasks: [] };
+    }
+
+    const tasks = [
+        { id: 'checkin', name: '每日签到', reward: 10, check: () => data.taskStatus.dailyChecked, progressText: () => data.taskStatus.dailyChecked ? '1/1' : '0/1' },
+        { id: 'first_msg', name: '发送首条消息', reward: 5, check: () => data.taskStatus.chatCount >= 1, progressText: () => `${Math.min(data.taskStatus.chatCount, 1)}/1` },
+        { id: 'chat_duration', name: '聊天时长打卡', reward: 15, check: () => data.taskStatus.chatCount >= 5, progressText: () => `${Math.min(data.taskStatus.chatCount, 5)}/5` },
+        { id: 'msg_count', name: '发送消息条数', reward: 10, check: () => data.taskStatus.chatCount >= 10, progressText: () => `${Math.min(data.taskStatus.chatCount, 10)}/10` },
+        { id: 'consecutive_login', name: '连续登录奖励 (共养3天)', reward: 30, check: () => (data.chatDays || 0) >= 3, progressText: () => `${Math.min(data.chatDays || 0, 3)}/3` },
+        { id: 'ai_reply', name: '完成一次AI回复', reward: 8, check: () => data.taskStatus.aiReplyCount >= 1, progressText: () => `${Math.min(data.taskStatus.aiReplyCount, 1)}/1` }
+    ];
+
+    const container = document.querySelector('#fire-task-page .task-list-container');
+    if (!container) return;
+
+    let html = '';
+    tasks.forEach(t => {
+        const isClaimed = data.taskStatus.claimedTasks.includes(t.id);
+        const isCompleted = t.check();
+        
+        let btnHtml = '';
+        if (isClaimed) {
+            btnHtml = `<button class="task-claim-btn" style="background:#ccc; color:#666; cursor:default;" disabled>已领取</button>`;
+        } else if (isCompleted) {
+            btnHtml = `<button class="task-claim-btn" style="background:#07c160; color:white; cursor:pointer;" onclick="executeClaimFireTask('${t.id}', ${t.reward})">领取奖励</button>`;
+        } else {
+            if (t.id === 'checkin') {
+                btnHtml = `<button class="task-claim-btn" style="background:#00bfff; color:white; cursor:pointer;" onclick="doFireCheckin('${t.id}')">签到</button>`;
+            } else {
+                btnHtml = `<button class="task-claim-btn" style="background:#eee; color:#999; cursor:default;" disabled>未完成 (${t.progressText()})</button>`;
+            }
+        }
+
+        html += `
+            <div class="task-item">
+                <div class="task-info">
+                    <span class="task-name">${t.name}</span>
+                    <span class="task-reward">+${t.reward} 星点</span>
+                </div>
+                ${btnHtml}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function doFireCheckin(taskId) {
+    const friend = currentFireFriend;
+    if (!friend || !friend.fireData) return;
+    friend.fireData.taskStatus.dailyChecked = true;
+    saveData();
+    renderFireTasks();
+    alert("签到成功！现在可以领取签到奖励了。");
+}
+
+function executeClaimFireTask(taskId, reward) {
+    const friend = currentFireFriend;
+    if (!friend || !friend.fireData) return;
+    
+    // 扣除或增加点数
+    friend.fireData.chatPoints = (friend.fireData.chatPoints || 0) + reward;
+    friend.fireData.taskStatus.claimedTasks.push(taskId);
+    
+    saveData();
+    renderFireTasks();
+    
+    // 更新主界面的点数显示
+    document.getElementById('fire-chat-points').innerText = `点数: ${friend.fireData.chatPoints}`;
+    alert(`领取奖励成功！星点 +${reward}`);
 }
 
 // 补充一个小动画CSS
@@ -5629,14 +5982,14 @@ function finishChatMsgEdit(index) {
     <div class="fire-header">
         <div class="fire-header-btn" onclick="closeFirePage()">✕</div>
         <div id="fire-chat-points" style="font-size:14px; font-weight:bold; background:rgba(255,255,255,0.6); padding:5px 15px; border-radius:20px;">点数: 0</div>
-        <div class="fire-header-btn">⚙️</div>
+        <div class="fire-header-btn" onclick="openFireSettingsModal()">⚙️</div>
     </div>
 
     <!-- 中间核心区 -->
     <div class="fire-main-view">
         <div class="side-controls">
             <div class="side-btn" onclick="alert('种子正在发芽中...')"><span>🌱</span></div>
-            <div class="side-btn" onclick="alert('快去聊天赢取投喂道具吧！')"><span>🍲</span></div>
+            <div class="side-btn" onclick="toggleFoodShelf()"><span>🍲</span></div>
         </div>
         
         <div class="fire-pet-container">
@@ -5660,8 +6013,35 @@ function finishChatMsgEdit(index) {
     <div class="fire-bottom-nav">
         <div class="nav-btn" onclick="alert('衣柜正在定制中...')">👗 装扮</div>
         <div class="nav-btn main" onclick="alert('快通过发送消息赚取点数吧！')">🚀 赚点数</div>
-        <div class="nav-btn" onclick="document.getElementById('fire-task-page').style.display='flex'">📝 任务</div>
+        <div class="nav-btn" onclick="openFireTaskPage()">📝 任务</div>
         <div class="full-width-btn" onclick="alert('更多趣味玩法即将上线')">更多玩法 ➔</div>
+    </div>
+</div>
+
+<!-- 小火人毛玻璃设置弹窗 -->
+<div id="fire-settings-modal" class="glass-modal" style="z-index: 9800;">
+    <div class="glass-card" style="width: 300px; padding: 20px; border-radius: 15px;">
+        <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px; color: #576b95;">小火人设置</h3>
+        
+        <div class="bg-tabs-header" style="display: flex; background: rgba(0,0,0,0.05); border-radius: 10px; padding: 4px; margin-bottom: 15px;">
+            <div class="bg-tab-btn active" id="btn-fire-avatar" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 8px;" onclick="switchFireSettingsTab('avatar')">修改形象</div>
+            <div class="bg-tab-btn" id="btn-fire-name" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 8px;" onclick="switchFireSettingsTab('name')">修改名字</div>
+        </div>
+
+        <!-- 修改形象面板 -->
+        <div id="content-fire-avatar" class="bg-tab-content active" style="text-align: center; display: block;">
+            <button class="wx-btn" style="width: 100%; height: 40px; font-size: 14px; background: #fff; border: 1px solid #ddd; color: #333; margin-bottom: 15px;" onclick="document.getElementById('fire-avatar-upload').click()">从相册选择形象</button>
+            <input type="file" id="fire-avatar-upload" style="display: none;" accept="image/*" onchange="handleFireAvatarUpload(this)">
+            <div id="fire-avatar-preview" style="width: 70px; height: 70px; border-radius: 15px; background: #eee; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #ddd;">🐶</div>
+        </div>
+
+        <!-- 修改名字面板 -->
+        <div id="content-fire-name" class="bg-tab-content" style="text-align: center; display: none;">
+            <input type="text" id="fire-name-input" style="width: 100%; border: none; border-bottom: 1px solid #ccc; padding: 10px 0; font-size: 14px; outline: none; margin-bottom: 15px; background: transparent; text-align: center;" placeholder="请输入小火人名字">
+            <button class="wx-btn wx-btn-recharge" style="width: 100%; height: 40px;" onclick="saveFireName()">确认修改</button>
+        </div>
+
+        <div style="text-align: center; margin-top: 15px; color: #666; cursor: pointer; font-size: 14px;" onclick="closeFireSettingsModal()">取消</div>
     </div>
 </div>
 
