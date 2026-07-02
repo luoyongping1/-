@@ -155,11 +155,11 @@
             <!-- 个人信息头部 -->
             <div class="bg-gradient-to-r from-primary to-secondary p-6 pb-12">
                 <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-white rounded-full border-2 border-white/50 overflow-hidden">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar">
+                    <div class="w-16 h-16 bg-white rounded-full border-2 border-white/50 overflow-hidden cursor-pointer animate-pulse-once" onclick="showAvatarModal()">
+                        <img id="user-avatar-display" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" class="w-full h-full object-cover">
                     </div>
                     <div class="text-white">
-                        <div class="text-xl font-bold">书书小手机用户</div>
+                        <div class="text-xl font-bold cursor-pointer hover:underline" id="user-nickname-display" onclick="changeNickname()">书书小手机用户</div>
                         <div class="text-xs opacity-80 mt-1">钱包余额: ¥<span id="user-balance-display">200.00</span></div>
                     </div>
                 </div>
@@ -203,12 +203,8 @@
                     <div class="flex items-center gap-3 text-sm"><i class="fa fa-map-marker text-blue-500"></i>收货地址</div>
                     <i class="fa fa-angle-right text-gray-300"></i>
                 </div>
-                <div class="p-4 flex justify-between items-center border-b border-gray-50" onclick="switchPage('coupons')">
+                <div class="p-4 flex justify-between items-center" onclick="switchPage('coupons')">
                     <div class="flex items-center gap-3 text-sm"><i class="fa fa-ticket text-gray-600"></i>领券中心</div>
-                    <i class="fa fa-angle-right text-gray-300"></i>
-                </div>
-                <div class="p-4 flex justify-between items-center" onclick="showApiModal()">
-                    <div class="flex items-center gap-3 text-sm"><i class="fa fa-cog text-gray-500"></i>API 参数设置</div>
                     <i class="fa fa-angle-right text-gray-300"></i>
                 </div>
             </div>
@@ -323,6 +319,34 @@
                 <button class="px-4 py-2 bg-green-500 text-white rounded-full text-sm" onclick="closePaySuccessCard()">完成</button>
             </div>
         </div>
+        <!-- 修改头像弹窗 (白色毛玻璃) -->
+        <div id="avatar-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+            <div class="bg-white/80 backdrop-blur-md border border-white/50 rounded-2xl w-4/5 p-5 shadow-xl">
+                <div class="text-center font-bold text-lg mb-4 text-dark">修改头像</div>
+                
+                <!-- 选项卡头部 -->
+                <div class="flex bg-gray-200/50 rounded-lg p-1 mb-4">
+                    <button id="tab-avatar-local-btn" class="flex-1 py-1.5 text-xs rounded-md bg-white text-dark font-medium shadow-sm" onclick="switchAvatarTab('local')">本地上传</button>
+                    <button id="tab-avatar-url-btn" class="flex-1 py-1.5 text-xs rounded-md text-gray-500" onclick="switchAvatarTab('url')">图片 URL</button>
+                </div>
+                
+                <!-- 本地上传内容 -->
+                <div id="avatar-local-content" class="block space-y-3">
+                    <button onclick="document.getElementById('avatar-file-input').click()" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-xs text-gray-500 hover:border-primary transition-colors">
+                        点击选择相册图片
+                    </button>
+                    <input type="file" id="avatar-file-input" accept="image/*" class="hidden" onchange="uploadLocalAvatar(this)">
+                </div>
+                
+                <!-- URL上传内容 -->
+                <div id="avatar-url-content" class="hidden space-y-3">
+                    <input type="text" id="avatar-url-input" placeholder="请输入图片 URL 链接" class="w-full h-10 border border-gray-200 rounded-lg px-3 bg-white/50 outline-none text-xs">
+                    <button onclick="applyUrlAvatar()" class="w-full h-10 bg-primary text-white rounded-lg text-xs font-medium">确认应用链接</button>
+                </div>
+                
+                <button onclick="closeAvatarModal()" class="mt-4 w-full h-10 border border-gray-200 rounded-lg text-xs text-gray-500">取消</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -335,11 +359,27 @@
         let uncommentOrders = JSON.parse(localStorage.getItem('uncommentOrders') || '[]');
         let finishedOrders = JSON.parse(localStorage.getItem('finishedOrders') || '[]');
         let userCoupons = JSON.parse(localStorage.getItem('userCoupons') || '[]');
+        let userNickname = localStorage.getItem('shop_user_nickname') || '书书小手机用户';
+        let userAvatar = localStorage.getItem('shop_user_avatar') || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix';
+        let activeAvatarTab = 'local';
         let apiConfig = {
             url: localStorage.getItem('apiUrl') || '',
             key: localStorage.getItem('apiKey') || '',
             model: localStorage.getItem('aiModel') || 'gpt-3.5-turbo'
         };
+
+        // 获取最终生效的 API 配置：若本地备用 API 为空则回退至主页 API
+        function getEffectiveApiConfig() {
+            if (apiConfig.url && apiConfig.key) {
+                return apiConfig;
+            }
+            const mainConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
+            return {
+                url: mainConfig.url || '',
+                key: mainConfig.key || '',
+                model: mainConfig.model || 'gpt-3.5-turbo'
+            };
+        }
 
         // 钱包余额
         let userWallet = {
@@ -358,10 +398,70 @@
             currentPage = page;
             if(page === 'setting') {
                 document.getElementById('user-balance-display').innerText = userWallet.balance.toFixed(2);
+                document.getElementById('user-nickname-display').innerText = userNickname;
+                document.getElementById('user-avatar-display').src = userAvatar;
                 updateBadges();
             }
             if(page === 'coupons') renderCoupons();
             if(page === 'cart') renderCart();
+        }
+
+        // 头像及昵称修改函数
+        function showAvatarModal() {
+            document.getElementById('avatar-modal').classList.remove('hidden');
+        }
+        function closeAvatarModal() {
+            document.getElementById('avatar-modal').classList.add('hidden');
+        }
+        function switchAvatarTab(tab) {
+            activeAvatarTab = tab;
+            const localBtn = document.getElementById('tab-avatar-local-btn');
+            const urlBtn = document.getElementById('tab-avatar-url-btn');
+            const localContent = document.getElementById('avatar-local-content');
+            const urlContent = document.getElementById('avatar-url-content');
+            
+            if (tab === 'local') {
+                localBtn.className = "flex-1 py-1.5 text-xs rounded-md bg-white text-dark font-medium shadow-sm";
+                urlBtn.className = "flex-1 py-1.5 text-xs rounded-md text-gray-500";
+                localContent.classList.remove('hidden');
+                urlContent.classList.add('hidden');
+            } else {
+                localBtn.className = "flex-1 py-1.5 text-xs rounded-md text-gray-500";
+                urlBtn.className = "flex-1 py-1.5 text-xs rounded-md bg-white text-dark font-medium shadow-sm";
+                localContent.classList.add('hidden');
+                urlContent.classList.remove('hidden');
+            }
+        }
+        function uploadLocalAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    userAvatar = e.target.result;
+                    localStorage.setItem('shop_user_avatar', userAvatar);
+                    document.getElementById('user-avatar-display').src = userAvatar;
+                    alert('本地头像更新成功！');
+                    closeAvatarModal();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        function applyUrlAvatar() {
+            const url = document.getElementById('avatar-url-input').value.trim();
+            if (!url) return alert('请输入有效的图片链接 URL');
+            userAvatar = url;
+            localStorage.setItem('shop_user_avatar', userAvatar);
+            document.getElementById('user-avatar-display').src = userAvatar;
+            alert('网络头像更新成功！');
+            closeAvatarModal();
+        }
+        function changeNickname() {
+            const n = prompt("请输入您要修改的昵称：", userNickname);
+            if (n && n.trim()) {
+                userNickname = n.trim();
+                localStorage.setItem('shop_user_nickname', userNickname);
+                document.getElementById('user-nickname-display').innerText = userNickname;
+                alert('昵称更新成功！');
+            }
         }
 
         // 淘宝风格订单子页面跳转
@@ -527,7 +627,8 @@
         // AI搜索功能 - 优化生成6个商品提示词
         async function handleAiSearch(keyword) {
             if(!keyword.trim()) return;
-            if(!apiConfig.url || !apiConfig.key) return alert('请先设置有效的API参数');
+            const effectiveApi = getEffectiveApiConfig();
+            if(!effectiveApi.url || !effectiveApi.key) return alert('请先在主页面或右上角齿轮设置API参数');
 
             const goodsList = document.getElementById('goods-list');
             const takeawayList = document.getElementById('takeaway-list');
@@ -537,14 +638,14 @@
             else takeawayList.innerHTML = loadingHtml;
 
             try {
-                const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
+                const response = await fetch(`${effectiveApi.url.replace(/\/$/, '')}/chat/completions`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${apiConfig.key}`,
+                        'Authorization': `Bearer ${effectiveApi.key}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: apiConfig.model,
+                        model: effectiveApi.model,
                         messages: [{
                             role: "system",
                             content: "你是一个专业的商品搜索生成引擎。请严格按照用户的关键词，生成并返回**正好6个**相关的虚拟商品信息。严格按以下JSON数组格式返回，禁止MarkDown标签，禁止任何解释：[{\"name\":\"名称\",\"price\":数字,\"desc\":\"详细吸引人的描述\",\"isTakeaway\":0或1}]。isTakeaway为0表示普通商品，1表示外卖。确保商品价格合理且描述多样化。"
@@ -773,16 +874,17 @@
 
             let res = "这个商品真的很不错，性价比非常高，包装也很精美，物流速度快得惊人，非常满意的一次购物体验，以后还会回购的！";
             
-            if(apiConfig.url && apiConfig.key) {
+            const effectiveApi = getEffectiveApiConfig();
+            if(effectiveApi.url && effectiveApi.key) {
                 try {
-                    const response = await fetch(`${apiConfig.url.replace(/\/$/, '')}/chat/completions`, {
+                    const response = await fetch(`${effectiveApi.url.replace(/\/$/, '')}/chat/completions`, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${apiConfig.key}`,
+                            'Authorization': `Bearer ${effectiveApi.key}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            model: apiConfig.model,
+                            model: effectiveApi.model,
                             messages: [{
                                 role: "system",
                                 content: "你是一个真实的电商买家。请针对订单写一段评价。要求：字数务必在40-60字之间。语气要像普通人，包含质量、物流等真实感受。禁止输出任何提示词内容、禁止输出MarkDown格式、禁止输出任何前缀（如'评价如下：'）、禁止输出任何关于你是AI的废话。直接输出评价原文。"
@@ -949,6 +1051,11 @@
                 opt.value = apiConfig.model; opt.innerText = apiConfig.model;
                 opt.selected = true; select.appendChild(opt);
             }
+            
+            // 初始化个人头像与昵称显示
+            document.getElementById('user-nickname-display').innerText = userNickname;
+            document.getElementById('user-avatar-display').src = userAvatar;
+
             renderCart();
             updateBadges();
         }
