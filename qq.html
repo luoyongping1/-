@@ -2482,6 +2482,22 @@ if (rawContent.includes("[PAY_SUCCESS]")) {
         payMsg.payStatus = 'paid';
         const amt = parseFloat(payMsg.text);
         
+        // 【修改：将代付成功订单状态同步写入到购物商城的数据中】
+        let localUnpaid = JSON.parse(localStorage.getItem('unpaidOrders') || '[]');
+        let localUnreceived = JSON.parse(localStorage.getItem('unreceivedOrders') || '[]');
+        const orderIdx = localUnpaid.findIndex(o => o.id === payMsg.orderId);
+        if (orderIdx !== -1) {
+            const targetOrder = localUnpaid.splice(orderIdx, 1)[0];
+            localUnreceived.push({
+                id: targetOrder.id,
+                total: targetOrder.total,
+                items: targetOrder.items,
+                time: new Date().toLocaleString()
+            });
+            localStorage.setItem('unpaidOrders', JSON.stringify(localUnpaid));
+            localStorage.setItem('unreceivedOrders', JSON.stringify(localUnreceived));
+        }
+
         // 生成一条角色的“代付成功卡片”
         h.push({
             type: 'friend',
@@ -2504,6 +2520,14 @@ if (rawContent.includes("[PAY_SUCCESS]")) {
     if (payMsg) {
         payMsg.payStatus = 'refused';
         
+        // 【修改：代付被拒绝时，从待付款订单中删除该订单】
+        let localUnpaid = JSON.parse(localStorage.getItem('unpaidOrders') || '[]');
+        const orderIdx = localUnpaid.findIndex(o => o.id === payMsg.orderId);
+        if (orderIdx !== -1) {
+            localUnpaid.splice(orderIdx, 1);
+            localStorage.setItem('unpaidOrders', JSON.stringify(localUnpaid));
+        }
+
         // 生成一条角色的“拒绝代付卡片”
         h.push({
             type: 'friend',

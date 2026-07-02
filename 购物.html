@@ -370,8 +370,29 @@
             document.getElementById('order-title').innerText = title;
             renderOrderContent(type);
         }
+        
+                // 自动检查并清除超过10分钟未付款的订单
+        function checkUnpaidTimeout() {
+            const now = Date.now();
+            let localUnpaid = JSON.parse(localStorage.getItem('unpaidOrders') || '[]');
+            const originalLength = localUnpaid.length;
+            
+            // 过滤掉超过10分钟（600000毫秒）的订单
+            localUnpaid = localUnpaid.filter(order => {
+                const orderTime = order.timestamp || now; // 如果旧数据没有时间戳，默认为当前时间
+                return (now - orderTime) < 600000;
+            });
+            
+            if (localUnpaid.length !== originalLength) {
+                localStorage.setItem('unpaidOrders', JSON.stringify(localUnpaid));
+                unpaidOrders = localUnpaid; // 同步修改全局变量
+            }
+        }
 
         function renderOrderContent(type) {
+            // 【新增】在渲染前先清理超时订单
+            checkUnpaidTimeout();
+
             const listContainer = document.getElementById('order-content-list');
             let html = '';
             
@@ -860,13 +881,14 @@
             localStorage.setItem('qq_history', JSON.stringify(histories));
             localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
 
-            // 【新增】保存订单到待付款
+            // 【新增】保存订单到待付款，并写入当前时间戳以支持超时检测
             unpaidOrders.push({
                 id: orderId,
                 total: finalTotal,
                 items: [...cartList],
                 time: new Date().toLocaleString(),
-                friendName: name
+                friendName: name,
+                timestamp: Date.now()
             });
             localStorage.setItem('unpaidOrders', JSON.stringify(unpaidOrders));
 
@@ -916,6 +938,9 @@
         }
 
         window.onload = function() {
+            // 【新增】初始化时检测超时订单
+            checkUnpaidTimeout();
+
             document.getElementById('api-url').value = apiConfig.url;
             document.getElementById('api-key').value = apiConfig.key;
             const select = document.getElementById('ai-model');
