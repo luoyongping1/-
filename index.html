@@ -904,6 +904,7 @@ input, textarea {
     <div id="item-wl" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp') !important; background-size: cover !important;" onclick="openWlApp()"><span>网恋模拟</span></div>
     <div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>
     <div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>
+    <div id="item-shouna" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openShounaApp()"><span>收纳助手</span></div>
 </div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0;">
@@ -942,6 +943,7 @@ input, textarea {
 <iframe id="iframe-checkphone" data-src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
 <iframe id="iframe-shop" data-src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
 <iframe id="iframe-ddp" data-src="对对碰背单词.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-shouna" data-src="收纳助手.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     
     <div id="worldbook-app" style="display: none;">
     <div class="wb-header">
@@ -1240,6 +1242,7 @@ function showFloatingMenu() {
         'item-wl': { name: '网恋模拟', func: 'openWlApp()' },
         'item-shop': { name: '购物商城', func: 'openShopApp()' },
         'item-ddp': { name: '对对碰', func: 'openDDPApp()' },
+        'item-shouna': { name: '收纳助手', func: 'openShounaApp()' },
         'item-wb': { name: '世界书', func: 'openWorldBook()' }
     };
     
@@ -1609,7 +1612,7 @@ function initGridSortable() {
 }
 
 function switchAppWindow(targetId) {
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'iframe-shouna', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -1633,13 +1636,8 @@ function openSelfApp() { switchAppWindow("iframe-self"); }
 function openWlApp() { switchAppWindow("iframe-wl"); }
 function openShopApp() { switchAppWindow("iframe-shop"); }
 function openDDPApp() { switchAppWindow("iframe-ddp"); }
+function openShounaApp() { switchAppWindow("iframe-shouna"); }
 function openWorldBook() { switchAppWindow("worldbook-app"); renderWorldBook(); }
-
-function startCheckPhone(name) {
-    document.getElementById('friend-selector-modal').style.display = 'none';
-    localStorage.setItem('target_check_name', name);
-    switchAppWindow("iframe-checkphone");
-}
 
 function showBall() {
     ball.style.display = "block";
@@ -1650,7 +1648,7 @@ function closeApp() {
     if(isDraggingBall) return;
     document.getElementById('app-overlay').style.display = "none";
     ball.style.display = "none";
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'iframe-shouna', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -2133,7 +2131,7 @@ const appNames = {
     'item-wb': '世界书', 'item-qq': 'QQ', 'item-xhs': '小红书',
     'item-face': '外观', 'item-set': '设置', 'item-self': '自律打卡',
     'item-gacha': '扭蛋机', 'item-checkphone': '查手机', 'item-wl': '网恋模拟器',
-    'item-shop': '购物商城', 'item-ddp': '对对碰背单词'
+    'item-shop': '购物商城', 'item-ddp': '对对碰背单词', 'item-shouna': '收纳助手'
 };
 function showAppListModal() {
     const container = document.getElementById('app-items-container');
@@ -2436,7 +2434,8 @@ window.onload = function() {
         { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/cJUV/1080X1080/image_1776692589613.png/webp') !important; background-size: cover !important;" onclick="showFriendSelector()"><span>查手机</span></div>` },
         { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp') !important; background-size: cover !important;" onclick="openWlApp()"><span>网恋模拟</span></div>` },
         { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>` },
-        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` }
+        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` },
+        { id: 'item-shouna', html: `<div id="item-shouna" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openShounaApp()"><span>收纳助手</span></div>` }
     ];
     
     // 监听来自 App（如 qq.html）的消息，用于后台发送通知
@@ -2565,6 +2564,7 @@ function initFloatingBallShortcuts() {
         { id: 'item-wl', name: '网恋模拟' },
         { id: 'item-shop', name: '购物商城' },
         { id: 'item-ddp', name: '对对碰' },
+        { id: 'item-shouna', name: '收纳助手' },
         { id: 'item-wb', name: '世界书' }
     ];
     

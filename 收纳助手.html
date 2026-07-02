@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资产与物品有效期管理</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Remix Icon CDN (图标库) -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- Vue 3 核心库 (中国大陆可快速访问的 CDN) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Tailwind 配置以支持自定义颜色与过渡 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f7ff',
+                            100: '#ebf0ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 防止 Vue 未加载完成时显示原始插值表达式 */
+        [v-cloak] {
+            display: none !important;
+        }
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* 移动端安全距离 */
+        .pb-safe {
+            padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+        }
+        /* 动画过渡 */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.25s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        .slide-up-enter-active, .slide-up-leave-active {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .slide-up-enter-from, .slide-up-leave-to {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+    <div id="app" v-cloak class="max-w-md mx-auto min-h-screen bg-slate-50 flex flex-col relative shadow-2xl shadow-slate-200">
+        
+        <!-- App 顶部 Header -->
+        <header class="bg-white border-b border-slate-100 px-6 py-4 sticky top-0 z-40 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="ri-safe-2-line text-brand-600"></i>
+                    <span>物记 Keep</span>
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">个人资产与到期时间守护者</p>
+            </div>
+            <!-- 新增物品按钮 (FAB 在顶部) -->
+            <button @click="openAddModal(false)" 
+                    class="bg-brand-600 hover:bg-brand-700 text-white p-2.5 rounded-full shadow-lg shadow-brand-100 transition-all active:scale-95 flex items-center justify-center">
+                <i class="ri-add-line text-lg"></i>
+            </button>
+        </header>
+
+        <!-- 主内容区域 -->
+        <main class="flex-1 px-4 py-4 overflow-y-auto" style="padding-bottom: calc(env(safe-area-inset-bottom) + 6rem)">
+            
+            <!-- ==================== 标签页 A：物品 ==================== -->
+            <div v-show="activeTab === 'items'" class="space-y-4">
+                <!-- 资产数据悬浮卡片 -->
+                <div class="bg-gradient-to-br from-brand-600 to-indigo-700 text-white rounded-2xl p-5 shadow-xl shadow-brand-100 relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 text-white/10 text-8xl font-bold">
+                        <i class="ri-bank-card-line"></i>
+                    </div>
+                    <p class="text-white/80 text-xs tracking-wider uppercase">我的资产总额</p>
+                    <p class="text-3xl font-extrabold mt-1">¥ {{ totalAsset }}</p>
+                    <div class="mt-4 pt-4 border-t border-white/20 flex justify-between items-center">
+                        <div>
+                            <p class="text-white/70 text-xs">日均/次均总消耗</p>
+                            <p class="text-lg font-bold">¥ {{ totalDailyCost }}<span class="text-xs font-normal text-white/75">/天(次)</span></p>
+                        </div>
+                        <div class="bg-white/15 px-3 py-1 rounded-full text-xs backdrop-blur-sm">
+                            共 {{ items.length }} 件物品
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 物品搜索与分类快速过滤 -->
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <i class="ri-search-line absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" v-model="searchQuery" placeholder="搜索物品名称或来源..." 
+                               class="w-full bg-white pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <select v-model="selectedCategoryFilter" class="bg-white px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500">
+                        <option value="">所有分类</option>
+                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                </div>
+
+                <!-- 物品列表 -->
+                <div class="space-y-3">
+                    <div v-if="filteredItems.length === 0" class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <i class="ri-inbox-2-line text-4xl text-slate-300"></i>
+                        <p class="text-slate-400 text-sm mt-2">暂无匹配物品，点击右上角添加</p>
+                    </div>
+                    
+                    <div v-for="item in filteredItems" :key="item.id" 
+                         class="bg-white rounded-xl p-4 border border-slate-100 hover:border-slate-200 transition-all shadow-sm flex flex-col justify-between gap-3">
+                        <!-- 物品头部信息 -->
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex flex-wrap gap-1.5 mb-1.5">
+                                    <span class="inline-block bg-brand-50 text-brand-600 text-[10px] px-2 py-0.5 rounded font-semibold">
+                                        {{ item.category }}
+                                    </span>
+                                    <span v-if="item.location" class="inline-block bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium flex items-center gap-0.5">
+                                        <i class="ri-map-pin-2-line"></i> {{ item.location }}
+                                    </span>
+                                </div>
+                                <h3 class="font-bold text-slate-800 text-base">{{ item.name }}</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    <i class="ri-store-2-line"></i> {{ item.source || '未知来源' }} · {{ item.purchaseDate }} 购入
+                                </p>
+                            </div>
+                            <div class="text-right flex flex-col items-end gap-1.5">
+                                <p class="font-extrabold text-slate-900">¥ {{ item.price }}</p>
+                                
+                                <!-- 数量/件数加减按钮 -->
+                                <div class="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm scale-90 origin-right">
+                                    <button @click.stop="decreaseQuantity(item)" class="px-2 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-colors">-</button>
+                                    <span class="px-2 text-xs font-mono font-bold text-slate-700 min-w-[24px] text-center bg-white">{{ item.quantity || 1 }}</span>
+                                    <button @click.stop="increaseQuantity(item)" class="px-2 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold text-xs transition-colors">+</button>
+                                </div>
+
+                                <button @click="deleteItem(item.id)" class="text-slate-300 hover:text-rose-500 transition-colors mt-0.5">
+                                    <i class="ri-delete-bin-line text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 成本计算器模块 -->
+                        <div class="bg-slate-50 rounded-lg p-2.5 flex items-center justify-between text-xs">
+                            <div>
+                                <span class="text-slate-500">成本均摊 ({{ item.costCalcType === 'time' ? '按时间' : '按次数' }})：</span>
+                                <span class="font-bold text-slate-700">¥ {{ getItemDailyCost(item) }} </span>
+                                <span class="text-[10px] text-slate-400">/{{ item.costCalcType === 'time' ? '天' : '次' }}</span>
+                            </div>
+                            <!-- 计数按钮 -->
+                            <div v-if="item.costCalcType === 'usage'" class="flex items-center gap-2">
+                                <span class="text-slate-500 font-mono">已用 {{ item.usageCount }} 次</span>
+                                <button @click="incrementUsage(item)" 
+                                        class="bg-white border border-slate-200 hover:border-brand-500 hover:text-brand-600 text-slate-600 px-2 py-1 rounded font-medium transition-colors shadow-sm active:scale-95">
+                                    +1 次
+                                </button>
+                            </div>
+                            <div v-else class="text-slate-400 text-[10px] font-mono">
+                                已购 {{ getDaysDiff(item.purchaseDate) }} 天
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ==================== 标签页 B：有效期 ==================== -->
+            <div v-show="activeTab === 'expiration'" class="space-y-4">
+                <!-- 状态过滤悬浮卡片 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div @click="setExpireFilter('expired')" 
+                         :class="['p-4 rounded-xl cursor-pointer transition-all border shadow-sm relative overflow-hidden', 
+                                 expireFilter === 'expired' ? 'bg-rose-50 border-rose-200 text-rose-900 ring-2 ring-rose-500/20' : 'bg-white border-slate-100 text-slate-700']">
+                        <div class="absolute -right-3 -bottom-3 text-rose-500/10 text-5xl font-bold"><i class="ri-error-warning-line"></i></div>
+                        <p class="text-xs font-medium text-slate-500">已过期</p>
+                        <p class="text-2xl font-black text-rose-600 mt-1">{{ expiredCount }} <span class="text-xs font-normal text-slate-400">件</span></p>
+                    </div>
+                    <div @click="setExpireFilter('near')" 
+                         :class="['p-4 rounded-xl cursor-pointer transition-all border shadow-sm relative overflow-hidden', 
+                                 expireFilter === 'near' ? 'bg-amber-50 border-amber-200 text-amber-900 ring-2 ring-amber-500/20' : 'bg-white border-slate-100 text-slate-700']">
+                        <div class="absolute -right-3 -bottom-3 text-amber-500/10 text-5xl font-bold"><i class="ri-time-line"></i></div>
+                        <p class="text-xs font-medium text-slate-500">30天内即将过期</p>
+                        <p class="text-2xl font-black text-amber-600 mt-1">{{ nearExpiredCount }} <span class="text-xs font-normal text-slate-400">件</span></p>
+                    </div>
+                </div>
+
+                <!-- 过滤器状态条 -->
+                <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+                    <span>
+                        正在展示：<strong class="text-slate-700">{{ getFilterStatusText }}</strong> (共 {{ filteredExpirationItems.length }} 件)
+                    </span>
+                    <button v-if="expireFilter !== 'all'" @click="setExpireFilter('all')" class="text-brand-600 font-medium hover:underline flex items-center gap-1">
+                        <i class="ri-refresh-line"></i> 清除过滤
+                    </button>
+                    <button v-else @click="openAddModal(true)" class="text-brand-600 font-medium hover:underline flex items-center gap-1">
+                        <i class="ri-add-circle-line"></i> 新增临期品
+                    </button>
+                </div>
+
+                <!-- 有效期物品列表 -->
+                <div class="space-y-3">
+                    <div v-if="filteredExpirationItems.length === 0" class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <i class="ri-shield-check-line text-4xl text-emerald-400"></i>
+                        <p class="text-slate-400 text-sm mt-2">没有在此分类下的到期物品</p>
+                    </div>
+
+                    <div v-for="item in filteredExpirationItems" :key="item.id" 
+                         class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm relative overflow-hidden">
+                        <!-- 过期警示条装饰 -->
+                        <div :class="['absolute top-0 left-0 bottom-0 w-1.5', getExpireBadgeClass(item).bg]"></div>
+                        
+                        <div class="pl-2">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-base">{{ item.name }}</h3>
+                                    <p class="text-xs text-slate-400 mt-0.5">
+                                        <i class="ri-calendar-event-line"></i> 到期日期：{{ item.expirationDate }}
+                                    </p>
+                                </div>
+                                <span :class="['px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm', getExpireBadgeClass(item).badge]">
+                                    {{ getExpireBadgeClass(item).text }}
+                                </span>
+                            </div>
+                            
+                            <!-- 底部操作与归属 -->
+                            <div class="mt-4 pt-3 border-t border-slate-50 flex justify-between items-center text-xs text-slate-400">
+                                <span>分类：{{ item.category }} | 位置：{{ item.location || '未指定' }} | {{ item.source || '直接购买' }}</span>
+                                <div class="flex gap-3">
+                                    <button @click="deleteItem(item.id)" class="text-slate-300 hover:text-rose-500 transition-colors">
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 标签页 C：位置 ==================== -->
+            <div v-show="activeTab === 'locations'" class="space-y-4">
+                <!-- 位置统计悬浮卡片 -->
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl p-5 shadow-xl shadow-indigo-100 relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 text-white/10 text-8xl font-bold">
+                        <i class="ri-map-pin-range-line"></i>
+                    </div>
+                    <p class="text-white/80 text-xs tracking-wider uppercase">收纳空间统计</p>
+                    <p class="text-3xl font-extrabold mt-1">{{ locations.length }} <span class="text-sm font-normal text-white/80">个存储位置</span></p>
+                    <div class="mt-4 pt-4 border-t border-white/20 flex justify-between items-center">
+                        <div>
+                            <p class="text-white/70 text-xs">已收纳物品总量</p>
+                            <p class="text-lg font-bold">{{ items.reduce((sum, i) => sum + (i.quantity || 1), 0) }} <span class="text-xs font-normal text-white/80">件</span></p>
+                        </div>
+                        <div class="bg-white/15 px-3 py-1 rounded-full text-xs backdrop-blur-sm">
+                            空间管理井然有序
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 搜索定位框 -->
+                <div class="relative">
+                    <i class="ri-search-line absolute left-3 top-2.5 text-slate-400"></i>
+                    <input type="text" v-model="locationSearchQuery" placeholder="搜索物品名称查找其位置..." 
+                           class="w-full bg-white pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-brand-500 transition-colors">
+                </div>
+
+                <!-- 位置及对应的物品列表 -->
+                <div class="space-y-3">
+                    <div v-if="filteredLocationsWithItems.length === 0" class="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
+                        <i class="ri-map-pin-2-line text-4xl text-slate-300"></i>
+                        <p class="text-slate-400 text-sm mt-2">没有匹配的位置或物品</p>
+                    </div>
+
+                    <div v-for="loc in filteredLocationsWithItems" :key="loc.name" 
+                         class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                        <!-- 位置标题 -->
+                        <div class="bg-slate-50/70 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
+                            <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                <i class="ri-archive-line text-brand-600"></i>
+                                <span>{{ loc.name }}</span>
+                            </span>
+                            <span class="text-xs bg-brand-50 text-brand-600 px-2.5 py-0.5 rounded-full font-semibold">
+                                共 {{ loc.items.length }} 种物品
+                            </span>
+                        </div>
+                        <!-- 该位置存放的物品 -->
+                        <div class="p-2 divide-y divide-slate-50">
+                            <div v-for="item in loc.items" :key="item.id" class="p-2 flex justify-between items-center hover:bg-slate-50/50 rounded-lg transition-colors">
+                                <div>
+                                    <span class="font-semibold text-slate-700 text-sm">{{ item.name }}</span>
+                                    <span class="text-xs text-slate-400 ml-2">x {{ item.quantity || 1 }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                                        {{ item.category }}
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-700">¥{{ item.price }}</span>
+                                </div>
+                            </div>
+                            <div v-if="loc.items.length === 0" class="p-4 text-center text-slate-300 text-xs">
+                                暂无存放物品
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 标签页 D：我的 ==================== -->
+            <div v-show="activeTab === 'mine'" class="space-y-4">
+                <!-- 方形悬浮卡片 -->
+                <div class="relative w-full aspect-square rounded-3xl shadow-xl overflow-visible flex flex-col justify-between p-6 transition-all">
+                    
+                    <!-- 卡片背景与遮罩子容器（裁剪模糊溢出，避免黑乎乎，实现虚化效果） -->
+                    <div class="absolute inset-0 rounded-3xl overflow-hidden z-0">
+                        <!-- 背景图（虚化 6px，轻微放大 1.05 倍防止白边） -->
+                        <div v-if="profile.bgImage" class="absolute inset-0 bg-cover bg-center filter blur-[6px] scale-105"
+                             :style="{ backgroundImage: `url(${profile.bgImage})` }"></div>
+                        <!-- 无图时的兜底渐变 -->
+                        <div v-else class="absolute inset-0 bg-gradient-to-br from-brand-600 to-indigo-700"></div>
+                        <!-- 柔和的白色/黑色遮罩，确保虚化后卡片文字可读且不显脏黑 -->
+                        <div class="absolute inset-0" :class="profile.bgImage ? 'bg-slate-900/20' : 'bg-transparent'"></div>
+                    </div>
+
+                    <!-- 卡片顶部操作 -->
+                    <div class="relative z-10 flex justify-between items-center w-full">
+                        <span class="bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1 rounded-full border border-white/20 font-medium">空间装扮</span>
+                        <button @click="openImageModal('bgImage')" 
+                                class="bg-white/25 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md transition-all active:scale-95 flex items-center justify-center">
+                            <i class="ri-image-edit-line text-base"></i>
+                        </button>
+                    </div>
+
+                    <!-- 卡片中间文案 -->
+                    <div class="relative z-10 text-white text-center w-full mb-8">
+                        <h3 class="text-lg font-bold drop-shadow-md">自律记账，精致生活</h3>
+                        <p class="text-xs text-white/80 mt-1 drop-shadow-sm">管理你的每一份数字资产</p>
+                    </div>
+
+                    <!-- 卡片底边正中央头像 -->
+                    <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-20">
+                        <div class="relative group cursor-pointer" @click="openImageModal('avatar')">
+                            <img :src="profile.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'" 
+                                 class="w-24 h-24 rounded-full border-4 border-white object-cover shadow-lg hover:brightness-95 transition-all">
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="ri-camera-line text-white text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 头像悬浮超出距离的占位组件 -->
+                <div class="h-12"></div>
+
+                <!-- 数据管理列表 -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div @click="showDataModal = true" class="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
+                                <i class="ri-database-2-line text-lg"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-800 text-sm">数据备份与管理</p>
+                                <p class="text-xs text-slate-400">导入、导出备份数据以同步设备</p>
+                            </div>
+                        </div>
+                        <i class="ri-arrow-right-s-line text-slate-400 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ==================== 底部导航栏 ==================== -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-100 flex justify-around py-2 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+            <button @click="activeTab = 'items'" 
+                    :class="['flex flex-col items-center gap-1 py-1 w-1/4 transition-colors', activeTab === 'items' ? 'text-brand-600 font-bold' : 'text-slate-400']">
+                <i class="text-xl" :class="activeTab === 'items' ? 'ri-box-3-fill' : 'ri-box-3-line'"></i>
+                <span class="text-xs">我的物品</span>
+            </button>
+            <button @click="activeTab = 'expiration'" 
+                    :class="['flex flex-col items-center gap-1 py-1 w-1/4 transition-colors', activeTab === 'expiration' ? 'text-brand-600 font-bold' : 'text-slate-400']">
+                <i class="text-xl" :class="activeTab === 'expiration' ? 'ri-time-fill' : 'ri-time-line'"></i>
+                <span class="text-xs">到期提醒</span>
+            </button>
+            <button @click="activeTab = 'locations'" 
+                    :class="['flex flex-col items-center gap-1 py-1 w-1/4 transition-colors', activeTab === 'locations' ? 'text-brand-600 font-bold' : 'text-slate-400']">
+                <i class="text-xl" :class="activeTab === 'locations' ? 'ri-map-pin-2-fill' : 'ri-map-pin-2-line'"></i>
+                <span class="text-xs">位置</span>
+            </button>
+            <button @click="activeTab = 'mine'" 
+                    :class="['flex flex-col items-center gap-1 py-1 w-1/4 transition-colors', activeTab === 'mine' ? 'text-brand-600 font-bold' : 'text-slate-400']">
+                <i class="text-xl" :class="activeTab === 'mine' ? 'ri-user-3-fill' : 'ri-user-3-line'"></i>
+                <span class="text-xs">我的</span>
+            </button>
+        </nav>
+
+        <!-- ==================== 模态框：新增物品/临期品 ==================== -->
+        <transition name="fade">
+            <div v-if="showAddModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end justify-center max-w-md mx-auto">
+                <!-- 遮罩点击关闭 -->
+                <div class="absolute inset-0" @click="closeAddModal"></div>
+                
+                <!-- 底部抽屉式面板 -->
+                <transition name="slide-up">
+                    <div class="bg-white rounded-t-2xl w-full p-6 relative z-10 max-h-[85vh] overflow-y-auto shadow-2xl">
+                        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100">
+                            <h2 class="text-lg font-bold text-slate-800">
+                                {{ isModalForExpiration ? '新增临期物品' : '新增物品' }}
+                            </h2>
+                            <button @click="closeAddModal" class="text-slate-400 hover:text-slate-600">
+                                <i class="ri-close-line text-2xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- 表单 -->
+                        <form @submit.prevent="submitItem" class="space-y-4 text-sm">
+                            <!-- 物品名称 -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">物品名称 *</label>
+                                <input type="text" v-model="newItem.name" required placeholder="如：眼霜、燕麦片" 
+                                       class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                            </div>
+
+                            <!-- 价格与来源 -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">价格 (元) *</label>
+                                    <input type="number" step="0.01" v-model.number="newItem.price" required min="0" placeholder="0.00" 
+                                           class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">购买来源</label>
+                                    <input type="text" v-model="newItem.source" placeholder="如：淘宝、盒马" 
+                                           class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                                </div>
+                            </div>
+
+                            <!-- 分类选择与新增 -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">分类 *</label>
+                                <div class="flex gap-2">
+                                    <select v-model="newItem.category" required 
+                                            class="flex-1 bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                                        <option value="" disabled>选择分类</option>
+                                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                                    </select>
+                                    <button type="button" @click="toggleAddCategory" 
+                                            class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2.5 rounded-xl transition-all flex items-center justify-center">
+                                        <i class="ri-add-line font-bold"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- 快捷添加与删除分类小栏 -->
+                                <div v-if="showAddCategoryInput" class="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                                    <div class="flex gap-2">
+                                        <input type="text" v-model="newCategoryName" placeholder="输入新分类" 
+                                               class="flex-1 bg-white px-3 py-1.5 rounded-lg border-none focus:ring-2 focus:ring-brand-500/20 outline-none text-xs">
+                                        <button type="button" @click="addNewCategory" 
+                                                class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">
+                                            添加
+                                        </button>
+                                        <button type="button" @click="showAddCategoryInput = false" 
+                                                class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs transition-colors">
+                                            取消
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- 分类管理列表 -->
+                                    <div class="max-h-24 overflow-y-auto divide-y divide-slate-200/60 text-xs text-slate-600 bg-white rounded-lg p-1.5 shadow-inner">
+                                        <div v-for="cat in categories" :key="cat" class="flex justify-between items-center py-1.5 px-2 hover:bg-slate-50 rounded">
+                                            <span>{{ cat }}</span>
+                                            <button type="button" @click="confirmDeleteCategory(cat)" class="text-slate-400 hover:text-rose-500 transition-colors">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 位置选择与新增 -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">存放位置</label>
+                                <div class="flex gap-2">
+                                    <select v-model="newItem.location" 
+                                            class="flex-1 bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                                        <option value="">未指定位置 (可选)</option>
+                                        <option v-for="loc in locations" :key="loc" :value="loc">{{ loc }}</option>
+                                    </select>
+                                    <button type="button" @click="toggleAddLocation" 
+                                            class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2.5 rounded-xl transition-all flex items-center justify-center">
+                                        <i class="ri-add-line font-bold"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- 快捷添加与删除位置小栏 -->
+                                <div v-if="showAddLocationInput" class="mt-2 p-2 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                                    <div class="flex gap-2">
+                                        <input type="text" v-model="newLocationName" placeholder="输入新位置" 
+                                               class="flex-1 bg-white px-3 py-1.5 rounded-lg border-none focus:ring-2 focus:ring-brand-500/20 outline-none text-xs">
+                                        <button type="button" @click="addNewLocation" 
+                                                class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">
+                                            添加
+                                        </button>
+                                        <button type="button" @click="showAddLocationInput = false" 
+                                                class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs transition-colors">
+                                            取消
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- 位置管理列表 -->
+                                    <div class="max-h-24 overflow-y-auto divide-y divide-slate-200/60 text-xs text-slate-600 bg-white rounded-lg p-1.5 shadow-inner">
+                                        <div v-for="loc in locations" :key="loc" class="flex justify-between items-center py-1.5 px-2 hover:bg-slate-50 rounded">
+                                            <span>{{ loc }}</span>
+                                            <button type="button" @click="confirmDeleteLocation(loc)" class="text-slate-400 hover:text-rose-500 transition-colors">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 购入日期 -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">购入时间</label>
+                                <input type="date" v-model="newItem.purchaseDate" required 
+                                       class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                            </div>
+
+                            <!-- 成本计算方式 -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-2">均摊计算类型</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="border rounded-xl p-3 flex items-center gap-2 cursor-pointer transition-all"
+                                           :class="newItem.costCalcType === 'time' ? 'border-brand-500 bg-brand-50/50 text-brand-700 font-bold' : 'border-slate-200 bg-white'">
+                                        <input type="radio" v-model="newItem.costCalcType" value="time" class="text-brand-600 focus:ring-brand-500 hidden">
+                                        <i class="ri-time-line text-base"></i>
+                                        <span>依时间均摊</span>
+                                    </label>
+                                    <label class="border rounded-xl p-3 flex items-center gap-2 cursor-pointer transition-all"
+                                           :class="newItem.costCalcType === 'usage' ? 'border-brand-500 bg-brand-50/50 text-brand-700 font-bold' : 'border-slate-200 bg-white'">
+                                        <input type="radio" v-model="newItem.costCalcType" value="usage" class="text-brand-600 focus:ring-brand-500 hidden">
+                                        <i class="ri-hand-coin-line text-base"></i>
+                                        <span>依次数均摊</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- 是否有有效期 -->
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                                <span class="font-medium text-slate-700">标记商品有有效期</span>
+                                <input type="checkbox" v-model="newItem.hasExpiration" :disabled="isModalForExpiration"
+                                       class="w-5 h-5 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                            </div>
+
+                            <!-- 到期时间 (若有有效期) -->
+                            <div v-if="newItem.hasExpiration || isModalForExpiration">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">到期时间 *</label>
+                                <input type="date" v-model="newItem.expirationDate" :required="newItem.hasExpiration || isModalForExpiration"
+                                       class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <button type="submit" 
+                                    class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-100 active:scale-95 transition-all mt-4">
+                                保存录入
+                            </button>
+                        </form>
+                    </div>
+                </transition>
+            </div>
+        </transition>
+
+        <!-- ==================== 模态框：转移分类/位置 ==================== -->
+        <transition name="fade">
+            <div v-if="showTransferModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+                <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800">
+                            转移物品并删除{{ transferType === 'category' ? '分类' : '位置' }}
+                        </h3>
+                        <button @click="showTransferModal = false" class="text-slate-400 hover:text-slate-600">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3 text-sm">
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            当前有 <strong class="text-rose-500 font-semibold">{{ affectedCount }}</strong> 件物品属于该{{ transferType === 'category' ? '分类' : '位置' }}「{{ toBeDeletedName }}」。必须将它们转移到其他现有选项后，方能安全删除当前项。
+                        </p>
+                        
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">
+                                转移到以下{{ transferType === 'category' ? '分类' : '位置' }}：
+                            </label>
+                            <select v-model="transferTarget" required
+                                    class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                                <option value="" disabled>-- 请选择目标 --</option>
+                                <option v-for="opt in transferOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                <option v-if="transferType === 'location'" value="_unassigned_">未指定位置</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button @click="showTransferModal = false" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 rounded-xl transition-all">
+                            取消
+                        </button>
+                        <button @click="executeTransferAndDelete" :disabled="!transferTarget"
+                                class="flex-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-xl transition-all">
+                            转移并删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- ==================== 模态框：设置头像/背景图 ==================== -->
+        <transition name="fade">
+            <div v-if="showImageModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+                <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800">修改{{ imageTarget === 'avatar' ? '头像' : '背景图' }}</h3>
+                        <button @click="showImageModal = false" class="text-slate-400 hover:text-slate-600">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3 text-sm">
+                        <!-- 本地上传 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">本地图片上传</label>
+                            <input type="file" accept="image/*" @change="handleFileUpload"
+                                   class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 cursor-pointer">
+                        </div>
+                        
+                        <!-- 分割线 -->
+                        <div class="relative flex py-2 items-center">
+                            <div class="flex-grow border-t border-slate-200"></div>
+                            <span class="flex-shrink mx-4 text-slate-400 text-xs">或</span>
+                            <div class="flex-grow border-t border-slate-200"></div>
+                        </div>
+
+                        <!-- URL 上传 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">网络图片 URL</label>
+                            <input type="text" v-model="imageUrlInput" placeholder="https://..."
+                                   class="w-full bg-slate-50 px-4 py-2.5 rounded-xl border-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button @click="showImageModal = false" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 rounded-xl transition-all">取消</button>
+                        <button @click="saveImageUrl" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl transition-all">确认</button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- ==================== 模态框：数据备份与恢复 ==================== -->
+        <transition name="fade">
+            <div v-if="showDataModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+                <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800">备份与管理数据</h3>
+                        <button @click="showDataModal = false" class="text-slate-400 hover:text-slate-600">
+                            <i class="ri-close-line text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4 text-sm text-center">
+                        <p class="text-slate-500 text-xs leading-relaxed">
+                            所有数据皆存储在您的本地浏览器中。为防数据丢失，请定期备份或在需要更换设备时导出后再导入。
+                        </p>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- 导出数据 -->
+                            <button @click="exportData" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-xl hover:border-brand-500 hover:bg-brand-50/20 transition-all gap-2 group">
+                                <i class="ri-download-cloud-2-line text-2xl text-slate-400 group-hover:text-brand-600"></i>
+                                <span class="font-semibold text-slate-700 text-xs">导出数据 (备份)</span>
+                            </button>
+                            <!-- 导入数据 -->
+                            <label class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-xl hover:border-brand-500 hover:bg-brand-50/20 cursor-pointer transition-all gap-2 group">
+                                <i class="ri-upload-cloud-2-line text-2xl text-slate-400 group-hover:text-brand-600"></i>
+                                <span class="font-semibold text-slate-700 text-xs">导入数据 (恢复)</span>
+                                <input type="file" accept=".json" @change="importData" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // 1. 基础状态数据
+                const activeTab = ref('items'); // 'items' | 'expiration' | 'locations' | 'mine'
+                const items = ref([]);
+                const categories = ref(['数码电子', '美妆护肤', '食品酒水', '家居日用', '服饰鞋包', '图书潮玩']);
+                const locations = ref(['默认位置']); // 仅有一个默认位置分类
+                const searchQuery = ref('');
+                const selectedCategoryFilter = ref('');
+                const expireFilter = ref('all'); // 'all' | 'expired' | 'near'
+                const locationSearchQuery = ref('');
+
+                // 用户个人主页装扮数据
+                const profile = ref({
+                    avatar: '',
+                    bgImage: ''
+                });
+
+                // 2. 表单控制状态
+                const showAddModal = ref(false);
+                const isModalForExpiration = ref(false);
+                const showAddCategoryInput = ref(false);
+                const newCategoryName = ref('');
+                const showAddLocationInput = ref(false);
+                const newLocationName = ref('');
+                
+                const newItem = ref({
+                    id: '',
+                    name: '',
+                    source: '',
+                    price: 0,
+                    category: '',
+                    location: '', // 默认为空，实现可选可不选
+                    quantity: 1,
+                    purchaseDate: '',
+                    hasExpiration: false,
+                    expirationDate: '',
+                    costCalcType: 'time',
+                    usageCount: 0
+                });
+
+                // 分类/位置转移模态框相关状态
+                const showTransferModal = ref(false);
+                const transferType = ref(''); // 'category' | 'location'
+                const toBeDeletedName = ref('');
+                const transferTarget = ref('');
+                const affectedCount = ref(0);
+
+                // 头像与背景修改相关状态
+                const showImageModal = ref(false);
+                const imageTarget = ref(''); // 'avatar' | 'bgImage'
+                const imageUrlInput = ref('');
+
+                // 数据管理模态框状态
+                const showDataModal = ref(false);
+
+                // 初始化今天日期（用于表单默认值）
+                const getTodayStr = () => {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                // 3. 从本地读取
+                onMounted(() => {
+                    const localItems = localStorage.getItem('keep_items');
+                    if (localItems) {
+                        items.value = JSON.parse(localItems);
+                    }
+                    const localCats = localStorage.getItem('keep_categories');
+                    if (localCats) {
+                        categories.value = JSON.parse(localCats);
+                    }
+                    const localLocs = localStorage.getItem('keep_locations');
+                    if (localLocs) {
+                        locations.value = JSON.parse(localLocs);
+                    }
+                    const localProfile = localStorage.getItem('keep_profile');
+                    if (localProfile) {
+                        profile.value = JSON.parse(localProfile);
+                    }
+                });
+
+                // 4. 数据深度监听并存入 LocalStorage
+                watch(items, (newVal) => {
+                    localStorage.setItem('keep_items', JSON.stringify(newVal));
+                }, { deep: true });
+
+                watch(categories, (newVal) => {
+                    localStorage.setItem('keep_categories', JSON.stringify(newVal));
+                }, { deep: true });
+
+                watch(locations, (newVal) => {
+                    localStorage.setItem('keep_locations', JSON.stringify(newVal));
+                }, { deep: true });
+
+                watch(profile, (newVal) => {
+                    localStorage.setItem('keep_profile', JSON.stringify(newVal));
+                }, { deep: true });
+
+                // 5. 计算属性
+                // 总资产计算
+                const totalAsset = computed(() => {
+                    return items.value.reduce((sum, item) => sum + parseFloat(item.price || 0), 0).toFixed(2);
+                });
+
+                // 统一天数差计算（购入日期到今天）
+                const getDaysDiff = (purchaseDate) => {
+                    if (!purchaseDate) return 1;
+                    const pDate = new Date(purchaseDate);
+                    pDate.setHours(0, 0, 0, 0);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const diffTime = today - pDate;
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays < 1 ? 1 : diffDays;
+                };
+
+                // 统一剩余有效期计算
+                const getDaysToExpire = (expirationDate) => {
+                    if (!expirationDate) return null;
+                    const eDate = new Date(expirationDate);
+                    eDate.setHours(0, 0, 0, 0);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const diffTime = eDate - today;
+                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                };
+
+                // 单个物品均摊成本计算
+                const getItemDailyCost = (item) => {
+                    if (item.costCalcType === 'time') {
+                        const days = getDaysDiff(item.purchaseDate);
+                        return (item.price / days).toFixed(2);
+                    } else {
+                        const count = item.usageCount || 0;
+                        if (count === 0) {
+                            return parseFloat(item.price).toFixed(2);
+                        }
+                        return (item.price / count).toFixed(2);
+                    }
+                };
+
+                // 总消耗计算
+                const totalDailyCost = computed(() => {
+                    const total = items.value.reduce((sum, item) => sum + parseFloat(getItemDailyCost(item)), 0);
+                    return total.toFixed(2);
+                });
+
+                // 有效期相关的三种数量
+                const expiredCount = computed(() => {
+                    return items.value.filter(item => {
+                        if (!item.hasExpiration || !item.expirationDate) return false;
+                        const days = getDaysToExpire(item.expirationDate);
+                        return days !== null && days < 0;
+                    }).length;
+                });
+
+                const nearExpiredCount = computed(() => {
+                    return items.value.filter(item => {
+                        if (!item.hasExpiration || !item.expirationDate) return false;
+                        const days = getDaysToExpire(item.expirationDate);
+                        return days !== null && days >= 0 && days <= 30;
+                    }).length;
+                });
+
+                // 物品页面列表过滤 (搜索 & 分类)
+                const filteredItems = computed(() => {
+                    return items.value.filter(item => {
+                        const matchesSearch = item.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                                              (item.source && item.source.toLowerCase().includes(searchQuery.value.toLowerCase()));
+                        const matchesCategory = selectedCategoryFilter.value ? item.category === selectedCategoryFilter.value : true;
+                        return matchesSearch && matchesCategory;
+                    });
+                });
+
+                // 有效期页面列表过滤
+                const filteredExpirationItems = computed(() => {
+                    return items.value.filter(item => {
+                        if (!item.hasExpiration || !item.expirationDate) return false;
+                        const days = getDaysToExpire(item.expirationDate);
+                        if (expireFilter.value === 'expired') {
+                            return days < 0;
+                        } else if (expireFilter.value === 'near') {
+                            return days >= 0 && days <= 30;
+                        }
+                        return true;
+                    }).sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate)); // 按到期时间排序
+                });
+
+                const getFilterStatusText = computed(() => {
+                    if (expireFilter.value === 'expired') return '已过期';
+                    if (expireFilter.value === 'near') return '即将过期 (≤30天)';
+                    return '全部到期物品';
+                });
+
+                // 根据搜索条件过滤存放位置和物品
+                const filteredLocationsWithItems = computed(() => {
+                    return locations.value.map(loc => {
+                        const locItems = items.value.filter(item => {
+                            const matchesLocation = item.location === loc;
+                            const matchesSearch = locationSearchQuery.value
+                                ? item.name.toLowerCase().includes(locationSearchQuery.value.toLowerCase())
+                                : true;
+                            return matchesLocation && matchesSearch;
+                        });
+                        return {
+                            name: loc,
+                            items: locItems
+                        };
+                    }).filter(loc => {
+                        if (locationSearchQuery.value) {
+                            return loc.items.length > 0;
+                        }
+                        return true;
+                    });
+                });
+
+                // 计算用于分类/位置转移的目标选项列表 (排除自身)
+                const transferOptions = computed(() => {
+                    if (transferType.value === 'category') {
+                        return categories.value.filter(cat => cat !== toBeDeletedName.value);
+                    } else {
+                        return locations.value.filter(loc => loc !== toBeDeletedName.value);
+                    }
+                });
+
+                // 6. 控制逻辑与交互
+                const setExpireFilter = (filterType) => {
+                    if (expireFilter.value === filterType) {
+                        expireFilter.value = 'all'; // 再次点击切换为显示全部
+                    } else {
+                        expireFilter.value = filterType;
+                    }
+                };
+
+                const openAddModal = (forceExpiration = false) => {
+                    isModalForExpiration.value = forceExpiration;
+                    newItem.value = {
+                        id: 'item_' + Date.now() + Math.random().toString(36).substr(2, 4),
+                        name: '',
+                        source: '',
+                        price: null,
+                        category: categories.value[0] || '',
+                        location: '', // 默认未指定位置，选填
+                        quantity: 1,
+                        purchaseDate: getTodayStr(),
+                        hasExpiration: forceExpiration,
+                        expirationDate: '',
+                        costCalcType: 'time',
+                        usageCount: 0
+                    };
+                    showAddModal.value = true;
+                };
+
+                const closeAddModal = () => {
+                    showAddModal.value = false;
+                    showAddCategoryInput.value = false;
+                    showAddLocationInput.value = false;
+                    newCategoryName.value = '';
+                    newLocationName.value = '';
+                };
+
+                const toggleAddCategory = () => {
+                    showAddCategoryInput.value = !showAddCategoryInput.value;
+                };
+
+                const addNewCategory = () => {
+                    const trimmed = newCategoryName.value.trim();
+                    if (trimmed && !categories.value.includes(trimmed)) {
+                        categories.value.push(trimmed);
+                        newItem.value.category = trimmed; // 设为当前选中
+                        newCategoryName.value = '';
+                        showAddCategoryInput.value = false;
+                    }
+                };
+
+                const confirmDeleteCategory = (cat) => {
+                    const affected = items.value.filter(item => item.category === cat);
+                    if (affected.length > 0) {
+                        if (categories.value.length <= 1) {
+                            alert('必须要保留至少一个分类，无法删除唯一的分类！');
+                            return;
+                        }
+                        transferType.value = 'category';
+                        toBeDeletedName.value = cat;
+                        affectedCount.value = affected.length;
+                        transferTarget.value = '';
+                        showTransferModal.value = true;
+                    } else {
+                        if (confirm(`确定要删除分类「${cat}」吗？`)) {
+                            categories.value = categories.value.filter(c => c !== cat);
+                            if (newItem.value.category === cat) {
+                                newItem.value.category = categories.value[0] || '';
+                            }
+                        }
+                    }
+                };
+
+                const toggleAddLocation = () => {
+                    showAddLocationInput.value = !showAddLocationInput.value;
+                };
+
+                const addNewLocation = () => {
+                    const trimmed = newLocationName.value.trim();
+                    if (trimmed && !locations.value.includes(trimmed)) {
+                        locations.value.push(trimmed);
+                        newItem.value.location = trimmed; // 设为当前选中
+                        newLocationName.value = '';
+                        showAddLocationInput.value = false;
+                    }
+                };
+
+                const confirmDeleteLocation = (loc) => {
+                    const affected = items.value.filter(item => item.location === loc);
+                    if (affected.length > 0) {
+                        transferType.value = 'location';
+                        toBeDeletedName.value = loc;
+                        affectedCount.value = affected.length;
+                        transferTarget.value = '';
+                        showTransferModal.value = true;
+                    } else {
+                        if (confirm(`确定要删除位置「${loc}」吗？`)) {
+                            locations.value = locations.value.filter(l => l !== loc);
+                            if (newItem.value.location === loc) {
+                                newItem.value.location = '';
+                            }
+                        }
+                    }
+                };
+
+                const executeTransferAndDelete = () => {
+                    if (!transferTarget.value) return;
+
+                    if (transferType.value === 'category') {
+                        items.value.forEach(item => {
+                            if (item.category === toBeDeletedName.value) {
+                                item.category = transferTarget.value;
+                            }
+                        });
+                        categories.value = categories.value.filter(c => c !== toBeDeletedName.value);
+                        if (newItem.value.category === toBeDeletedName.value) {
+                            newItem.value.category = transferTarget.value;
+                        }
+                    } else {
+                        const targetLoc = transferTarget.value === '_unassigned_' ? '' : transferTarget.value;
+                        items.value.forEach(item => {
+                            if (item.location === toBeDeletedName.value) {
+                                item.location = targetLoc;
+                            }
+                        });
+                        locations.value = locations.value.filter(l => l !== toBeDeletedName.value);
+                        if (newItem.value.location === toBeDeletedName.value) {
+                            newItem.value.location = targetLoc;
+                        }
+                    }
+                    showTransferModal.value = false;
+                    alert('转移并删除成功！');
+                };
+
+                const increaseQuantity = (item) => {
+                    if (item.quantity === undefined) {
+                        item.quantity = 1;
+                    }
+                    item.quantity++;
+                };
+
+                const decreaseQuantity = (item) => {
+                    if (item.quantity === undefined) {
+                        item.quantity = 1;
+                    }
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                    }
+                };
+
+                const submitItem = () => {
+                    // 如果从有效期页面添加，或者勾选了有效期，必填有效期时间
+                    if (isModalForExpiration.value || newItem.value.hasExpiration) {
+                        newItem.value.hasExpiration = true;
+                        if (!newItem.value.expirationDate) {
+                            alert('请选择到期时间！');
+                            return;
+                        }
+                    }
+
+                    // 插入数据
+                    items.value.unshift({ ...newItem.value });
+                    closeAddModal();
+                };
+
+                const deleteItem = (id) => {
+                    if (confirm('确定要删除这件物品吗？删除后数据无法恢复。')) {
+                        items.value = items.value.filter(item => item.id !== id);
+                    }
+                };
+
+                const incrementUsage = (item) => {
+                    const target = items.value.find(i => i.id === item.id);
+                    if (target) {
+                        target.usageCount = (target.usageCount || 0) + 1;
+                    }
+                };
+
+                // 判断到期状态并输出对应的颜色与文字样式
+                const getExpireBadgeClass = (item) => {
+                    const days = getDaysToExpire(item.expirationDate);
+                    if (days === null) return {};
+                    if (days < 0) {
+                        return {
+                            text: `已过期 ${Math.abs(days)} 天`,
+                            badge: 'bg-rose-50 text-rose-600 border border-rose-200',
+                            bg: 'bg-rose-500'
+                        };
+                    } else if (days === 0) {
+                        return {
+                            text: '今天到期',
+                            badge: 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse',
+                            bg: 'bg-amber-500'
+                        };
+                    } else if (days <= 30) {
+                        return {
+                            text: `仅剩 ${days} 天`,
+                            badge: 'bg-amber-50 text-amber-600 border border-amber-200',
+                            bg: 'bg-amber-400'
+                        };
+                    } else {
+                        return {
+                            text: `还剩 ${days} 天`,
+                            badge: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
+                            bg: 'bg-emerald-500'
+                        };
+                    }
+                };
+
+                // 7. 图片上传相关方法
+                const openImageModal = (target) => {
+                    imageTarget.value = target;
+                    imageUrlInput.value = profile.value[target] || '';
+                    showImageModal.value = true;
+                };
+
+                // 处理文件上传并对其进行 Canvas 尺寸与质量压缩，防止 LocalStorage 容量溢出
+                const handleFileUpload = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                let width = img.width;
+                                let height = img.height;
+                                
+                                // 限制最大宽度与高度为 800px 以压缩体积
+                                const MAX_DIM = 800;
+                                if (width > height) {
+                                    if (width > MAX_DIM) {
+                                        height = Math.round((height * MAX_DIM) / width);
+                                        width = MAX_DIM;
+                                    }
+                                } else {
+                                    if (height > MAX_DIM) {
+                                        width = Math.round((width * MAX_DIM) / height);
+                                        height = MAX_DIM;
+                                    }
+                                }
+                                
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+                                
+                                // 转为 JPEG 并设置 0.7 的质量系数
+                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                                
+                                // 暂存到输入框中，用户点击确认时统一保存
+                                imageUrlInput.value = compressedBase64;
+                            };
+                            img.src = event.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                const saveImageUrl = () => {
+                    if (imageUrlInput.value.trim()) {
+                        profile.value[imageTarget.value] = imageUrlInput.value.trim();
+                    } else {
+                        profile.value[imageTarget.value] = ''; // 支持清空
+                    }
+                    showImageModal.value = false;
+                };
+
+                // 8. 数据导入导出方法
+                const exportData = () => {
+                    const dataObj = {
+                        items: items.value,
+                        categories: categories.value,
+                        locations: locations.value,
+                        profile: profile.value
+                    };
+                    const blob = new Blob([JSON.stringify(dataObj, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `keep_data_backup_${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    alert('数据备份已导出，请妥善保管下载的备份文件。');
+                };
+
+                const importData = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const parsedData = JSON.parse(event.target.result);
+                            if (parsedData && (parsedData.items || parsedData.categories || parsedData.locations || parsedData.profile)) {
+                                if (parsedData.items) items.value = parsedData.items;
+                                if (parsedData.categories) categories.value = parsedData.categories;
+                                if (parsedData.locations) locations.value = parsedData.locations;
+                                if (parsedData.profile) profile.value = parsedData.profile;
+                                alert('备份数据导入恢复成功！');
+                                showDataModal.value = false;
+                            } else {
+                                alert('备份文件格式不正确，无法读取数据。');
+                            }
+                        } catch (err) {
+                            alert('导入失败，请检查文件是否为合法的备份文件。');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+
+                return {
+                    activeTab,
+                    items,
+                    categories,
+                    locations,
+                    searchQuery,
+                    selectedCategoryFilter,
+                    expireFilter,
+                    locationSearchQuery,
+                    showAddModal,
+                    isModalForExpiration,
+                    showAddCategoryInput,
+                    newCategoryName,
+                    showAddLocationInput,
+                    newLocationName,
+                    newItem,
+                    showTransferModal,
+                    transferType,
+                    toBeDeletedName,
+                    transferTarget,
+                    affectedCount,
+                    transferOptions,
+                    totalAsset,
+                    totalDailyCost,
+                    expiredCount,
+                    nearExpiredCount,
+                    filteredItems,
+                    filteredExpirationItems,
+                    filteredLocationsWithItems,
+                    getFilterStatusText,
+                    setExpireFilter,
+                    openAddModal,
+                    closeAddModal,
+                    toggleAddCategory,
+                    addNewCategory,
+                    confirmDeleteCategory,
+                    toggleAddLocation,
+                    addNewLocation,
+                    confirmDeleteLocation,
+                    executeTransferAndDelete,
+                    increaseQuantity,
+                    decreaseQuantity,
+                    submitItem,
+                    deleteItem,
+                    incrementUsage,
+                    getDaysDiff,
+                    getItemDailyCost,
+                    getExpireBadgeClass,
+                    
+                    // 属性和方法
+                    profile,
+                    showImageModal,
+                    imageTarget,
+                    imageUrlInput,
+                    showDataModal,
+                    openImageModal,
+                    handleFileUpload,
+                    saveImageUrl,
+                    exportData,
+                    importData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
