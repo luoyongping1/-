@@ -329,9 +329,11 @@
         // 全局数据
         let currentPage = 'home';
         let currentTab = 'goods';
-        let cartList = [];
-        let unreceivedOrders = [];
-        let uncommentOrders = [];
+        let cartList = JSON.parse(localStorage.getItem('cartList') || '[]');
+        let unpaidOrders = JSON.parse(localStorage.getItem('unpaidOrders') || '[]');
+        let unreceivedOrders = JSON.parse(localStorage.getItem('unreceivedOrders') || '[]');
+        let uncommentOrders = JSON.parse(localStorage.getItem('uncommentOrders') || '[]');
+        let finishedOrders = JSON.parse(localStorage.getItem('finishedOrders') || '[]');
         let userCoupons = JSON.parse(localStorage.getItem('userCoupons') || '[]');
         let apiConfig = {
             url: localStorage.getItem('apiUrl') || '',
@@ -372,14 +374,42 @@
         function renderOrderContent(type) {
             const listContainer = document.getElementById('order-content-list');
             let html = '';
-            if(type === 'unreceived') {
+            
+            // 辅助函数：生成商品名称和详情HTML
+            const getItemsHtml = (items) => {
+                if(!items || items.length === 0) return '<div class="text-xs text-gray-400">无商品信息</div>';
+                return items.map(item => `
+                    <div class="flex justify-between items-center text-xs text-gray-600 mt-1">
+                        <span>${item.name} ${item.isTakeaway ? '[外卖]' : '[商品]'}</span>
+                        <span>¥${item.price.toFixed(2)}</span>
+                    </div>
+                `).join('');
+            };
+
+            if(type === 'unpaid') {
+                unpaidOrders.forEach((order, index) => {
+                    html += `<div class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                        <div class="text-xs text-gray-400 mb-2">订单号：${order.id}</div>
+                        <div class="font-medium text-xs text-gray-500 mb-1">订单时间：${order.time}</div>
+                        <div class="border-t border-b border-gray-50 py-2 my-2">
+                            ${getItemsHtml(order.items)}
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="text-xs text-red-500">等待 ${order.friendName || '好友'} 代付...</span>
+                            <div class="text-primary font-bold text-base">实付: ¥${order.total.toFixed(2)}</div>
+                        </div>
+                    </div>`;
+                });
+            } else if(type === 'unreceived') {
                 unreceivedOrders.forEach((order, index) => {
                     html += `<div class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
                         <div class="text-xs text-gray-400 mb-2">订单号：${order.id}</div>
-                        <div class="font-medium text-sm">订单时间：${order.time}</div>
-                        <div class="text-primary font-bold mt-1 text-lg">¥${order.total.toFixed(2)}</div>
-                        <div class="text-[10px] text-gray-400 mt-1">包含 ${order.items.length} 件商品</div>
-                        <div class="flex justify-end mt-2">
+                        <div class="font-medium text-xs text-gray-500 mb-1">订单时间：${order.time}</div>
+                        <div class="border-t border-b border-gray-50 py-2 my-2">
+                            ${getItemsHtml(order.items)}
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="text-primary font-bold text-base">实付: ¥${order.total.toFixed(2)}</div>
                             <button onclick="confirmReceive(${index})" class="text-xs bg-primary text-white px-4 py-1.5 rounded-full">确认收货</button>
                         </div>
                     </div>`;
@@ -388,15 +418,30 @@
                 uncommentOrders.forEach((order, index) => {
                     html += `<div class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
                         <div class="text-xs text-gray-400 mb-2">订单号：${order.id}</div>
-                        <div class="font-medium text-sm">待评价订单</div>
-                        <div class="text-primary font-bold mt-1 text-lg">¥${order.total.toFixed(2)}</div>
-                        <div class="flex justify-end mt-2">
-                            <button onclick="generateComment(this, ${index})" class="text-xs bg-blue-500 text-white px-4 py-1.5 rounded-full">评价</button>
+                        <div class="font-medium text-xs text-gray-500 mb-1">订单时间：${order.time}</div>
+                        <div class="border-t border-b border-gray-50 py-2 my-2">
+                            ${getItemsHtml(order.items)}
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="text-primary font-bold text-base">实付: ¥${order.total.toFixed(2)}</div>
+                            <button onclick="generateComment(this, ${index})" class="text-xs bg-blue-500 text-white px-4 py-1.5 rounded-full">评价领券</button>
                         </div>
                     </div>`;
                 });
-            } else {
-                html = `<div class="text-center py-20 text-gray-300 text-sm">该模块订单数据开发中...</div>`;
+            } else if(type === 'finished') {
+                finishedOrders.forEach((order, index) => {
+                    html += `<div class="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                        <div class="text-xs text-gray-400 mb-2">订单号：${order.id}</div>
+                        <div class="font-medium text-xs text-gray-500 mb-1">订单时间：${order.time}</div>
+                        <div class="border-t border-b border-gray-50 py-2 my-2">
+                            ${getItemsHtml(order.items)}
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <div class="text-primary font-bold text-base">已实付: ¥${order.total.toFixed(2)}</div>
+                            <span class="text-xs text-gray-400">已完成</span>
+                        </div>
+                    </div>`;
+                });
             }
             listContainer.innerHTML = html || `<div class="text-center py-20 text-gray-300 text-sm">暂无相关订单</div>`;
         }
@@ -612,6 +657,7 @@
 
         function addToCart(id,name,price,desc,isTakeaway=0) {
             cartList.push({id,name,price,desc,isTakeaway});
+            localStorage.setItem('cartList', JSON.stringify(cartList));
             renderCart();
             alert('已加入购物车');
         }
@@ -651,6 +697,7 @@
 
         function removeFromCart(index) {
             cartList.splice(index,1);
+            localStorage.setItem('cartList', JSON.stringify(cartList));
             renderCart();
         }
 
@@ -674,8 +721,10 @@
                 items: [...cartList],
                 time: new Date().toLocaleString()
             });
+            localStorage.setItem('unreceivedOrders', JSON.stringify(unreceivedOrders));
 
             cartList = [];
+            localStorage.setItem('cartList', JSON.stringify(cartList));
             renderCart();
             alert(`支付成功！实付¥${finalTotal.toFixed(2)}，订单已进入待收货`);
             switchPage('setting');
@@ -684,6 +733,8 @@
         function confirmReceive(index) {
             uncommentOrders.push(unreceivedOrders[index]);
             unreceivedOrders.splice(index,1);
+            localStorage.setItem('uncommentOrders', JSON.stringify(uncommentOrders));
+            localStorage.setItem('unreceivedOrders', JSON.stringify(unreceivedOrders));
             alert('确认收货成功');
             renderOrderContent('unreceived');
             updateBadges();
@@ -732,7 +783,14 @@
             btn.style.opacity = "1";
 
             alert('AI 自动评价：\n' + res);
+
+            // 将订单移入已完成并保存
+            finishedOrders.push(uncommentOrders[index]);
+            localStorage.setItem('finishedOrders', JSON.stringify(finishedOrders));
+
             uncommentOrders.splice(index,1);
+            localStorage.setItem('uncommentOrders', JSON.stringify(uncommentOrders));
+
             renderOrderContent('uncomment');
             updateBadges();
             
@@ -772,39 +830,51 @@
         }
 
         function sendPayRequest(id, name) {
-    const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
-    const itemNames = cartList.map(item => item.name).join('、');
-    
-    // 1. 获取最新的聊天记录
-    let histories = JSON.parse(localStorage.getItem('qq_history') || '{}');
-    if (!histories[name]) histories[name] = [];
-    
-    // 2. 添加代付消息对象
-    histories[name].push({
-        type: 'self', 
-        text: finalTotal.toFixed(2),
-        isShoppingPay: true, 
-        payItems: itemNames,
-        payStatus: 'pending',
-        time: new Date().getTime()
-    });
-    
-    // 3. 更新好友列表里的“最后一条消息”预览
-    let qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
-    let targetFriend = qqFriends.find(f => f.name === name);
-    if (targetFriend) {
-        targetFriend.lastMsg = "[找你代付] ￥" + finalTotal.toFixed(2);
-    }
+            const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
+            const itemNames = cartList.map(item => item.name).join('、');
+            
+            // 1. 获取最新的聊天记录
+            let histories = JSON.parse(localStorage.getItem('qq_history') || '{}');
+            if (!histories[name]) histories[name] = [];
+            
+            // 2. 添加代付消息对象
+            const orderId = 'PAY'+Date.now();
+            histories[name].push({
+                type: 'self', 
+                text: finalTotal.toFixed(2),
+                isShoppingPay: true, 
+                payItems: itemNames,
+                payStatus: 'pending',
+                time: new Date().getTime(),
+                orderId: orderId
+            });
+            
+            // 3. 更新好友列表里的“最后一条消息”预览
+            let qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+            let targetFriend = qqFriends.find(f => f.name === name);
+            if (targetFriend) {
+                targetFriend.lastMsg = "[找你代付] ￥" + finalTotal.toFixed(2);
+            }
 
-    // 4. 立即保存回存储
-    localStorage.setItem('qq_history', JSON.stringify(histories));
-    localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
+            // 4. 立即保存回存储
+            localStorage.setItem('qq_history', JSON.stringify(histories));
+            localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
 
-    // 5. 提示并跳转
-    closeFriendPay();
-    alert('代付请求已发送给 ' + name + '！请切换到 QQ 窗口查看。');
-    switchPage('home');
-}
+            // 【新增】保存订单到待付款
+            unpaidOrders.push({
+                id: orderId,
+                total: finalTotal,
+                items: [...cartList],
+                time: new Date().toLocaleString(),
+                friendName: name
+            });
+            localStorage.setItem('unpaidOrders', JSON.stringify(unpaidOrders));
+
+            // 5. 提示并跳转
+            closeFriendPay();
+            alert('代付请求已发送给 ' + name + '！请切换到 QQ 窗口查看。');
+            switchPage('home');
+        }
 
         function finishFriendPay() {
             const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
@@ -816,14 +886,24 @@
                 localStorage.setItem('userCoupons', JSON.stringify(userCoupons));
             }
 
+            // 转移待支付订单或使用购物车列表
+            let orderItems = [...cartList];
+            if (unpaidOrders.length > 0) {
+                const unpaidOrder = unpaidOrders.pop();
+                orderItems = unpaidOrder.items;
+                localStorage.setItem('unpaidOrders', JSON.stringify(unpaidOrders));
+            }
+
             unreceivedOrders.push({
                 id: 'PAY'+Date.now(),
                 total: finalTotal,
-                items: [...cartList],
+                items: orderItems,
                 time: new Date().toLocaleString()
             });
+            localStorage.setItem('unreceivedOrders', JSON.stringify(unreceivedOrders));
 
             cartList = [];
+            localStorage.setItem('cartList', JSON.stringify(cartList));
             renderCart();
             document.getElementById('pay-success-card').querySelector('.text-xl').innerHTML = `¥${finalTotal.toFixed(2)}`;
             document.getElementById('pay-success-card').classList.remove('hidden');
