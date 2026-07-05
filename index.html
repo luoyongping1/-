@@ -940,7 +940,7 @@ input, textarea {
     <iframe id="iframe-gacha" data-src="扭蛋机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     <iframe id="iframe-self" data-src="自律.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     <iframe id="iframe-wl" data-src="网恋.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
-<iframe id="iframe-checkphone" data-src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+<iframe id="iframe-checkphone" data-src="查手机.html" style="width: 100%; height: 100%; border: none; display: none;" onload="syncCheckPhoneTarget(this)"></iframe>
 <iframe id="iframe-shop" data-src="购物.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
 <iframe id="iframe-ddp" data-src="对对碰背单词.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
 <iframe id="iframe-shouna" data-src="收纳助手.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
@@ -1691,6 +1691,12 @@ function showFriendSelector() {
         `).join('');
     }
     document.getElementById('friend-selector-modal').style.display = 'flex';
+}
+
+function startCheckPhone(name) {
+    localStorage.setItem('target_check_name', name);
+    document.getElementById('friend-selector-modal').style.display = 'none';
+    switchAppWindow('iframe-checkphone');
 }
 
 let wbData = JSON.parse(localStorage.getItem('wb_data') || '{"groups":["默认分组"], "books":[]}');
@@ -2687,6 +2693,13 @@ function closeTimeColorPicker() {
 function applyTimeColor(color) {
     document.getElementById('item-time').style.color = color;
     localStorage.setItem('time_display_color', color);
+}
+function syncCheckPhoneTarget(iframe) {
+    try {
+        iframe.contentWindow.localStorage.setItem('target_check_name', localStorage.getItem('target_check_name') || '');
+    } catch(e) {
+        // 跨域情况下忽略
+    }
 }
     </script>
 

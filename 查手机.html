@@ -530,10 +530,26 @@ function updateWallpaper() {
 /* ================= QQ 核心功能 ================= */
 function renderQQList() {
     const content = document.getElementById('app-content');
+
+    // 如果内存里没有好友，先从 localStorage 读取 qq_friends
     if (currentQQFriends.length === 0) {
-        content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><i class="fas fa-lock" style="font-size:40px; margin-bottom:10px;"></i><p>QQ 已加密</p><p style="font-size:12px;">点击右上角 AI 按钮破解数据</p></div>`;
-        return;
+        const storedFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+        if (storedFriends.length === 0) {
+            content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><i class="fas fa-lock" style="font-size:40px; margin-bottom:10px;"></i><p>QQ 已加密</p><p style="font-size:12px;">点击右上角 AI 按钮破解数据</p></div>`;
+            return;
+        }
+        // 把 qq_friends 里的好友直接显示出来
+        currentQQFriends = storedFriends.map(f => ({
+            name: f.name,
+            relation: f.group || '好友'
+        }));
+        // 同时从 qq_history 里读取聊天记录，用于显示最后一条消息
+        const storedHistory = JSON.parse(localStorage.getItem('qq_history') || '{}');
+        Object.keys(storedHistory).forEach(name => {
+            qqChatHistories[name] = storedHistory[name];
+        });
     }
+
     content.innerHTML = currentQQFriends.map(f => {
         const history = qqChatHistories[f.name] || [];
         const lastMsg = history.length > 0 ? history[history.length-1].text : "无消息";
