@@ -1871,10 +1871,14 @@ async function saveData() {
     chatTitle = friend.name;
 }
 
-    const container = document.getElementById('message-container');
-    container.style.backgroundImage = 'none'; // 默认无背景，等待数据库异步加载
+const container = document.getElementById('message-container');
+const loadedFriend = container.getAttribute('data-loaded-bg-friend');
 
-    // 改为从 IndexedDB 异步读取背景图，不限制图片文件大小
+// 只有在切换了聊天对象（换了人）时，才重新读取并加载背景，防止刷消息时清空背景闪烁
+if (loadedFriend !== currentFriendName) {
+    container.style.backgroundImage = 'none';
+    container.setAttribute('data-loaded-bg-friend', currentFriendName);
+
     if (!isGroupMode) {
         getChatBg(currentFriendName).then(value => {
             if (value) {
@@ -1889,6 +1893,7 @@ async function saveData() {
             console.warn("背景加载失败:", err);
         });
     }
+}
 
 const history = chatHistories[currentFriendName] || [];
 
@@ -3420,6 +3425,8 @@ function applyChatBgUrl() {
     if (!u) return alert("内容不能为空");
     // 保存网络图片URL链接至大容量数据库
     saveChatBg(currentFriendName, u).then(() => {
+        // 强制移除已加载标记，以保证背景立刻刷新
+        document.getElementById('message-container').removeAttribute('data-loaded-bg-friend');
         renderMessages();
         alert("背景设置成功！");
         document.getElementById('chat-bg-config-modal').style.display = 'none';
@@ -3438,6 +3445,8 @@ document.getElementById('chat-bg-upload').onchange = function() {
                     // 将本地上传的高清图片压缩后转换为 Blob 并存储到大容量数据库
                     const blob = dataURLtoBlob(compressedData);
                     saveChatBg(currentFriendName, blob).then(() => {
+                        // 强制移除已加载标记，以保证背景立刻刷新
+                        document.getElementById('message-container').removeAttribute('data-loaded-bg-friend');
                         renderMessages();
                     });
                 } catch (err) {
@@ -4218,7 +4227,7 @@ closeChat = function() {
     } 
     setTimeout(renderMessages, 50); 
 }
-        function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; setTimeout(renderChatList, 10); }
+        function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; container.removeAttribute('data-loaded-bg-friend'); setTimeout(renderChatList, 10); }
         function openSettings() {
     const listGroup = document.querySelector('#settings-page .list-group:nth-child(2)');
     
