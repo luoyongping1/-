@@ -1340,6 +1340,8 @@ input:checked + .slider:before {
                 <div class="list-item" onclick="triggerPersonaDocUpload()"><div class="info">从文档导入人设</div><span>></span></div>
                 <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
                 <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
+<div class="list-item" onclick="openHeaderBeautify()"><div class="info">顶栏美化</div><span>></span></div>
+<div class="list-item" onclick="openInputBarBeautify()"><div class="info">底栏美化</div><span>></span></div>
                 <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
                 <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
                 <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
@@ -4281,6 +4283,8 @@ if (isGroupMode) {
         <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
         <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
         <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
+<div class="list-item" onclick="openHeaderBeautify()"><div class="info">顶栏美化</div><span>></span></div>
+<div class="list-item" onclick="openInputBarBeautify()"><div class="info">底栏美化</div><span>></span></div>
         <div class="list-item">
             <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
             <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
@@ -4523,6 +4527,7 @@ const originalOpenChat = openChat;
 openChat = function(n) {
     originalOpenChat(n);
     applyFriendBubbleStyle();
+    applyHeaderAndInputBarStyles(n);
 };
 function openAppBeautify() {
     document.getElementById('edit-qq-chatlist-css').value = localStorage.getItem('qq_chatlist_css') || "";
@@ -5394,6 +5399,639 @@ function finishChatMsgEdit(index) {
     renderMessages(); // 刷新页面
     alert("修改已保存");
 }
+// =========================================================================
+//                          顶栏 & 底栏美化逻辑代码
+// =========================================================================
+let tempUploadFile = null;
+let tempUploadBase64 = null;
+let currentUploadSource = ''; // 用于区分当前上传的是 hb 顶栏还是 ib 底栏
+let hbTempOpacities = {}; // 存储当前选定顶栏各部位的临时透明度数值 (100)
+let ibTempOpacities = {}; // 存储当前选定底栏各部位的临时透明度数值 (100)
+
+let currentHbTab = 'bg';
+let currentIbTab = 'bg';
+let hbTempImages = {}; 
+let ibTempImages = {}; 
+let cropCallback = null;
+let targetCropRatio = 375 / 60; 
+
+// 裁剪引擎状态变量
+let cropBoxY = 0;
+let cropStartY = 0;
+let cropStartBoxY = 0;
+let maxCropY = 0;
+let cropBoxHeight = 0;
+let imgDisplayWidth = 0;
+let imgDisplayHeight = 0;
+let imgDisplayTop = 0;
+
+// 【1】顶栏美化控制器
+function openHeaderBeautify() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    document.getElementById('header-css-input').value = friend.headerCss || "";
+    hbTempImages = {};
+    hbTempOpacities = {};
+    
+    const keys = ['bg', 'back', 'title', 'more'];
+    let promises = keys.map(k => {
+        // 读取并初始化当前好友的顶栏透明度配置，默认为 100
+        const opKey = `header_${k}_opacity_${currentFriendName}`;
+        const savedOp = localStorage.getItem(opKey);
+        hbTempOpacities[k] = savedOp !== null ? parseInt(savedOp) : 100;
+
+        return getChatBg(`header_${k}_img_${currentFriendName}`).then(val => {
+            if (val) hbTempImages[k] = val;
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        switchHbTab('bg');
+        document.getElementById('header-beautify-page').style.display = 'flex';
+    });
+}
+
+function closeHeaderBeautify() {
+    document.getElementById('header-beautify-page').style.display = 'none';
+}
+
+function switchHbTab(tab) {
+    currentHbTab = tab;
+    document.querySelectorAll('#header-beautify-page .bg-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tab-hb-${tab}`).classList.add('active');
+    
+    // 加载并渲染当前 Tab 进度条数值
+    const opVal = hbTempOpacities[tab] !== undefined ? hbTempOpacities[tab] : 100;
+    document.getElementById('hb-opacity-slider').value = opVal;
+    document.getElementById('hb-opacity-value').innerText = opVal + '%';
+
+    renderHbPreview();
+}
+
+function renderHbPreview() {
+    const box = document.getElementById('hb-preview-box');
+    const imgData = hbTempImages[currentHbTab];
+    if (imgData) {
+        if (imgData instanceof Blob) {
+            const url = URL.createObjectURL(imgData);
+            box.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+        } else {
+            box.innerHTML = `<img src="${imgData}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+        }
+    } else {
+        box.innerHTML = `暂无 ${currentHbTab === 'bg' ? '背景图' : '图标'}`;
+    }
+}
+
+function triggerHbUpload() {
+    document.getElementById('hb-file-input').click();
+}
+
+function handleHbFile(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (currentHbTab === 'bg') {
+                // 不直接进入裁剪，而是展示选项弹窗
+                tempUploadFile = file;
+                tempUploadBase64 = e.target.result;
+                currentUploadSource = 'hb';
+                document.getElementById('crop-choice-modal').style.display = 'flex';
+            } else {
+                hbTempImages[currentHbTab] = file;
+                renderHbPreview();
+            }
+        };
+        reader.readAsDataURL(file);
+        input.value = '';
+    }
+}
+
+function triggerHbUrl() {
+    const url = prompt("请输入图片 URL:");
+    if (url) {
+        hbTempImages[currentHbTab] = url;
+        renderHbPreview();
+    }
+}
+
+function clearHbImage() {
+    delete hbTempImages[currentHbTab];
+    renderHbPreview();
+}
+
+function updateHbOpacity(val) {
+    hbTempOpacities[currentHbTab] = parseInt(val);
+    document.getElementById('hb-opacity-value').innerText = val + '%';
+}
+
+function saveHeaderBeautify() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    
+    friend.headerCss = document.getElementById('header-css-input').value;
+    
+    const keys = ['bg', 'back', 'title', 'more'];
+    let promises = keys.map(k => {
+        const dbKey = `header_${k}_img_${currentFriendName}`;
+        
+        // 保存各部位的透明度值
+        localStorage.setItem(`header_${k}_opacity_${currentFriendName}`, hbTempOpacities[k]);
+
+        if (hbTempImages[k]) {
+            return saveChatBg(dbKey, hbTempImages[k]);
+        } else {
+            return saveChatBg(dbKey, null);
+        }
+    });
+    
+    Promise.all(promises).then(() => {
+        saveData();
+        applyHeaderAndInputBarStyles(currentFriendName);
+        closeHeaderBeautify();
+        alert("顶栏美化配置已保存！");
+    });
+}
+
+// 【2】底栏美化控制器
+function openInputBarBeautify() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    document.getElementById('inputbar-css-input').value = friend.inputBarCss || "";
+    ibTempImages = {};
+    ibTempOpacities = {};
+    
+    const keys = ['bg', 'plus', 'mic', 'send'];
+    let promises = keys.map(k => {
+        // 读取并初始化当前底栏透明度配置，默认为 100
+        const opKey = `inputbar_${k}_opacity_${currentFriendName}`;
+        const savedOp = localStorage.getItem(opKey);
+        ibTempOpacities[k] = savedOp !== null ? parseInt(savedOp) : 100;
+
+        return getChatBg(`inputbar_${k}_img_${currentFriendName}`).then(val => {
+            if (val) ibTempImages[k] = val;
+        });
+    });
+    
+    Promise.all(promises).then(() => {
+        switchIbTab('bg');
+        document.getElementById('inputbar-beautify-page').style.display = 'flex';
+    });
+}
+
+function closeInputBarBeautify() {
+    document.getElementById('inputbar-beautify-page').style.display = 'none';
+}
+
+function switchIbTab(tab) {
+    currentIbTab = tab;
+    document.querySelectorAll('#inputbar-beautify-page .bg-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tab-ib-${tab}`).classList.add('active');
+    
+    // 加载并渲染当前 Tab 进度条数值
+    const opVal = ibTempOpacities[tab] !== undefined ? ibTempOpacities[tab] : 100;
+    document.getElementById('ib-opacity-slider').value = opVal;
+    document.getElementById('ib-opacity-value').innerText = opVal + '%';
+
+    renderIbPreview();
+}
+
+function renderIbPreview() {
+    const box = document.getElementById('ib-preview-box');
+    const imgData = ibTempImages[currentIbTab];
+    if (imgData) {
+        if (imgData instanceof Blob) {
+            const url = URL.createObjectURL(imgData);
+            box.innerHTML = `<img src="${url}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+        } else {
+            box.innerHTML = `<img src="${imgData}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+        }
+    } else {
+        box.innerHTML = `暂无 ${currentIbTab === 'bg' ? '背景图' : '图标'}`;
+    }
+}
+
+function triggerIbUpload() {
+    document.getElementById('ib-file-input').click();
+}
+
+function handleIbFile(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (currentIbTab === 'bg') {
+                // 不直接进入裁剪，而是展示选项弹窗
+                tempUploadFile = file;
+                tempUploadBase64 = e.target.result;
+                currentUploadSource = 'ib';
+                document.getElementById('crop-choice-modal').style.display = 'flex';
+            } else {
+                ibTempImages[currentIbTab] = file;
+                renderIbPreview();
+            }
+        };
+        reader.readAsDataURL(file);
+        input.value = '';
+    }
+}
+
+function triggerIbUrl() {
+    const url = prompt("请输入图片 URL:");
+    if (url) {
+        ibTempImages[currentIbTab] = url;
+        renderIbPreview();
+    }
+}
+
+function clearIbImage() {
+    delete ibTempImages[currentIbTab];
+    renderIbPreview();
+}
+
+function updateIbOpacity(val) {
+    ibTempOpacities[currentIbTab] = parseInt(val);
+    document.getElementById('ib-opacity-value').innerText = val + '%';
+}
+
+function saveInputBarBeautify() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    
+    friend.inputBarCss = document.getElementById('inputbar-css-input').value;
+    
+    const keys = ['bg', 'plus', 'mic', 'send'];
+    let promises = keys.map(k => {
+        const dbKey = `inputbar_${k}_img_${currentFriendName}`;
+        
+        // 保存各部位的透明度值
+        localStorage.setItem(`inputbar_${k}_opacity_${currentFriendName}`, ibTempOpacities[k]);
+
+        if (ibTempImages[k]) {
+            return saveChatBg(dbKey, ibTempImages[k]);
+        } else {
+            return saveChatBg(dbKey, null);
+        }
+    });
+    
+    Promise.all(promises).then(() => {
+        saveData();
+        applyHeaderAndInputBarStyles(currentFriendName);
+        closeInputBarBeautify();
+        alert("底栏美化配置已保存！");
+    });
+}
+
+// 新增：处理裁剪选择框按钮的逻辑
+function handleCropChoice(shouldCrop) {
+    document.getElementById('crop-choice-modal').style.display = 'none';
+    if (shouldCrop) {
+        // 进入原有的手动裁剪流程
+        startCropProcess(tempUploadBase64, window.innerWidth / 60, function(croppedBlob) {
+            if (currentUploadSource === 'hb') {
+                hbTempImages[currentHbTab] = croppedBlob;
+                renderHbPreview();
+            } else {
+                ibTempImages[currentIbTab] = croppedBlob;
+                renderIbPreview();
+            }
+        });
+    } else {
+        // 直接使用原图文件 Blob，跳过裁剪
+        if (currentUploadSource === 'hb') {
+            hbTempImages[currentHbTab] = tempUploadFile;
+            renderHbPreview();
+        } else {
+            ibTempImages[currentIbTab] = tempUploadFile;
+            renderIbPreview();
+        }
+    }
+}
+
+// 【3】原生手势拖动裁剪内核逻辑 (支持移动端)
+function startCropProcess(imgBase64, ratio, callback) {
+    targetCropRatio = ratio;
+    cropCallback = callback;
+    
+    const cropModal = document.getElementById('crop-modal');
+    const sourceImg = document.getElementById('crop-source-img');
+    
+    sourceImg.src = imgBase64;
+    cropModal.style.display = 'flex';
+    
+    sourceImg.onload = function() {
+        const wrapper = document.getElementById('crop-wrapper');
+        const wrapRect = wrapper.getBoundingClientRect();
+        
+        const imgW = sourceImg.naturalWidth;
+        const imgH = sourceImg.naturalHeight;
+        
+        const wRatio = wrapRect.width / imgW;
+        const hRatio = wrapRect.height / imgH;
+        const scale = Math.min(wRatio, hRatio);
+        
+        imgDisplayWidth = imgW * scale;
+        imgDisplayHeight = imgH * scale;
+        imgDisplayTop = (wrapRect.height - imgDisplayHeight) / 2;
+        
+        const cropBox = document.getElementById('crop-box-element');
+        cropBox.style.width = imgDisplayWidth + 'px';
+        cropBoxHeight = imgDisplayWidth / targetCropRatio;
+        cropBox.style.height = cropBoxHeight + 'px';
+        
+        cropBoxY = imgDisplayTop + (imgDisplayHeight - cropBoxHeight) / 2;
+        cropBox.style.top = cropBoxY + 'px';
+        cropBox.style.left = ((wrapRect.width - imgDisplayWidth) / 2) + 'px';
+        
+        maxCropY = imgDisplayTop + imgDisplayHeight - cropBoxHeight;
+        
+        // 注册触屏拖动监听器 (Touch)
+        cropBox.ontouchstart = function(e) {
+            cropStartY = e.touches[0].clientY;
+            cropStartBoxY = cropBoxY;
+            e.preventDefault();
+        };
+        
+        cropBox.ontouchmove = function(e) {
+            const dy = e.touches[0].clientY - cropStartY;
+            let nextY = cropStartBoxY + dy;
+            if (nextY < imgDisplayTop) nextY = imgDisplayTop;
+            if (nextY > maxCropY) nextY = maxCropY;
+            cropBoxY = nextY;
+            cropBox.style.top = cropBoxY + 'px';
+            e.preventDefault();
+        };
+    };
+}
+
+function cancelCrop() {
+    document.getElementById('crop-modal').style.display = 'none';
+    cropCallback = null;
+}
+
+function confirmCrop() {
+    const sourceImg = document.getElementById('crop-source-img');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const scale = sourceImg.naturalWidth / imgDisplayWidth;
+    const physicalCropY = (cropBoxY - imgDisplayTop) * scale;
+    const physicalCropHeight = cropBoxHeight * scale;
+    
+    canvas.width = sourceImg.naturalWidth;
+    canvas.height = physicalCropHeight;
+    
+    ctx.drawImage(
+        sourceImg,
+        0, physicalCropY, sourceImg.naturalWidth, physicalCropHeight,
+        0, 0, canvas.width, canvas.height
+    );
+    
+    canvas.toBlob(function(blob) {
+        if (cropCallback) cropCallback(blob);
+        document.getElementById('crop-modal').style.display = 'none';
+    }, 'image/jpeg', 0.9);
+}
+
+// 【4】动态渲染与注入样式加载器
+function applyHeaderAndInputBarStyles(friendName) {
+    const friend = friends.find(f => f.name === friendName);
+    if (!friend) return;
+    
+    // A. 注入全局 CSS 规则
+    let hbStyle = document.getElementById(`header-custom-style-${friendName}`);
+    if (!hbStyle) {
+        hbStyle = document.createElement('style');
+        hbStyle.id = `header-custom-style-${friendName}`;
+        document.head.appendChild(hbStyle);
+    }
+    hbStyle.innerHTML = friend.headerCss || "";
+    
+    let ibStyle = document.getElementById(`inputbar-custom-style-${friendName}`);
+    if (!ibStyle) {
+        ibStyle = document.createElement('style');
+        ibStyle.id = `inputbar-custom-style-${friendName}`;
+        document.head.appendChild(ibStyle);
+    }
+    ibStyle.innerHTML = friend.inputBarCss || "";
+    
+    // 清除其他好友无用样式
+    document.querySelectorAll('style[id^="header-custom-style-"], style[id^="inputbar-custom-style-"]').forEach(el => {
+        if (el.id !== `header-custom-style-${friendName}` && el.id !== `inputbar-custom-style-${friendName}`) {
+            el.remove();
+        }
+    });
+
+    // B. 应用顶栏背景图片、高度自适应及透明度渲染
+    getChatBg(`header_bg_img_${friendName}`).then(val => {
+        const header = document.querySelector('#chat-page .header');
+        if (header) {
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                
+                // 【核心变化】：获取图片的真实物理比例，自适应改变顶栏的高度显示
+                const img = new Image();
+                img.src = url;
+                img.onload = function() {
+                    const ratio = img.height / img.width;
+                    const calculatedHeight = window.innerWidth * ratio;
+                    header.style.height = `calc(${calculatedHeight}px + env(safe-area-inset-top))`;
+                };
+
+                // 读取对应的背景透明度数值
+                const opVal = localStorage.getItem(`header_bg_opacity_${friendName}`) || "100";
+                const opacityDecimal = parseInt(opVal) / 100;
+                
+                // 动态构建伪元素背景规则，防止父容器透明导致顶栏的文字和返回按钮跟着一起透明
+                let bgOverlayStyle = document.getElementById(`header-bg-overlay-${friendName}`);
+                if (!bgOverlayStyle) {
+                    bgOverlayStyle = document.createElement('style');
+                    bgOverlayStyle.id = `header-bg-overlay-${friendName}`;
+                    document.head.appendChild(bgOverlayStyle);
+                }
+                bgOverlayStyle.innerHTML = `
+                    #chat-page .header {
+                        position: relative !important;
+                        z-index: 10 !important;
+                        background: transparent !important;
+                    }
+                    #chat-page .header::before {
+                        content: "";
+                        position: absolute;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background-image: url("${url}") !important;
+                        background-size: cover !important;
+                        background-position: center !important;
+                        opacity: ${opacityDecimal} !important;
+                        z-index: -1 !important;
+                        pointer-events: none;
+                    }
+                `;
+            } else {
+                header.style.backgroundImage = '';
+                header.style.height = ''; // 恢复微信默认的高度
+                const bgOverlayStyle = document.getElementById(`header-bg-overlay-${friendName}`);
+                if (bgOverlayStyle) bgOverlayStyle.remove();
+            }
+        }
+    });
+
+    getChatBg(`header_back_img_${friendName}`).then(val => {
+        const backBtn = document.querySelector('#chat-page .header > span:first-child');
+        if (backBtn) {
+            const opVal = localStorage.getItem(`header_back_opacity_${friendName}`) || "100";
+            backBtn.style.opacity = parseInt(opVal) / 100; // 应用透明度
+
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                backBtn.innerHTML = `<img src="${url}" style="height: 24px; vertical-align: middle;">`;
+            } else {
+                backBtn.innerHTML = '〈 返回';
+            }
+        }
+    });
+
+    getChatBg(`header_title_img_${friendName}`).then(val => {
+        const titleArea = document.getElementById('chat-title');
+        if (titleArea) {
+            const opVal = localStorage.getItem(`header_title_opacity_${friendName}`) || "100";
+            titleArea.style.opacity = parseInt(opVal) / 100; // 应用透明度
+
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                titleArea.innerHTML = `<img src="${url}" style="height: 24px; vertical-align: middle;">`;
+            } else {
+                let titleHtml = friendName;
+                if (friend.fireData && friend.fireData.isStarted) {
+                    titleHtml += `<span style="color:#ff4500; margin-left:5px;">🔥${friend.fireData.chatDays || 0}</span>`;
+                }
+                titleArea.innerHTML = titleHtml;
+            }
+        }
+    });
+
+    getChatBg(`header_more_img_${friendName}`).then(val => {
+        const moreBtn = document.querySelector('#chat-page .header > span:last-child');
+        if (moreBtn) {
+            const opVal = localStorage.getItem(`header_more_opacity_${friendName}`) || "100";
+            moreBtn.style.opacity = parseInt(opVal) / 100; // 应用透明度
+
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                moreBtn.innerHTML = `<img src="${url}" style="height: 24px; vertical-align: middle;">`;
+            } else {
+                moreBtn.innerHTML = '···';
+            }
+        }
+    });
+
+    // C. 应用底栏背景图片、高度自适应及透明度渲染
+    getChatBg(`inputbar_bg_img_${friendName}`).then(val => {
+        const inputBar = document.querySelector('#chat-page .input-bar');
+        if (inputBar) {
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                const opVal = localStorage.getItem(`inputbar_bg_opacity_${friendName}`) || "100";
+                const opacityDecimal = parseInt(opVal) / 100;
+                
+                // 动态构建伪元素背景规则，防止父容器透明导致底栏的输入框和发送按钮也一起跟着变透明
+                let bgOverlayStyle = document.getElementById(`inputbar-bg-overlay-${friendName}`);
+                if (!bgOverlayStyle) {
+                    bgOverlayStyle = document.createElement('style');
+                    bgOverlayStyle.id = `inputbar-bg-overlay-${friendName}`;
+                    document.head.appendChild(bgOverlayStyle);
+                }
+                bgOverlayStyle.innerHTML = `
+                    #chat-page .input-bar {
+                        position: relative !important;
+                        z-index: 10 !important;
+                        background: transparent !important;
+                    }
+                    #chat-page .input-bar::before {
+                        content: "";
+                        position: absolute;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background-image: url("${url}") !important;
+                        background-size: cover !important;
+                        background-position: center !important;
+                        opacity: ${opacityDecimal} !important;
+                        z-index: -1 !important;
+                        pointer-events: none;
+                    }
+                `;
+            } else {
+                inputBar.style.backgroundImage = '';
+                const bgOverlayStyle = document.getElementById(`inputbar-bg-overlay-${friendName}`);
+                if (bgOverlayStyle) bgOverlayStyle.remove();
+            }
+        }
+    });
+
+    getChatBg(`inputbar_plus_img_${friendName}`).then(val => {
+        const plusBtn = document.querySelector('#chat-page .input-bar > div:first-child');
+        if (plusBtn) {
+            const opVal = localStorage.getItem(`inputbar_plus_opacity_${friendName}`) || "100";
+            plusBtn.style.opacity = parseInt(opVal) / 100; // 应用透明度
+
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                plusBtn.innerHTML = `<img src="${url}" style="width: 26px; height: 26px; vertical-align: middle;">`;
+            } else {
+                plusBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" style="width: 26px; height: 26px; stroke: #333; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                `;
+            }
+        }
+    });
+
+    getChatBg(`inputbar_mic_img_${friendName}`).then(val => {
+        const micBtn = document.querySelector('#chat-page .input-bar > div:nth-child(3)');
+        if (micBtn) {
+            const opVal = localStorage.getItem(`inputbar_mic_opacity_${friendName}`) || "100";
+            micBtn.style.opacity = parseInt(opVal) / 100; // 应用透明度
+
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                micBtn.innerHTML = `<img src="${url}" style="width: 24px; height: 24px; vertical-align: middle;">`;
+            } else {
+                micBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; stroke: #333; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                    </svg>
+                `;
+            }
+        }
+    });
+
+    getChatBg(`inputbar_send_img_${friendName}`).then(val => {
+        const sendBtn = document.querySelector('#chat-page .input-bar > .btn-green');
+        if (sendBtn) {
+            const opVal = localStorage.getItem(`inputbar_send_opacity_${friendName}`) || "100";
+            sendBtn.style.opacity = parseInt(opVal) / 100; // 应用透明度
+
+            if (val) {
+                const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
+                sendBtn.innerHTML = `<img src="${url}" style="height: 28px; vertical-align: middle;">`;
+                sendBtn.style.background = 'transparent';
+                sendBtn.style.boxShadow = 'none';
+                sendBtn.style.padding = '0';
+            } else {
+                sendBtn.innerHTML = '发送';
+                sendBtn.style.background = '#07c160';
+                sendBtn.style.boxShadow = '0 2px 5px rgba(7, 193, 96, 0.2)';
+                sendBtn.style.padding = '8px 15px';
+            }
+        }
+    });
+}
     </script>
     <!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
@@ -5844,5 +6482,119 @@ function finishChatMsgEdit(index) {
 
 <input type="file" id="user-persona-avatar-upload" style="display:none" accept="image/*">
 <!-- === User人设相关的新页面和弹窗结束 === -->
+<!-- ================= 新增顶栏美化全屏页面 ================= -->
+<div id="header-beautify-page" class="page" style="z-index: 5200; background: #f1f1f1; display: none; flex-direction: column;">
+    <div class="header">
+        <span onclick="closeHeaderBeautify()">取消</span>
+        <span>顶栏美化</span>
+        <span class="btn-green" onclick="saveHeaderBeautify()">保存</span>
+    </div>
+    <div class="content" style="padding: 15px; display: flex; flex-direction: column; gap: 15px;">
+        <!-- 四项 Tabs 切换 -->
+        <div style="display: flex; background: rgba(0,0,0,0.05); border-radius: 10px; padding: 4px;">
+            <div class="bg-tab-btn active" id="tab-hb-bg" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchHbTab('bg')">背景图</div>
+            <div class="bg-tab-btn" id="tab-hb-back" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchHbTab('back')">返回按钮</div>
+            <div class="bg-tab-btn" id="tab-hb-title" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchHbTab('title')">标题区</div>
+            <div class="bg-tab-btn" id="tab-hb-more" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchHbTab('more')">更多按钮</div>
+        </div>
+        
+        <!-- 上传及预览区域 -->
+        <div style="background: white; border-radius: 12px; padding: 15px; text-align: center;">
+            <div id="hb-preview-box" style="width: 100%; height: 60px; background: #eee; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; border: 1px dashed #ccc; font-size: 12px; color: #999;">
+                预览区域
+            </div>
+            <!-- 新增：透明度滑块进度条 -->
+            <div style="margin: 10px 0; text-align: left;">
+                <label style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
+                    <span>图片透明度:</span>
+                    <span id="hb-opacity-value">100%</span>
+                </label>
+                <input type="range" id="hb-opacity-slider" min="0" max="100" value="100" style="width: 100%; accent-color: #07c160;" oninput="updateHbOpacity(this.value)">
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerHbUpload()">相册上传</button>
+                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerHbUrl()">输入 URL</button>
+            </div>
+            <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #fa5151; margin-bottom: 0;" onclick="clearHbImage()">清除此图片</button>
+        </div>
+        
+        <!-- CSS 代码编辑器 -->
+        <div style="background: white; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 8px;">
+            <label style="font-size: 13px; color: #666; font-weight: bold;">顶栏 CSS 代码</label>
+            <textarea id="header-css-input" style="width: 100%; height: 180px; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; font-family: monospace;" placeholder="/* 输入自定义 CSS 控制顶栏 */&#10;#chat-page .header {&#10;  border-radius: 0 0 12px 12px !important;&#10;}"></textarea>
+        </div>
+    </div>
+    <input type="file" id="hb-file-input" style="display: none;" accept="image/*" onchange="handleHbFile(this)">
+</div>
+
+<!-- ================= 新增底栏美化全屏页面 ================= -->
+<div id="inputbar-beautify-page" class="page" style="z-index: 5200; background: #f1f1f1; display: none; flex-direction: column;">
+    <div class="header">
+        <span onclick="closeInputBarBeautify()">取消</span>
+        <span>底栏美化</span>
+        <span class="btn-green" onclick="saveInputBarBeautify()">保存</span>
+    </div>
+    <div class="content" style="padding: 15px; display: flex; flex-direction: column; gap: 15px;">
+        <!-- 四项 Tabs 切换 -->
+        <div style="display: flex; background: rgba(0,0,0,0.05); border-radius: 10px; padding: 4px;">
+            <div class="bg-tab-btn active" id="tab-ib-bg" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchIbTab('bg')">背景图</div>
+            <div class="bg-tab-btn" id="tab-ib-plus" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchIbTab('plus')">加号按钮</div>
+            <div class="bg-tab-btn" id="tab-ib-mic" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchIbTab('mic')">话筒按钮</div>
+            <div class="bg-tab-btn" id="tab-ib-send" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchIbTab('send')">发送按钮</div>
+        </div>
+        
+                <!-- 上传及预览区域 -->
+        <div style="background: white; border-radius: 12px; padding: 15px; text-align: center;">
+            <div id="ib-preview-box" style="width: 100%; height: 60px; background: #eee; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; border: 1px dashed #ccc; font-size: 12px; color: #999;">
+                预览区域
+            </div>
+            <!-- 新增：透明度滑块进度条 -->
+            <div style="margin: 10px 0; text-align: left;">
+                <label style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
+                    <span>图片透明度:</span>
+                    <span id="ib-opacity-value">100%</span>
+                </label>
+                <input type="range" id="ib-opacity-slider" min="0" max="100" value="100" style="width: 100%; accent-color: #07c160;" oninput="updateIbOpacity(this.value)">
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerIbUpload()">相册上传</button>
+                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerIbUrl()">输入 URL</button>
+            </div>
+            <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #fa5151; margin-bottom: 0;" onclick="clearIbImage()">清除此图片</button>
+        </div>
+        
+        <!-- CSS 代码编辑器 -->
+        <div style="background: white; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 8px;">
+            <label style="font-size: 13px; color: #666; font-weight: bold;">底栏 CSS 代码</label>
+            <textarea id="inputbar-css-input" style="width: 100%; height: 180px; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; font-family: monospace;" placeholder="/* 输入自定义 CSS 控制底栏 */&#10;#chat-page .input-bar {&#10;  border-top: 1px dashed #ddd !important;&#10;}"></textarea>
+        </div>
+    </div>
+    <input type="file" id="ib-file-input" style="display: none;" accept="image/*" onchange="handleIbFile(this)">
+</div>
+
+<!-- ================= 新增原生图片裁剪模态窗口 ================= -->
+<div id="crop-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 5300; flex-direction: column; justify-content: space-between; align-items: center; padding: 20px 0; box-sizing: border-box;">
+    <div style="color: white; font-size: 16px; font-weight: bold;">拖动裁剪区域</div>
+    <div id="crop-wrapper" style="position: relative; width: 90vw; height: 70vh; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+        <img id="crop-source-img" style="max-width: 100%; max-height: 100%; pointer-events: none; user-select: none;">
+        <div id="crop-box-element" style="position: absolute; border: 2px solid #07c160; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); box-sizing: border-box; cursor: move; touch-action: none;"></div>
+    </div>
+    <div style="display: flex; gap: 20px; width: 90%;">
+        <button class="wx-btn" style="flex: 1; background: #333; color: white; border: none; height: 44px; margin-bottom: 0;" onclick="cancelCrop()">取消</button>
+        <button class="wx-btn" style="flex: 1; background: #07c160; color: white; border: none; height: 44px; margin-bottom: 0;" onclick="confirmCrop()">确定裁剪</button>
+    </div>
+</div>
+
+<!-- 新增：选择裁剪或直接使用的决定弹窗 -->
+<div id="crop-choice-modal" class="glass-modal" style="z-index: 9800;">
+    <div class="glass-card" style="width: 280px; padding: 20px; border-radius: 15px; text-align: center;">
+        <h3 style="margin-top: 0; color: #333; font-size: 16px;">背景图片处理</h3>
+        <p style="font-size: 13px; color: #666; margin-bottom: 20px;">上传图片为背景，是否需要裁剪图片？</p>
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn wx-btn-recharge" style="flex: 1; margin-bottom: 0; background: #07c160;" onclick="handleCropChoice(true)">裁剪图片</button>
+            <button class="wx-btn" style="flex: 1; background: #eee; color: #333; margin-bottom: 0;" onclick="handleCropChoice(false)">直接使用</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
