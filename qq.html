@@ -1647,6 +1647,7 @@ const DB_NAME = 'WeChatAIPlusDB';
 const DB_VERSION = 1;
 const AVATAR_STORE_NAME = 'userPersonaAvatars';
 let userPersonaAvatarDB;
+let chatBgDB;
 
 function openUserPersonaAvatarDB() {
     return new Promise((resolve, reject) => {
@@ -1665,10 +1666,9 @@ function openUserPersonaAvatarDB() {
         };
 
         request.onerror = (event) => {
-    console.error("IndexedDB error:", event.target.errorCode);
-    // 删掉了 alert 弹窗提示
-    reject(event.target.errorCode);
-};
+            console.error("IndexedDB error:", event.target.errorCode);
+            reject(event.target.errorCode);
+        };
     });
 }
 
@@ -1703,6 +1703,61 @@ function deleteAvatarBlob(id) {
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.errorCode);
     });
+}
+
+// 新增：初始化并打开专门存储背景图的数据库
+function openChatBgDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('ChatBackgroundsDB', 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('backgrounds')) {
+                db.createObjectStore('backgrounds', { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = (event) => {
+            chatBgDB = event.target.result;
+            resolve();
+        };
+        request.onerror = (event) => {
+            reject(event.target.errorCode);
+        };
+    });
+}
+
+// 新增：保存背景图到数据库（可支持图片文件Blob，也可以支持网络链接URL字符串）
+function saveChatBg(id, value) {
+    return new Promise((resolve, reject) => {
+        const transaction = chatBgDB.transaction(['backgrounds'], 'readwrite');
+        const store = transaction.objectStore('backgrounds');
+        const request = store.put({ id: id, value: value });
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.errorCode);
+    });
+}
+
+// 新增：从数据库读取背景图数据
+function getChatBg(id) {
+    return new Promise((resolve, reject) => {
+        const transaction = chatBgDB.transaction(['backgrounds'], 'readonly');
+        const store = transaction.objectStore('backgrounds');
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result ? request.result.value : null);
+        request.onerror = (event) => reject(event.target.errorCode);
+    });
+}
+
+// 新增：将压缩图片转换成数据库能直接识别的 Blob 文件格式的工具
+function dataURLtoBlob(dataUrl) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
 }
 // --- IndexedDB 相关代码结束 ---
 
@@ -1814,13 +1869,26 @@ async function saveData() {
     const friend = friends.find(f => f.name === currentFriendName);
     if (!friend) return;
     chatTitle = friend.name;
-    // 改为从单独的本地键中读取聊天背景，避免塞进好友列表导致崩溃
-    const savedBg = localStorage.getItem('qq_chat_bg_' + currentFriendName);
-    chatBg = savedBg ? `url("${savedBg.trim()}")` : 'none';
 }
 
     const container = document.getElementById('message-container');
-container.style.backgroundImage = chatBg;
+    container.style.backgroundImage = 'none'; // 默认无背景，等待数据库异步加载
+
+    // 改为从 IndexedDB 异步读取背景图，不限制图片文件大小
+    if (!isGroupMode) {
+        getChatBg(currentFriendName).then(value => {
+            if (value) {
+                if (value instanceof Blob) {
+                    const url = URL.createObjectURL(value);
+                    container.style.backgroundImage = `url("${url}")`;
+                } else {
+                    container.style.backgroundImage = `url("${value}")`;
+                }
+            }
+        }).catch(err => {
+            console.warn("背景加载失败:", err);
+        });
+    }
 
 const history = chatHistories[currentFriendName] || [];
 
@@ -3350,21 +3418,31 @@ function switchChatBgTab(type) {
 function applyChatBgUrl() {
     const u = document.getElementById('chat-bg-url-field').value.trim();
     if (!u) return alert("内容不能为空");
-    // 直接存储为独立的本地键中
-    localStorage.setItem('qq_chat_bg_' + currentFriendName, u);
-    renderMessages();
-    alert("背景设置成功！");
-    document.getElementById('chat-bg-config-modal').style.display = 'none';
-    document.getElementById('chat-bg-url-field').value = '';
+    // 保存网络图片URL链接至大容量数据库
+    saveChatBg(currentFriendName, u).then(() => {
+        renderMessages();
+        alert("背景设置成功！");
+        document.getElementById('chat-bg-config-modal').style.display = 'none';
+        document.getElementById('chat-bg-url-field').value = '';
+    }).catch(err => {
+        console.error("保存失败", err);
+    });
 }
-        document.getElementById('chat-bg-upload').onchange = function() {
+
+document.getElementById('chat-bg-upload').onchange = function() {
     if (this.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // 采用与朋友圈背景一致的1000宽度压缩，直接存储为独立的本地数据，且不弹出提示
             compressImage(e.target.result, 1000, function(compressedData) {
-                localStorage.setItem('qq_chat_bg_' + currentFriendName, compressedData);
-                renderMessages();
+                try {
+                    // 将本地上传的高清图片压缩后转换为 Blob 并存储到大容量数据库
+                    const blob = dataURLtoBlob(compressedData);
+                    saveChatBg(currentFriendName, blob).then(() => {
+                        renderMessages();
+                    });
+                } catch (err) {
+                    console.error("图片转换并保存失败", err);
+                }
             });
         };
         reader.readAsDataURL(this.files[0]);
@@ -4348,21 +4426,28 @@ function toggleTimeAwareness(val) {
             document.getElementById('sticker-permission-modal').style.display = 'none';
         }
 
-        window.onload = async () => { 
-    // 请求系统通知权限
-    if ("Notification" in window) {
-        Notification.requestPermission();
-    }
+    window.onload = async () => { 
+// 请求系统通知权限
+if ("Notification" in window) {
+    Notification.requestPermission();
+}
 
-    try {
-        await openUserPersonaAvatarDB(); 
-    } catch (e) {
-        console.warn("数据库初始化被跳过:", e);
-    }
+try {
+    await openUserPersonaAvatarDB(); 
+} catch (e) {
+    console.warn("数据库初始化被跳过:", e);
+}
 
-    renderChatList(); 
-    renderContactList(); 
-    renderMePage(); 
+// 新增：打开并初始化大容量背景图数据库
+try {
+    await openChatBgDB();
+} catch (e) {
+    console.warn("背景数据库初始化失败:", e);
+}
+
+renderChatList(); 
+renderContactList(); 
+renderMePage(); 
     
     const momentsBg = localStorage.getItem('moments_bg_url');
     if (momentsBg) { 
