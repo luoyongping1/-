@@ -1810,12 +1810,14 @@ async function saveData() {
         const group = groupChats.find(g => g.id === currentFriendName);
         if (!group) return;
         chatTitle = group.name;
-    } else {
-        const friend = friends.find(f => f.name === currentFriendName);
-        if (!friend) return;
-        chatTitle = friend.name;
-        chatBg = friend.chatBg ? `url("${friend.chatBg.replace(/(\r\n|\n|\r)/gm, "")}")` : 'none';
-    }
+} else {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    chatTitle = friend.name;
+    // 改为从单独的本地键中读取聊天背景，避免塞进好友列表导致崩溃
+    const savedBg = localStorage.getItem('qq_chat_bg_' + currentFriendName);
+    chatBg = savedBg ? `url("${savedBg.trim()}")` : 'none';
+}
 
     const container = document.getElementById('message-container');
 container.style.backgroundImage = chatBg;
@@ -3348,29 +3350,21 @@ function switchChatBgTab(type) {
 function applyChatBgUrl() {
     const u = document.getElementById('chat-bg-url-field').value.trim();
     if (!u) return alert("内容不能为空");
-    const friend = friends.find(f => f.name === currentFriendName);
-    if (friend) {
-        friend.chatBg = u;
-        saveData();
-        renderMessages();
-        alert("背景设置成功！");
-        document.getElementById('chat-bg-config-modal').style.display = 'none';
-        document.getElementById('chat-bg-url-field').value = '';
-    }
+    // 直接存储为独立的本地键中
+    localStorage.setItem('qq_chat_bg_' + currentFriendName, u);
+    renderMessages();
+    alert("背景设置成功！");
+    document.getElementById('chat-bg-config-modal').style.display = 'none';
+    document.getElementById('chat-bg-url-field').value = '';
 }
         document.getElementById('chat-bg-upload').onchange = function() {
     if (this.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            // 背景图不需要压得像头像那么小，宽度给 800 保证清晰度
-            compressImage(e.target.result, 800, function(compressedData) {
-                const friend = friends.find(f => f.name === currentFriendName);
-                if (friend) {
-                    friend.chatBg = compressedData;
-                    localStorage.setItem('qq_friends', JSON.stringify(friends));
-                    renderMessages();
-                    alert("聊天背景保存成功（已自动压缩）");
-                }
+            // 采用与朋友圈背景一致的1000宽度压缩，直接存储为独立的本地数据，且不弹出提示
+            compressImage(e.target.result, 1000, function(compressedData) {
+                localStorage.setItem('qq_chat_bg_' + currentFriendName, compressedData);
+                renderMessages();
             });
         };
         reader.readAsDataURL(this.files[0]);
