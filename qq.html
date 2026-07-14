@@ -2481,8 +2481,31 @@ let proactivePrompt = isProactive ? "\n【强制指令】：用户已经很久�
             // ---------------------------
 
             // 在下面这一行中，我们将 userPersonaPrompt 加入了 sys
-            let sys = `# Role
-你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}${userPersonaPrompt}
+            // 构建MCP工具提示词
+let mcpToolsPrompt = "";
+const savedMcpUrl = localStorage.getItem('mcp_server_url');
+if (savedMcpUrl && typeof mcpTools !== 'undefined' && mcpTools.length > 0) {
+    const toolList = mcpTools.map(t => `- 工具名：${t.name}，说明：${t.description || '无描述'}，参数：${JSON.stringify(t.inputSchema?.properties || {})}`).join('\n');
+    mcpToolsPrompt = `
+【MCP外部工具调用指令】：
+你现在拥有以下外部工具可以使用，当用户问到需要实时数据（比如天气、电量、系统信息、时间等）时，你必须主动调用对应工具来获取真实答案，而不是凭空猜测：
+${toolList}
+
+调用格式（必须严格按照此格式输出，不能有其他多余文字）：
+[MCP_CALL]工具名|{"参数名":"参数值"}
+
+例如：用户问电量，你就输出：[MCP_CALL]get_battery_info|{}
+例如：用户问天气，你就输出：[MCP_CALL]get_weather|{"city":"北京"}
+
+重要规则：
+1. 调用工具时，只输出 [MCP_CALL] 这一行，不要附加任何解释文字
+2. 工具调用完成后系统会把结果告诉你，你再用自然语言回答用户
+3. 如果不需要工具，就正常回复，不要乱用 [MCP_CALL]
+`;
+}
+
+let sys = `# Role
+你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}${userPersonaPrompt}${mcpToolsPrompt}
 
 【找我代付指令】：
 如果用户向你发送了代付请求卡片，你可以看到他买了什么（payItems）和金额。
@@ -2550,6 +2573,86 @@ const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
                 // --------------------------------
 
                 let rawContent = data.choices[0].message.content;
+
+// --- 处理 MCP 工具调用逻辑 ---
+if (rawContent.includes("[MCP_CALL]")) {
+    // 提取工具调用指令，格式：[MCP_CALL]工具名|{"参数"}
+    const mcpMatch = rawContent.match(/\[MCP_CALL\]([^|]+)\|(\{[\s\S]*?\})/);
+    if (mcpMatch) {
+        const toolName = mcpMatch[1].trim();
+        let toolArgs = {};
+        try {
+            toolArgs = JSON.parse(mcpMatch[2]);
+        } catch(e) {
+            toolArgs = {};
+        }
+        
+        const mcpUrl = localStorage.getItem('mcp_server_url') || '';
+        
+        // 先在聊天框里显示一条"正在调用工具"的提示
+        chatHistories[currentFriendName].push({
+            type: 'friend',
+            text: `🔧 正在调用工具：${toolName}...`,
+            isSystemNotice: true
+        });
+        renderMessages();
+        
+        try {
+            // 真正调用 MCP 工具
+            const mcpRes = await fetch(mcpUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    id: Date.now(),
+                    method: "tools/call",
+                    params: { name: toolName, arguments: toolArgs }
+                })
+            });
+            const mcpData = await mcpRes.json();
+            
+            let mcpResult = "";
+            if (mcpData.result && mcpData.result.content) {
+                mcpResult = mcpData.result.content.map(c => c.text || JSON.stringify(c)).join('\n');
+            } else if (mcpData.result) {
+                mcpResult = JSON.stringify(mcpData.result);
+            } else if (mcpData.error) {
+                mcpResult = "工具调用失败：" + mcpData.error.message;
+            }
+            
+            // 把工具结果塞回聊天历史，让 AI 用自然语言回答
+            const historyForReply = (chatHistories[currentFriendName] || []).slice(-10).map(m => ({
+                role: m.type === 'self' ? 'user' : 'assistant',
+                content: m.text || ''
+            }));
+            
+            // 加上工具结果，让 AI 再回一条自然语言答复
+            historyForReply.push({
+                role: 'user',
+                content: `[工具调用结果] 工具 ${toolName} 返回的数据是：${mcpResult}\n\n请根据以上真实数据，用自然口语回答用户的问题，不要暴露你是在查工具，就当你自然知道这些信息一样。`
+            });
+            
+            const replyRes = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: aiConfig.model,
+                    messages: [{ role: "system", content: sys }, ...historyForReply],
+                    temperature: 0.9
+                })
+            });
+            const replyData = await replyRes.json();
+            
+            if (replyData.choices && replyData.choices[0]) {
+                rawContent = replyData.choices[0].message.content;
+            } else {
+                rawContent = `工具数据已获取：${mcpResult}`;
+            }
+        } catch(e) {
+            rawContent = `抱歉，工具调用失败了：${e.message}`;
+        }
+    }
+}
 
 // --- 处理 AI 支付逻辑 ---
 if (rawContent.includes("[PAY_SUCCESS]")) {
@@ -4293,6 +4396,7 @@ if (isGroupMode) {
         <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
         <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
         <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
+        <div class="list-item" onclick="openMcpTools()"><div class="info">MCP工具</div><span>></span></div>
     `;
 }
     // 新增：根据是否是群聊，修改底部删除按钮的文字
@@ -6596,5 +6700,282 @@ function applyHeaderAndInputBarStyles(friendName) {
         </div>
     </div>
 </div>
+<!-- MCP工具弹窗 -->
+<div id="mcp-modal" class="glass-modal" style="z-index: 9900; align-items: flex-end;">
+    <div style="background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom));">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 17px; color: #333;">MCP工具</h3>
+            <span onclick="closeMcpModal()" style="font-size: 22px; color: #999; cursor: pointer;">✕</span>
+        </div>
+
+        <!-- 服务器地址配置 -->
+        <div style="background: #f7f7f7; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <div style="font-size: 13px; color: #888; margin-bottom: 8px;">MCP服务器地址</div>
+            <input type="text" id="mcp-server-url" 
+    style="width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 14px; outline: none; box-sizing: border-box; background: white;"
+    placeholder="请输入MCP服务器地址"
+    value="">
+<div style="font-size: 11px; color: #aaa; margin-top: 6px;">请填写你自己的MCP服务地址，不填无法使用工具</div>
+
+        <!-- 工具列表区域 -->
+        <div style="background: #f7f7f7; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="font-size: 13px; color: #888;">可用工具列表</div>
+                <div id="mcp-conn-status" style="font-size: 11px; color: #aaa;">未连接</div>
+            </div>
+            <div id="mcp-tool-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="text-align: center; color: #ccc; font-size: 13px; padding: 20px 0;">点击下方"获取工具"按钮连接服务</div>
+            </div>
+        </div>
+
+        <!-- 手动调用工具区域 -->
+        <div id="mcp-call-area" style="background: #f7f7f7; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: none;">
+            <div style="font-size: 13px; color: #888; margin-bottom: 8px;">调用工具：<span id="mcp-selected-tool-name" style="color: #576b95; font-weight: bold;"></span></div>
+            <textarea id="mcp-tool-args" 
+                style="width: 100%; height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; background: white; font-family: monospace;"
+                placeholder='{"参数名": "参数值"}'></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="wx-btn" style="flex: 1; height: 38px; font-size: 13px; background: #eee; color: #666; margin-bottom: 0;" onclick="cancelMcpCall()">取消</button>
+                <button class="wx-btn wx-btn-recharge" style="flex: 1; height: 38px; font-size: 13px; margin-bottom: 0;" onclick="executeMcpTool()">执行</button>
+            </div>
+        </div>
+
+        <!-- 执行结果区域 -->
+        <div id="mcp-result-area" style="background: #f7f7f7; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: none;">
+            <div style="font-size: 13px; color: #888; margin-bottom: 8px;">执行结果</div>
+            <div id="mcp-result-content" style="font-size: 13px; color: #333; line-height: 1.6; word-break: break-all; white-space: pre-wrap; background: white; padding: 10px; border-radius: 8px; border: 1px solid #eee; max-height: 200px; overflow-y: auto;"></div>
+            <button class="wx-btn wx-btn-recharge" style="width: 100%; height: 38px; font-size: 13px; margin-top: 10px; margin-bottom: 0;" onclick="sendMcpResultToChat()">将结果发送到聊天</button>
+        </div>
+
+        <!-- 底部按钮 -->
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; height: 44px; font-size: 14px; background: #eee; color: #333; margin-bottom: 0;" onclick="fetchMcpTools()">获取工具列表</button>
+            <button class="wx-btn wx-btn-recharge" style="flex: 1; height: 44px; font-size: 14px; margin-bottom: 0;" onclick="saveMcpConfig()">保存地址</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== MCP工具相关代码 =====
+
+let mcpTools = [];
+let mcpSelectedTool = null;
+let mcpLastResult = "";
+
+// 打开MCP弹窗
+function openMcpTools() {
+    // 读取之前保存的服务器地址
+    const savedUrl = localStorage.getItem('mcp_server_url') || '';
+    document.getElementById('mcp-server-url').value = savedUrl;
+    
+    // 重置结果区域
+    document.getElementById('mcp-call-area').style.display = 'none';
+    document.getElementById('mcp-result-area').style.display = 'none';
+    
+    // 显示弹窗
+    document.getElementById('mcp-modal').style.display = 'flex';
+}
+
+// 关闭MCP弹窗
+function closeMcpModal() {
+    document.getElementById('mcp-modal').style.display = 'none';
+}
+
+// 保存服务器地址
+function saveMcpConfig() {
+    const url = document.getElementById('mcp-server-url').value.trim();
+    if (!url) return alert("请输入服务器地址");
+    localStorage.setItem('mcp_server_url', url);
+    alert("地址已保存：" + url);
+}
+
+// 获取工具列表（通过标准MCP协议的 tools/list 请求）
+async function fetchMcpTools() {
+    const serverUrl = document.getElementById('mcp-server-url').value.trim();
+if (!serverUrl) return alert("请先填写并保存MCP服务器地址");
+    
+    const statusEl = document.getElementById('mcp-conn-status');
+    const listEl = document.getElementById('mcp-tool-list');
+    
+    statusEl.style.color = '#aaa';
+    statusEl.innerText = '连接中...';
+    listEl.innerHTML = '<div style="text-align:center; color:#aaa; padding:15px;">正在获取工具列表...</div>';
+    
+    try {
+        // MCP标准协议：先发 initialize 握手
+        const initRes = await fetch(serverUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "initialize",
+                params: {
+                    protocolVersion: "2024-11-05",
+                    capabilities: {},
+                    clientInfo: { name: "WeChatAIPlus", version: "1.0" }
+                }
+            })
+        });
+        
+        // 再发 tools/list 请求
+        const toolsRes = await fetch(serverUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 2,
+                method: "tools/list",
+                params: {}
+            })
+        });
+        
+        const toolsData = await toolsRes.json();
+        
+        if (toolsData.result && toolsData.result.tools) {
+            mcpTools = toolsData.result.tools;
+            statusEl.style.color = '#07c160';
+            statusEl.innerText = '✅ 已连接 · ' + mcpTools.length + ' 个工具';
+            renderMcpToolList();
+        } else {
+            throw new Error("返回数据格式异常");
+        }
+        
+    } catch (e) {
+        statusEl.style.color = '#fa5151';
+        statusEl.innerText = '❌ 连接失败';
+        listEl.innerHTML = `<div style="text-align:center; padding:15px; color:#fa5151; font-size:12px; line-height:1.8;">
+            连接失败！请检查：<br>
+            1. LoverConnect 通知栏是否有常驻通知<br>
+            2. 服务器地址是否正确<br>
+            3. 手机和服务不在同一网络时请用 127.0.0.1<br>
+            <span style="color:#888;">错误：${e.message}</span>
+        </div>`;
+    }
+}
+
+// 渲染工具列表
+function renderMcpToolList() {
+    const listEl = document.getElementById('mcp-tool-list');
+    if (mcpTools.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; color:#ccc; padding:15px;">暂无可用工具</div>';
+        return;
+    }
+    
+    listEl.innerHTML = mcpTools.map((tool, idx) => `
+        <div onclick="selectMcpTool(${idx})" style="background: white; border-radius: 10px; padding: 12px; cursor: pointer; border: 1px solid #eee; transition: all 0.2s;" 
+            onmousedown="this.style.background='#f0f0f0'" onmouseup="this.style.background='white'" ontouchstart="this.style.background='#f0f0f0'" ontouchend="this.style.background='white'">
+            <div style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px;">🔧 ${tool.name}</div>
+            <div style="font-size: 12px; color: #888; line-height: 1.5;">${tool.description || '暂无描述'}</div>
+        </div>
+    `).join('');
+}
+
+// 选中某个工具准备调用
+function selectMcpTool(idx) {
+    mcpSelectedTool = mcpTools[idx];
+    document.getElementById('mcp-selected-tool-name').innerText = mcpSelectedTool.name;
+    
+    // 自动生成参数模板
+    let argTemplate = {};
+    if (mcpSelectedTool.inputSchema && mcpSelectedTool.inputSchema.properties) {
+        Object.keys(mcpSelectedTool.inputSchema.properties).forEach(key => {
+            argTemplate[key] = "";
+        });
+    }
+    document.getElementById('mcp-tool-args').value = Object.keys(argTemplate).length > 0 
+        ? JSON.stringify(argTemplate, null, 2) 
+        : '{}';
+    
+    document.getElementById('mcp-call-area').style.display = 'block';
+    document.getElementById('mcp-result-area').style.display = 'none';
+    
+    // 滚动到调用区域
+    document.getElementById('mcp-call-area').scrollIntoView({ behavior: 'smooth' });
+}
+
+// 取消调用
+function cancelMcpCall() {
+    document.getElementById('mcp-call-area').style.display = 'none';
+    mcpSelectedTool = null;
+}
+
+// 执行工具调用
+async function executeMcpTool() {
+    if (!mcpSelectedTool) return;
+    
+    const serverUrl = document.getElementById('mcp-server-url').value.trim();
+if (!serverUrl) return alert("请先填写MCP服务器地址");
+    const argsText = document.getElementById('mcp-tool-args').value.trim();
+    
+    let args = {};
+    try {
+        args = JSON.parse(argsText);
+    } catch (e) {
+        return alert("参数格式错误，请检查JSON格式是否正确");
+    }
+    
+    const execBtn = document.querySelector('#mcp-call-area button:last-child');
+    execBtn.innerText = '执行中...';
+    execBtn.style.pointerEvents = 'none';
+    
+    try {
+        const res = await fetch(serverUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 3,
+                method: "tools/call",
+                params: {
+                    name: mcpSelectedTool.name,
+                    arguments: args
+                }
+            })
+        });
+        
+        const data = await res.json();
+        
+        let resultText = "";
+        if (data.result && data.result.content) {
+            // 标准MCP返回格式
+            resultText = data.result.content.map(c => c.text || JSON.stringify(c)).join('\n');
+        } else if (data.result) {
+            resultText = typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2);
+        } else if (data.error) {
+            resultText = "❌ 工具执行失败：" + (data.error.message || JSON.stringify(data.error));
+        } else {
+            resultText = JSON.stringify(data, null, 2);
+        }
+        
+        mcpLastResult = resultText;
+        document.getElementById('mcp-result-content').innerText = resultText;
+        document.getElementById('mcp-result-area').style.display = 'block';
+        document.getElementById('mcp-call-area').style.display = 'none';
+        
+    } catch (e) {
+        alert("工具调用失败：" + e.message);
+    } finally {
+        execBtn.innerText = '执行';
+        execBtn.style.pointerEvents = 'auto';
+    }
+}
+
+// 将执行结果发送到聊天
+function sendMcpResultToChat() {
+    if (!mcpLastResult) return;
+    
+    const msgInput = document.getElementById('msg-input');
+    if (msgInput) {
+        msgInput.value = "【MCP工具结果】\n" + mcpLastResult;
+    }
+    
+    closeMcpModal();
+    closeSettings();
+    alert("结果已填入输入框，确认后点发送");
+}
+
+// ===== MCP工具相关代码结束 =====
+</script>
 </body>
 </html>
