@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>微博论坛</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* =========================================================
+           ★ 注入微博美化主题 JSON 内部的所有 CSS 样式
+           ========================================================= */
+        :root {
+            --me-cover: url("https://nos.netease.com/ysf/72da4f895e178bc08be049495e2b6a36.jpeg");    /* 你自己背景 */
+            --me-vvip:  url("https://nos.netease.com/ysf/ff7ff05406c3c3a414b0517ffae913ee.png");
+            --me-avatar-size: 88px;
+            --me-avatar-left: 16px;
+            --me-avatar-top: 92px;
+            --me-cover-height: 140px;
+            --me-vvip-w: 56px;
+            --me-vvip-h: 20px;
+        }
+        .nuo-forum-me-header,
+        .profile-header.personal-profile {
+            position: relative !important;
+            background-color: #ffffff !important;
+            background-image: var(--me-cover) !important;
+            background-repeat: no-repeat !important;
+            background-position: top center !important;
+            background-size: 100% var(--me-cover-height) !important;
+            padding: calc(var(--me-cover-height) + 14px) 16px 18px
+                     calc(var(--me-avatar-left) + var(--me-avatar-size) + 14px) !important;
+            margin: 0 !important;
+            border: none !important;
+            overflow: visible !important;
+            display: block !important;
+        }
+
+        /* 头像 — 橙色光环 */
+        .nuo-forum-me-avatar,
+        .profile-hero-avatar {
+            position: absolute !important;
+            left: var(--me-avatar-left) !important;
+            top: var(--me-avatar-top) !important;
+            width: var(--me-avatar-size) !important;
+            height: var(--me-avatar-size) !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
+            background: #ffe0b2 !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 0 3px #ff8200, 0 2px 8px rgba(0,0,0,0.25) !important;
+            z-index: 3 !important;
+        }
+        /* ★ 小V — ::after，头像右下角 */
+        .nuo-forum-me-header::after {
+            content: "" !important;
+            position: absolute !important;
+            left: calc(var(--me-avatar-left) + var(--me-avatar-size) - 26px) !important;
+            top: calc(var(--me-avatar-top) + var(--me-avatar-size) - 26px) !important;
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 50% !important;
+            background:
+                url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 7l4 10h2l4-10h-2.6l-2.4 6.5L8.6 7z' fill='white'/%3E%3C/svg%3E") center / 70% no-repeat,
+                #ff8200 !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+            z-index: 4 !important;
+            pointer-events: none !important;
+        }
+
+        /* 名字 */
+        .nuo-forum-me-name {
+            color: #333333 !important;
+            font-size: 20px !important;
+            font-weight: 800 !important;
+            margin: 0 0 8px 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .nuo-forum-me-name::after {
+            content: "" !important;
+            display: inline-block !important;
+            width: var(--me-vvip-w) !important;
+            height: var(--me-vvip-h) !important;
+            background: var(--me-vvip) center / contain no-repeat !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            flex-shrink: 0 !important;
+        }
+
+        /* 编辑按钮 */
+        .nuo-forum-me-header .btn-secondary {
+            background: #ffffff !important;
+            color: #ff8200 !important;
+            border: 1px solid #ffb347 !important;
+            border-radius: 18px !important;
+            padding: 7px 18px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
+
+        .profile-stats {
+            display: flex !important;
+            justify-content: space-around !important;
+            align-items: center !important;
+            background: #ffffff !important;
+            border-radius: 12px !important;
+            margin: 10px !important;
+            padding: 16px 14px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+        }
+        .profile-stats .stat-box {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 5px !important;
+            flex: 1 !important;
+            cursor: pointer !important;
+        }
+        /* 数字 — 橙色加粗 */
+        .profile-stats .stat-box strong {
+            color: #ff8200 !important;
+            font-weight: 800 !important;
+            font-size: 19px !important;
+            line-height: 1.1 !important;
+        }
+        /* 标签 — 灰色 */
+        .profile-stats .stat-box span {
+            color: #999999 !important;
+            font-size: 12px !important;
+            font-weight: 400 !important;
+        }
+        /* 点击高亮 */
+        .profile-stats .stat-box:active strong {
+            color: #f25c54 !important;
+        }
+
+        .nuo-forum-profile-header {
+            position: relative !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 10px !important;
+            background: linear-gradient(135deg, #ffb347 0%, #ff8200 55%, #f25c54 100%) !important;
+            padding: 24px 16px 20px !important;
+            margin: 0 !important;
+            border: none !important;
+            overflow: visible !important;
+        }
+
+        .nuo-forum-profile-header .profile-hero-avatar,
+        .nuo-forum-profile-header .nuo-forum-profile-avatar {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            width: 80px !important;
+            height: 80px !important;
+            min-width: 80px !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
+            border: 3px solid #ffffff !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
+            margin: 0 !important;
+        }
+
+        /* 名字行 */
+        .nuo-forum-profile-header .profile-name-row {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            margin: 0 !important;
+        }
+        .nuo-forum-profile-header .nuo-forum-profile-name {
+            color: #ffffff !important;
+            font-size: 19px !important;
+            font-weight: 800 !important;
+            margin: 0 !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+        }
+        .nuo-forum-profile-header .level-badge {
+            background: rgba(255,255,255,0.95) !important;
+            color: #ff8200 !important;
+        }
+
+        /* 按钮行 */
+        .nuo-forum-profile-header .profile-actions-row {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+            width: 100% !important;
+            margin-top: 4px !important;
+        }
+        .nuo-forum-profile-header .btn-primary {
+            background: #ffffff !important;
+            color: #ff8200 !important;
+            border: none !important;
+            border-radius: 18px !important;
+            padding: 8px 22px !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+            flex: 0 0 auto !important;
+        }
+        .nuo-forum-profile-header .btn-secondary {
+            background: rgba(255,255,255,0.2) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.6) !important;
+            border-radius: 18px !important;
+            padding: 8px 22px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+            flex: 0 0 auto !important;
+        }
+
+        :root {
+            /* ===== 全局 — 微博浅灰背景 ===== */
+            --forum-page-bg: #f5f5f5;
+            --forum-page-bg-image: none;
+            --forum-page-bg-size: auto;
+            --forum-page-bg-position: center;
+            --forum-page-bg-repeat: no-repeat;
+            --forum-page-bg-attachment: fixed;
+            --forum-text: #333333;
+            --forum-text-muted: #999999;
+            --forum-link: #eb7350;
+            --forum-accent: #ff8200;
+            --forum-divider: #ececec;
+
+            /* ===== 顶栏 — 微博橙红渐变 ===== */
+            --forum-chrome-bg: #ff8200;
+            --forum-chrome-bg-image: linear-gradient(135deg, #ffb347 0%, #ff8200 50%, #f25c54 100%);
+            --forum-chrome-bg-size: 100% 100%;
+            --forum-chrome-bg-position: center;
+            --forum-chrome-shadow: 0 2px 6px rgba(242, 92, 84, 0.25);
+            --forum-chrome-border: none;
+            --forum-chrome-backdrop-filter: none;
+            --forum-chrome-title-color: #ffffff;
+            --forum-chrome-title-size: 18px;
+            --forum-chrome-title-weight: 700;
+            --forum-chrome-title-letter-spacing: 0.5px;
+            --forum-chrome-title-text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            --forum-chrome-icon-color: #ffffff;
+            --forum-chrome-icon-bg: rgba(255,255,255,0.18);
+            --forum-chrome-icon-radius: 50%;
+
+            /* ===== 底栏 — 微博白色底栏带橙色高亮 ===== */
+            --forum-chrome-nav-bg: #ffffff;
+            --forum-chrome-nav-bg-image: none;
+            --forum-chrome-nav-shadow: 0 -1px 0 #ececec, 0 -2px 10px rgba(0,0,0,0.04);
+            --forum-chrome-nav-border: none;
+            --forum-chrome-nav-radius: 0;
+            --forum-chrome-nav-backdrop-filter: none;
+            --forum-chrome-nav-active: #ff8200;
+            --forum-chrome-nav-active-bg: transparent;
+            --forum-chrome-nav-active-transform: none;
+            --forum-chrome-nav-inactive: #999999;
+            --forum-chrome-nav-label-size: 10px;
+            --forum-chrome-nav-label-weight: 500;
+
+            /* ===== FAB — 微博橙色发布按钮 ===== */
+            --forum-chrome-fab-bg: linear-gradient(135deg, #ffb347 0%, #ff8200 60%, #f25c54 100%);
+            --forum-chrome-fab-bg-image: none;
+            --forum-chrome-fab-color: #ffffff;
+            --forum-chrome-fab-shadow: 0 4px 12px rgba(255,130,0,0.5), 0 2px 4px rgba(242,92,84,0.3);
+            --forum-chrome-fab-radius: 50%;
+            --forum-chrome-fab-border: 3px solid #ffffff;
+            --forum-chrome-fab-transform: translateY(-8px);
+            --forum-chrome-fab-icon-url: none;
+            --forum-chrome-fab-icon-size: 22px;
+
+            /* ===== 帖子卡片 — 微博白色卡片 ===== */
+            --forum-post-bg: #ffffff;
+            --forum-post-bg-image: none;
+            --forum-post-bg-size: auto;
+            --forum-post-bg-position: center;
+            --forum-post-border: none;
+            --forum-post-border-left: none;
+            --forum-post-radius: 10px;
+            --forum-post-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            --forum-post-backdrop-filter: none;
+
+            /* ===== 帖子文字 ===== */
+            --forum-post-title-color: #333333;
+            --forum-post-title-size: 16px;
+            --forum-post-title-weight: 700;
+            --forum-post-title-letter-spacing: 0;
+            --forum-post-title-text-shadow: none;
+            --forum-post-title-line-height: 1.4;
+            --forum-post-excerpt-color: #555555;
+            --forum-post-excerpt-size: 15px;
+            --forum-post-excerpt-line-height: 1.6;
+            --forum-post-board-tag-bg: #fff4e6;
+            --forum-post-board-tag-color: #ff8200;
+            --forum-post-board-tag-radius: 4px;
+            --forum-post-board-tag-padding: 2px 8px;
+            --forum-post-board-tag-size: 12px;
+            --forum-post-board-tag-weight: 600;
+            --forum-post-board-tag-border: 1px solid #ffd9b3;
+            --forum-post-time-color: #999999;
+            --forum-post-author-color: #eb7350;
+            --forum-post-author-weight: 600;
+            --forum-post-avatar-radius: 50%;
+            --forum-post-avatar-border: none;
+            --forum-post-avatar-ring: 0 0 0 2px #ffffff, 0 1px 4px rgba(0,0,0,0.1);
+            --forum-post-thumb-radius: 6px;
+            --forum-post-metric-num-color: #ff8200;
+            --forum-post-metric-num-weight: 700;
+            --forum-post-metric-num-size: 16px;
+            --forum-post-metric-label-color: #999999;
+
+            /* ===== 板块 ===== */
+            --forum-board-card-bg: #ffffff;
+            --forum-board-card-bg-image: none;
+            --forum-board-card-radius: 10px;
+            --forum-board-card-border: none;
+            --forum-board-card-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            --forum-board-card-padding: 14px;
+            --forum-board-icon-bg: linear-gradient(135deg, #ffb347, #ff8200);
+            --forum-board-icon-radius: 10px;
+            --forum-board-icon-size: 44px;
+            --forum-board-name-color: #333333;
+            --forum-board-name-size: 15px;
+            --forum-board-name-weight: 600;
+            --forum-board-desc-color: #999999;
+            --forum-board-desc-size: 12px;
+            --forum-board-hero-bg: linear-gradient(135deg, #ffb347 0%, #ff8200 50%, #f25c54 100%);
+            --forum-board-hero-bg-image: none;
+            --forum-board-hero-min-height: 110px;
+            --forum-board-hero-padding: 22px 16px;
+            --forum-board-hero-title-color: #ffffff;
+            --forum-board-hero-title-size: 20px;
+            --forum-board-hero-title-weight: 700;
+            --forum-board-hero-desc-color: rgba(255,255,255,0.9);
+            --forum-board-cover-radius: 10px;
+
+            /* ===== 个人页 ===== */
+            --forum-profile-bg: #f5f5f5;
+            --forum-profile-bg-image: none;
+            --forum-profile-header-bg: linear-gradient(135deg, #ffb347 0%, #ff8200 50%, #f25c54 100%);
+            --forum-profile-header-bg-image: none;
+            --forum-profile-header-padding: 26px 16px;
+            --forum-profile-avatar-size: 72px;
+            --forum-profile-avatar-radius: 50%;
+            --forum-profile-avatar-border: 3px solid #ffffff;
+            --forum-profile-avatar-ring: 0 2px 8px rgba(0,0,0,0.15);
+            --forum-profile-name-color: #ffffff;
+            --forum-profile-name-size: 19px;
+            --forum-profile-name-weight: 700;
+            --forum-profile-name-text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+            --forum-profile-stats-bg: #ffffff;
+            --forum-profile-stats-radius: 10px;
+            --forum-profile-stats-padding: 14px;
+            --forum-profile-stats-num-color: #ff8200;
+            --forum-profile-stats-num-weight: 700;
+            --forum-profile-stats-label-color: #999999;
+        }
+
+        .nuo-forum-chrome-title::before {
+            content: "";
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            margin-right: 8px;
+            vertical-align: -5px;
+            background: url("https://nos.netease.com/ysf/3b80a23576a9b0b6117425ca2043ba75.png") center / contain no-repeat;
+        }
+
+        .nuo-forum-chrome,
+        .forum-top-chrome {
+            background: linear-gradient(135deg, #ffb347 0%, #ff8200 50%, #f25c54 100%) !important;
+            box-shadow: 0 2px 8px rgba(242,92,84,0.25) !important;
+            border: none !important;
+        }
+        .nuo-forum-chrome-title,
+        .forum-top-chrome-title {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.15) !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        .forum-bottom-nav.nuo-forum-chrome-nav,
+        .forum-bottom-nav {
+            background: #ffffff !important;
+            background-image: none !important;
+            box-shadow: 0 -1px 0 #ececec, 0 -2px 10px rgba(0,0,0,0.04) !important;
+            border: none !important;
+        }
+        .forum-bottom-nav .nav-item {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            transition: all 0.15s ease !important;
+            padding: 6px 4px !important;
+        }
+        .forum-bottom-nav .nav-item svg {
+            stroke: #999999 !important;
+            filter: none !important;
+            transition: all 0.15s ease !important;
+        }
+        .forum-bottom-nav .nav-item span {
+            color: #999999 !important;
+            text-shadow: none !important;
+            font-size: 10px !important;
+            font-weight: 500 !important;
+            margin-top: 2px !important;
+        }
+        .forum-bottom-nav .nav-item.active svg {
+            stroke: #ff8200 !important;
+            filter: drop-shadow(0 1px 3px rgba(255,130,0,0.35));
+        }
+
+        .forum-events-banner {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            margin: 10px 12px !important;
+            padding: 8px 12px !important;
+            background: #ffffff !important;
+            border: none !important;
+            border-radius: 10px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+            overflow: hidden !important;
+        }
+        .forum-events-banner .event-tag {
+            flex-shrink: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 3px !important;
+            padding: 3px 9px !important;
+            background: linear-gradient(135deg, #ff8200, #f25c54) !important;
+            color: #ffffff !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            border: none !important;
+            border-radius: 10px !important;
+            text-shadow: none !important;
+            box-shadow: 0 1px 3px rgba(242,92,84,0.3) !important;
+        }
+        .forum-events-banner .event-tag::before {
+            content: "🔥";
+            font-size: 11px;
+        }
+        .forum-events-banner .event-list-marquee {
+            flex: 1 !important;
+            overflow: hidden !important;
+            white-space: nowrap !important;
+        }
+        .forum-events-banner .event-item {
+            display: inline-block !important;
+            color: #333333 !important;
+            font-size: 13px !important;
+            font-weight: 505 !important;
+            text-shadow: none !important;
+            padding-left: 100% !important;
+            animation: nuo-marquee 18s linear infinite !important;
+        }
+        @keyframes nuo-marquee {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .quick-boards {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            gap: 8px !important;
+            padding: 4px 12px 12px !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+        }
+        .quick-boards::-webkit-scrollbar { display: none !important; }
+        .quick-boards .quick-board-chip {
+            flex-shrink: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            padding: 6px 14px !important;
+            background: #ffffff !important;
+            color: #ff8200 !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            border: 1px solid #ffd9b3 !important;
+            border-radius: 16px !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+            text-shadow: none !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            white-space: nowrap !important;
+        }
+        .quick-boards .quick-board-chip:active {
+            background: #fff4e6 !important;
+            transform: scale(0.96) !important;
+        }
+
+        .nuo-forum-post-card,
+        .forum-post.nuo-forum-post:not(.detail-mode) {
+            background: #ffffff !important;
+            background-image: none !important;
+            border: none !important;
+            border-radius: 10px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+            margin: 8px 10px !important;
+            padding: 12px 14px !important;
+            position: relative !important;
+        }
+
+        /* 顶部右侧推/评数 */
+        .nuo-forum-post-card .post-metrics-side {
+            color: #999999 !important;
+        }
+        .nuo-forum-post-card .metric-num {
+            color: #ff8200 !important;
+            font-weight: 700 !important;
+        }
+        .nuo-forum-post-card .metric-label {
+            color: #999999 !important;
+        }
+
+        /* 板块标签 */
+        .nuo-forum-post-card .post-board-tag {
+            background: #fff4e6 !important;
+            color: #ff8200 !important;
+            border: 1px solid #ffd9b3 !important;
+            border-radius: 4px !important;
+            padding: 2px 8px !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+        }
+
+        /* 标题 */
+        .nuo-forum-post-card .post-title-forum {
+            color: #333333 !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            line-height: 1.4 !important;
+        }
+
+        /* 摘要 */
+        .nuo-forum-post-card .post-excerpt {
+            color: #555555 !important;
+            font-size: 14px !important;
+            line-height: 1.55 !important;
+        }
+
+        .nuo-forum-post-card .post-author-link {
+            color: #eb7350 !important;
+            font-weight: 600 !important;
+        }
+        .nuo-forum-post-card .level-badge {
+            background: linear-gradient(135deg, #ffb347, #ff8200) !important;
+            color: #ffffff !important;
+            border-radius: 4px !important;
+            padding: 1px 6px !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+        }
+
+        .nuo-forum-post-detail {
+            background: #ffffff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 14px 16px 8px !important;
+            margin: 0 !important;
+            border-bottom: 8px solid #f5f5f5 !important;
+        }
+
+        /* 评论区 */
+        .nuo-forum-comments-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            padding: 12px 16px !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+        }
+        .nuo-forum-comment.comment-thread {
+            display: flex !important;
+            gap: 10px !important;
+            padding: 12px 16px !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #f5f5f5 !important;
+            cursor: pointer !important;
+        }
+        .nuo-forum-comment.comment-thread .comment-author {
+            color: #eb7350 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
+
+        /* 底部导航核心结构 */
+        .forum-bottom-nav-inner {
+            display: flex !important;
+            align-items: stretch !important;
+            justify-content: space-around !important;
+            padding: 6px 0 8px !important;
+        }
+        .forum-bottom-nav .nav-item {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 3px !important;
+            background: transparent !important;
+            flex: 1 1 0 !important;
+            position: relative !important;
+        }
+        .forum-bottom-nav .nav-item::before {
+            content: "" !important;
+            display: block !important;
+            width: 28px !important;
+            height: 28px !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            background-size: 28px 28px !important;
+            margin: 0 auto !important;
+        }
+        
+        .forum-bottom-nav-inner > *:nth-child(1)::before { background-image: url("https://nos.netease.com/ysf/681f505f45eaa7ee1363826b3ace050c.png") !important; }
+        .forum-bottom-nav-inner > *:nth-child(2)::before { background-image: url("https://nos.netease.com/ysf/91c7402d52abc7cef8f77e9344adedbe.png") !important; }
+        .forum-bottom-nav-inner > *:nth-child(3)::before { background-image: url("https://nos.netease.com/ysf/913f2c2e190785da48eb601178ea5db5.png") !important; }
+        .forum-bottom-nav-inner > *:nth-child(4)::before { background-image: url("https://nos.netease.com/ysf/4d8d03f1580c68b171c28e2f5b02d9a1.png") !important; }
+        .forum-bottom-nav-inner > *:nth-child(5)::before { background-image: url("https://nos.netease.com/ysf/cbced56610fc148c4f5e44a21e8d58ef.png") !important; }
+
+        .forum-bottom-nav-inner > *:nth-child(1)::after { content: "微博" !important; }
+        .forum-bottom-nav-inner > *:nth-child(2)::after { content: "超话" !important; }
+        .forum-bottom-nav-inner > *:nth-child(3)::after { content: "生成" !important; }
+        .forum-bottom-nav-inner > *:nth-child(4)::after { content: "消息" !important; }
+        .forum-bottom-nav-inner > *:nth-child(5)::after { content: "我"   !important; }
+
+        .forum-bottom-nav .nav-item::after {
+            display: block !important;
+            font-size: 10px !important;
+            font-weight: 500 !important;
+            color: #999999 !important;
+            text-align: center !important;
+            width: 100% !important;
+        }
+        .forum-bottom-nav .nav-item.active::after {
+            color: #ff8200 !important;
+            font-weight: 600 !important;
+        }
+
+        /* 其它自定义微噪点与滚动区域 */
+        body {
+            background-color: #f5f5f5;
+        }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .floating-back-btn {
+            position: fixed;
+            bottom: 110px;
+            right: 20px;
+            width: 52px;
+            height: 52px;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden select-none flex justify-center text-gray-800">
+<div id="app" class="w-full max-w-md h-full flex flex-col justify-between relative overflow-hidden bg-white shadow-xl">
+    
+    <!-- 🏠 全局悬浮返回桌面按钮 -->
+    <div @click="backToHome" class="floating-back-btn">
+        <span class="text-2xl text-white">🏠</span>
+    </div>
+
+    <!-- 隐藏的头像与背景上传控件 -->
+    <input type="file" ref="avatarFileInput" accept="image/*" class="hidden" @change="handleAvatarUpload">
+    <input type="file" ref="bgFileInput" accept="image/*" class="hidden" @change="handleBgUpload">
+
+    <!-- 1. 顶栏 (微博橙红渐变) -->
+    <header class="nuo-forum-chrome flex justify-between items-center px-4 py-3 shrink-0 z-10" v-if="!currentPost">
+        <h1 class="nuo-forum-chrome-title text-lg">微博论坛</h1>
+        <div class="flex items-center space-x-2">
+            <button @click="showAddPostModal = true" class="bg-white/25 hover:bg-white/40 text-white rounded-full p-2 text-xs font-semibold transition">
+                📝 发帖
+            </button>
+        </div>
+    </header>
+
+    <!-- 2. 主体视图区域 -->
+    <main class="flex-1 overflow-y-auto hide-scrollbar pb-24 bg-[#f5f5f5]" v-if="!currentPost">
+        
+        <!-- 【视图 A：微博 Feed 流】 -->
+        <div v-show="currentTab === 'feed'">
+            <!-- 滚动八卦大喇叭 -->
+            <div class="forum-events-banner">
+                <span class="event-tag">今日爆料</span>
+                <div class="event-list-marquee">
+                    <span class="event-item">{{ currentMarqueeText }}</span>
+                </div>
+            </div>
+
+            <!-- 微博子分类过滤 Tab -->
+            <div class="flex border-b border-gray-200 bg-white sticky top-0 z-20 justify-around py-2 text-sm font-semibold">
+                <button @click="feedFilter = 'all'" :class="[feedFilter === 'all' ? 'text-[#ff8200] border-b-2 border-[#ff8200]' : 'text-gray-500']" class="pb-1 px-4">全部</button>
+                <button @click="feedFilter = 'attention'" :class="[feedFilter === 'attention' ? 'text-[#ff8200] border-b-2 border-[#ff8200]' : 'text-gray-500']" class="pb-1 px-4">特别关心</button>
+                <button @click="feedFilter = 'gossip'" :class="[feedFilter === 'gossip' ? 'text-[#ff8200] border-b-2 border-[#ff8200]' : 'text-gray-500']" class="pb-1 px-4">世界八卦</button>
+            </div>
+
+            <!-- 帖子卡片列表 -->
+            <div class="space-y-2 mt-2">
+                <div v-for="post in filteredPosts" :key="post.id" class="nuo-forum-post-card cursor-pointer" @click="openPostDetail(post)">
+                    <div class="nuo-forum-decor-post-mid"></div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="post-board-tag">{{ post.board }}</span>
+                        <span v-if="isSpecialAttention(post.authorId)" class="text-xs text-red-500 font-bold">★ 特别关心</span>
+                    </div>
+
+                    <div class="post-meta-bottom mt-1">
+                        <div class="post-meta-left">
+                            <div class="nuo-forum-post-meta-avatar flex items-center justify-center bg-gradient-to-tr from-orange-400 to-amber-300 text-white font-bold text-xs uppercase overflow-hidden">
+                                {{ post.author[0] }}
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="post-author-link text-sm font-semibold">{{ post.author }}</span>
+                                <span class="text-[10px] text-gray-400">{{ formatTime(post.time) }}</span>
+                            </div>
+                        </div>
+                        <span class="level-badge">LV.{{ post.authorLevel }}</span>
+                    </div>
+
+                    <div class="post-body-forum my-2.5">
+                        <h3 class="post-title-forum text-base font-bold text-gray-800">{{ post.title }}</h3>
+                        <p class="post-excerpt text-sm text-gray-600 line-clamp-3 mt-1">{{ post.excerpt }}</p>
+                    </div>
+
+                    <div class="post-metrics-side flex justify-end gap-6 text-xs text-gray-400 border-t pt-2 mt-2">
+                        <span>💬 评论 <strong class="metric-num">{{ post.comments.length }}</strong></span>
+                        <span>👍 赞 <strong class="metric-num">{{ post.likes }}</strong></span>
+                        <span>浏览 {{ post.views }}</span>
+                    </div>
+                </div>
+
+                <div v-if="filteredPosts.length === 0" class="text-center py-10 text-gray-400 text-xs">
+                    暂无对应类别的帖子，去 [生成] 或 [我] 里让AI发帖吧！
+                </div>
+            </div>
+        </div>
+
+        <!-- 【视图 B：超话板块】 -->
+        <div v-show="currentTab === 'boards'" class="p-3">
+            <div class="nuo-forum-board-hero mb-4 rounded-xl overflow-hidden p-4 text-white">
+                <div class="board-hero-content flex items-center justify-between gap-3 w-full">
+                    <div class="flex items-center gap-3">
+                        <div class="board-hero-icon text-3xl">🔥</div>
+                        <div class="board-hero-text">
+                            <h2 class="nuo-forum-board-hero-title text-lg font-bold">微博超话社区</h2>
+                            <p class="nuo-forum-board-hero-desc text-xs opacity-90">聚集兴趣同好，交流世界八卦</p>
+                        </div>
+                    </div>
+                    <!-- 添加社区按钮 -->
+                    <button @click="showAddBoardModal = true" class="bg-white/30 hover:bg-white/50 text-white text-xs font-bold px-3 py-1.5 rounded-full shrink-0">
+                        ＋ 添加社区
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div v-for="board in boards" :key="board.name" class="nuo-forum-board-card bg-white p-4 rounded-xl shadow-sm flex items-center gap-4 relative">
+                    <div class="nuo-forum-board-icon text-2xl flex items-center justify-center w-12 h-12 bg-orange-100 rounded-xl text-orange-600">
+                        {{ board.icon }}
+                    </div>
+                    <div class="board-info-classic flex-1">
+                        <h3 class="nuo-forum-board-name text-sm font-bold text-gray-800">{{ board.name }}</h3>
+                        <p class="nuo-forum-board-desc text-xs text-gray-400 mt-1">{{ board.desc }}</p>
+                        <div class="nuo-forum-board-stats text-[10px] text-gray-400 mt-2 flex gap-3">
+                            <span>讨论 {{ board.postCount }}</span>
+                            <span class="board-mod">版主: {{ board.moderator }}</span>
+                        </div>
+                    </div>
+                    <div class="nuo-forum-board-joined" @click="toggleJoinBoard(board)">✓ 已加入</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 【视图 C：生成 / 助推器】 -->
+        <div v-show="currentTab === 'search'" class="p-4 space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                <h3 class="font-bold text-gray-800 text-sm mb-2">✨ AI 发帖智能助推器</h3>
+                <p class="text-xs text-gray-500 mb-4">您可以强行指派一个已关联的 AI 角色在当前论坛世界观下即兴创作发表一篇论坛帖子。</p>
+                
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-gray-600 mb-1">选择发帖角色</label>
+                        <select v-model="aiPosterId" class="w-full border p-2 rounded-xl bg-gray-50">
+                            <option value="">-- 请选择关联的AI角色 --</option>
+                            <option v-for="f in associatedFriends" :key="f.id" :value="f.id">{{ f.name }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-600 mb-1">发帖超话板块</label>
+                        <select v-model="aiPostBoard" class="w-full border p-2 rounded-xl bg-gray-50">
+                            <option v-for="b in boards" :key="b.name" :value="b.name">{{ b.name }}</option>
+                        </select>
+                    </div>
+                    <button @click="triggerAIPost" class="w-full bg-[#ff8200] text-white p-2.5 rounded-xl hover:bg-orange-600 transition font-bold text-xs mt-2">
+                        🚀 召唤 AI 角色发帖
+                    </button>
+                </div>
+            </div>
+
+            <!-- 世界八卦生成器 -->
+            <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                <h3 class="font-bold text-gray-800 text-sm mb-2">📣 模拟世界大八卦</h3>
+                <p class="text-xs text-gray-500 mb-3">让路人 NPC 在当前世界观下发表一篇小道消息或奇闻异事。</p>
+                <button @click="triggerGossipPost" class="w-full bg-stone-800 text-white p-2.5 rounded-xl hover:bg-stone-900 transition font-bold text-xs">
+                    🍺 随机生成一条路人八卦贴
+                </button>
+            </div>
+        </div>
+
+        <!-- 【视图 D：消息通知】 -->
+        <div v-show="currentTab === 'messages'" class="p-3 space-y-2">
+            <div v-for="n in notifications" :key="n.id" class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3">
+                <div class="text-xl">🔔</div>
+                <div class="flex-1 text-xs">
+                    <div class="flex justify-between font-bold text-gray-800">
+                        <span>{{ n.sender }}</span>
+                        <span class="text-gray-400 font-normal">{{ formatTime(n.time) }}</span>
+                    </div>
+                    <p class="text-gray-600 mt-1">{{ n.text }}</p>
+                    <div v-if="n.postTitle" class="bg-gray-50 p-2 rounded border mt-1.5 italic text-gray-500">
+                        原贴：{{ n.postTitle }}
+                    </div>
+                </div>
+            </div>
+            <div v-if="notifications.length === 0" class="text-center py-20 text-gray-400 text-xs">
+                暂无互动的消息通知
+            </div>
+        </div>
+
+        <!-- 【视图 E：我 (配置与关联中心)】 -->
+        <div v-show="currentTab === 'profile'" class="space-y-4">
+            
+            <!-- 微博风格个人头部 (绑定背景点击) -->
+            <div class="nuo-forum-me-header cursor-pointer" :style="{ '--me-cover': 'url(' + profileBg + ')' }" @click.self="changeBackground">
+                <!-- 头像修改入口 -->
+                <div class="nuo-forum-me-avatar bg-stone-700 text-white flex items-center justify-center font-bold text-2xl overflow-hidden cursor-pointer" @click.stop="changeAvatar">
+                    <img v-if="profileAvatar" :src="profileAvatar" class="w-full h-full object-cover">
+                    <span v-else>我</span>
+                </div>
+                <h2 class="nuo-forum-me-name">大博主 (我)</h2>
+                <div>
+                    <button class="btn-secondary" @click.stop="changeBackground">更换背景</button>
+                </div>
+            </div>
+
+            <!-- 数据项 -->
+            <div class="profile-stats">
+                <div class="stat-box"><strong>{{ posts.filter(p => p.author === '我').length }}</strong><span>帖子</span></div>
+                <div class="stat-box"><strong>{{ associatedFriends.length }}</strong><span>关联角色</span></div>
+                <div class="stat-box"><strong>{{ notifications.length }}</strong><span>互动消息</span></div>
+            </div>
+
+            <!-- 世界观核心绑定配置面板 -->
+            <section class="bg-white p-4 mx-3 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <h3 class="font-bold border-b pb-2 text-stone-700 text-sm">🌌 论坛世界观大设定</h3>
+                <div class="space-y-2 text-xs">
+                    <p class="text-gray-400">设置当前论坛对应的世界观与背景设定，AI 将基于此背景发表帖子和评论。</p>
+                    <textarea v-model="worldview" rows="3" class="w-full border p-2.5 rounded-xl outline-none focus:border-orange-500 bg-gray-50" placeholder="例如：某魔法学院的校园贴吧，大家平时用论坛吐槽魔法理论或暗恋八卦..."></textarea>
+                </div>
+            </section>
+
+            <!-- 角色关联配置 -->
+            <section class="bg-white p-4 mx-3 rounded-2xl shadow-sm border border-gray-100 space-y-3">
+                <h3 class="font-bold border-b pb-2 text-stone-700 text-sm">👥 论坛关联角色卡 (读取自聊天APP)</h3>
+                <p class="text-[10px] text-gray-400">只有在此勾选关联后，AI 角色才会参与论坛发帖与评论回复互动。</p>
+                <div class="space-y-2 max-h-60 overflow-y-auto">
+                    <div v-for="friend in friends" :key="friend.id" class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center font-bold text-xs text-orange-600">
+                                {{ friend.name[0] }}
+                            </div>
+                            <div class="text-xs">
+                                <p class="font-bold text-gray-800">{{ friend.name }}</p>
+                                <p class="text-[9px] text-gray-400 truncate max-w-[150px]">{{ friend.persona || '暂无设定' }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-1 text-[10px]">
+                                <input type="checkbox" :checked="isAssociated(friend.id)" @change="toggleAssociation(friend.id)" class="w-4 h-4 accent-orange-500">
+                                关联
+                            </label>
+                            <label class="flex items-center gap-1 text-[10px] text-red-500">
+                                <input type="checkbox" :checked="isSpecialAttention(friend.id)" @change="toggleSpecialAttention(friend.id)" class="w-4 h-4 accent-red-500">
+                                特关
+                            </label>
+                        </div>
+                    </div>
+                    <div v-if="friends.length === 0" class="text-center py-4 text-xs text-gray-400">
+                        聊天APP中暂无好友角色，请先去聊天页面添加。
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 3. 帖子详情视窗 (全屏弹出，使用 nuo-forum-post-detail 适配) -->
+    <div v-if="currentPost" class="absolute inset-0 bg-[#f5f5f5] z-50 flex flex-col justify-between">
+        
+        <!-- 帖子详情顶栏 -->
+        <header class="nuo-forum-chrome flex items-center px-4 py-3 shrink-0 text-white">
+            <button @click="closePostDetail" class="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">← 返回</button>
+            <h1 class="flex-1 text-center font-bold truncate px-4">博文正文</h1>
+            <div class="w-12"></div>
+        </header>
+
+        <!-- 帖子详情主区 -->
+        <div class="flex-1 overflow-y-auto hide-scrollbar pb-16 bg-[#f5f5f5]">
+            
+            <div class="nuo-forum-post-detail bg-white p-4">
+                <div class="post-title-row mb-3">
+                    <span class="post-board-tag">{{ currentPost.board }}</span>
+                    <h2 class="post-title-forum text-lg font-bold text-gray-900 mt-1">{{ currentPost.title }}</h2>
+                </div>
+
+                <!-- 作者栏 -->
+                <div class="post-detail-author-bar flex items-center gap-3 border-b border-gray-100 pb-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 font-bold flex items-center justify-center text-sm border-2 border-white shadow-sm overflow-hidden">
+                        {{ currentPost.author[0] }}
+                    </div>
+                    <div class="post-detail-author-info flex-1">
+                        <div class="post-detail-author-name-row flex items-center gap-2">
+                            <span class="post-author-link text-sm font-bold text-gray-800">{{ currentPost.author }}</span>
+                            <span class="level-badge">LV.{{ currentPost.authorLevel }}</span>
+                        </div>
+                        <span class="post-detail-time text-[10px] text-gray-400">{{ formatTime(currentPost.time) }}</span>
+                    </div>
+                </div>
+
+                <!-- 正文内容 -->
+                <div class="post-content my-4">
+                    <p class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{{ currentPost.content }}</p>
+                </div>
+
+                <!-- 统计数 -->
+                <div class="post-detail-stats text-[11px] text-gray-400 flex gap-4 border-t pt-3">
+                    <span>浏览 {{ currentPost.views }}</span>
+                    <span>点赞 {{ currentPost.likes }}</span>
+                    <span>板块 {{ currentPost.board }}</span>
+                </div>
+
+                <!-- 互动操作按钮 -->
+                <div class="post-actions flex justify-around border-t border-b border-gray-150 py-2.5 mt-3">
+                    <button @click="likePost(currentPost)" class="action-btn flex items-center gap-1.5 text-xs text-gray-600" :class="{'text-red-500 font-bold': currentPost.isLiked}">
+                        👍 <span>{{ currentPost.isLiked ? '已赞' : '点赞' }}</span>
+                    </button>
+                    <button @click="triggerAIComment(currentPost)" class="action-btn flex items-center gap-1.5 text-xs text-orange-600 font-semibold">
+                        ✨ <span>召唤AI评论</span>
+                    </button>
+                    <button @click="sharePost(currentPost)" class="action-btn flex items-center gap-1.5 text-xs text-gray-600">
+                        📤 <span>分享</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 评论区头部 -->
+            <div class="nuo-forum-comments-header bg-white mt-2 px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                <span class="text-xs font-bold text-gray-800">全部评论 ({{ currentPost.comments.length }})</span>
+                <span class="text-[10px] text-gray-400">倒序排列</span>
+            </div>
+
+            <!-- 评论列表 -->
+            <div class="bg-white">
+                <div v-for="(cmt, cIdx) in currentPost.comments" :key="cIdx" class="nuo-forum-comment comment-thread border-b border-gray-50 p-3 flex gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-xs text-gray-600 shrink-0">
+                        {{ cmt.author[0] }}
+                    </div>
+                    <div class="comment-body flex-1 text-xs">
+                        <div class="comment-author-row flex items-center gap-2">
+                            <span class="comment-author font-bold text-[#eb7350]">{{ cmt.author }}</span>
+                            <span class="level-badge py-0.5 px-1.5 text-[8px]">LV.{{ cmt.authorLevel || 1 }}</span>
+                        </div>
+                        <p class="comment-content text-gray-700 mt-1 leading-relaxed">{{ cmt.content }}</p>
+                        <div class="comment-actions mt-2 flex gap-4 text-[10px] text-gray-400">
+                            <span class="comment-floor">{{ cIdx + 1 }}楼</span>
+                            <span>{{ formatTime(cmt.time) }}</span>
+                            <span @click="likeComment(cmt)" class="cursor-pointer hover:text-orange-500">👍 {{ cmt.likes || 0 }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="currentPost.comments.length === 0" class="text-center py-10 text-gray-400 text-xs bg-white">
+                    还没有人发表评论，来当第一个沙发吧！
+                </div>
+            </div>
+        </div>
+
+        <!-- 评论输入框 (nuo-forum-comment-input) -->
+        <div class="nuo-forum-comment-input comment-input-bar bg-white border-t p-2 safe-area-bottom absolute bottom-0 inset-x-0">
+            <div class="comment-input-row flex items-center gap-2">
+                <!-- 助推/AI 按钮 -->
+                <button @click="triggerAIComment(currentPost)" class="forum-icon-btn forum-regen-btn w-9 h-9 rounded-full bg-orange-100 text-orange-600 text-sm font-bold flex items-center justify-center shrink-0" title="AI互动">
+                    ✨
+                </button>
+                
+                <!-- 输入框 -->
+                <input v-model="newCommentText" @keyup.enter="sendUserComment" type="text" class="flex-1 bg-gray-100 border-none outline-none rounded-full px-4 py-2 text-xs" placeholder="输入神评评论一下吧...">
+                
+                <!-- 发送按钮 -->
+                <button @click="sendUserComment" class="bg-[#ff8200] text-white text-xs px-4 py-2 rounded-full font-bold transition">
+                    发送
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 底部导航栏 -->
+    <nav class="forum-bottom-nav nuo-forum-chrome-nav absolute bottom-0 inset-x-0 z-10" v-show="!currentPost">
+        <div class="forum-bottom-nav-inner">
+            <button class="nav-item" :class="{active: currentTab === 'feed'}" @click="currentTab = 'feed'"></button>
+            <button class="nav-item" :class="{active: currentTab === 'boards'}" @click="currentTab = 'boards'"></button>
+            <button class="nav-item" :class="{active: currentTab === 'search'}" @click="currentTab = 'search'"></button>
+            <button class="nav-item" :class="{active: currentTab === 'messages'}" @click="currentTab = 'messages'"></button>
+            <button class="nav-item" :class="{active: currentTab === 'profile'}" @click="currentTab = 'profile'"></button>
+        </div>
+    </nav>
+
+    <!-- 5. 弹窗：用户手动发布帖子 -->
+    <div v-if="showAddPostModal" class="absolute inset-0 bg-black/60 flex items-center justify-center p-6 z-[60]">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
+            <h3 class="font-bold text-gray-800 text-center border-b pb-2 text-sm">发布新博文</h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-500 mb-1">选择超话板块</label>
+                    <select v-model="newPostData.board" class="w-full border p-2 rounded-xl bg-gray-50">
+                        <option v-for="b in boards" :key="b.name" :value="b.name">{{ b.name }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-500 mb-1">博文标题</label>
+                    <input v-model="newPostData.title" type="text" class="w-full border p-2 rounded-xl outline-none" placeholder="输入博文标题">
+                </div>
+                <div>
+                    <label class="block text-gray-500 mb-1">正文内容</label>
+                    <textarea v-model="newPostData.content" rows="5" class="w-full border p-2 rounded-xl outline-none resize-none" placeholder="分享你此时的见解..."></textarea>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button @click="showAddPostModal = false" class="flex-1 p-2.5 bg-gray-100 rounded-xl text-xs font-semibold text-gray-600">取消</button>
+                <button @click="publishUserPost" class="flex-1 p-2.5 bg-[#ff8200] text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition">发表</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 弹窗：新建超话社区 -->
+    <div v-if="showAddBoardModal" class="absolute inset-0 bg-black/60 flex items-center justify-center p-6 z-[60]">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
+            <h3 class="font-bold text-gray-800 text-center border-b pb-2 text-sm">创建新超话社区</h3>
+            <div class="space-y-3 text-xs text-gray-700">
+                <div>
+                    <label class="block text-gray-500 mb-1">超话名称</label>
+                    <input v-model="newBoardData.name" type="text" class="w-full border p-2 rounded-xl outline-none" placeholder="例如：动漫同好会">
+                </div>
+                <div>
+                    <label class="block text-gray-500 mb-1">图标 (建议填一个Emoji表情)</label>
+                    <input v-model="newBoardData.icon" type="text" class="w-full border p-2 rounded-xl outline-none" placeholder="例如：🎨">
+                </div>
+                <div>
+                    <label class="block text-gray-500 mb-1">社区描述</label>
+                    <input v-model="newBoardData.desc" type="text" class="w-full border p-2 rounded-xl outline-none" placeholder="描述该超话板块的内容规则">
+                </div>
+                <div>
+                    <label class="block text-gray-500 mb-1">版主</label>
+                    <input v-model="newBoardData.moderator" type="text" class="w-full border p-2 rounded-xl outline-none" placeholder="版主昵称">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button @click="showAddBoardModal = false" class="flex-1 p-2.5 bg-gray-100 rounded-xl text-xs font-semibold text-gray-600">取消</button>
+                <button @click="addNewBoard" class="flex-1 p-2.5 bg-[#ff8200] text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition">创建</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed, watch, nextTick } = Vue;
+
+    createApp({
+        setup() {
+            // ==========================================
+            // 基础状态和导航
+            // ==========================================
+            const currentTab = ref('feed');
+            const feedFilter = ref('all'); // all (全部) | attention (特关) | gossip (八卦)
+            const worldview = ref(localStorage.getItem('forum_worldview') || '这是一个现代架空大都市，各种二次元角色和平相处，时常在贴吧互动吐槽。');
+            
+            // 聊天应用中的好友配置读取
+            const friends = ref(JSON.parse(localStorage.getItem('chat_friends') || '[]'));
+
+            // 动态同步并加载主页的 API 设置
+            const getCleanApiUrl = () => {
+                const endpoint = localStorage.getItem('global_api_endpoint') || localStorage.getItem('chat_api_url') || '';
+                let cleanUrl = endpoint.trim().replace(/\/$/, "");
+                if (cleanUrl.endsWith("/chat/completions")) {
+                    cleanUrl = cleanUrl.replace(/\/chat\/completions$/, "");
+                }
+                return cleanUrl;
+            };
+            const getApiKey = () => localStorage.getItem('global_api_key') || localStorage.getItem('chat_api_key') || '';
+            const getSelectedModel = () => localStorage.getItem('global_api_model') || localStorage.getItem('chat_api_model') || '';
+
+            // 论坛单独的角色配置
+            const associatedIds = ref(JSON.parse(localStorage.getItem('forum_associated_ids') || '[]'));
+            const specialAttentionIds = ref(JSON.parse(localStorage.getItem('forum_special_attention_ids') || '[]'));
+
+            // 帖子库与消息库
+            const posts = ref(JSON.parse(localStorage.getItem('forum_posts') || '[]'));
+            const notifications = ref(JSON.parse(localStorage.getItem('forum_notifications') || '[]'));
+
+            // 超话板块持久化配置
+            const defaultBoards = [
+                { name: '世界八卦', icon: '🍺', desc: '路边小道消息、整活日常聚集地。', postCount: 28, moderator: '爆料王' },
+                { name: '深夜情感', icon: '🌙', desc: '深夜树洞，倾吐不愿面对的心事。', postCount: 14, moderator: '聆听者' },
+                { name: '角色日常', icon: '🎮', desc: '角色贴吧，各种趣味互动日常。', postCount: 42, moderator: '官方管理员' }
+            ];
+            const boards = ref(JSON.parse(localStorage.getItem('forum_boards') || JSON.stringify(defaultBoards)));
+
+            // 头像与背景状态
+            const profileAvatar = ref(localStorage.getItem('forum_profile_avatar') || '');
+            const profileBg = ref(localStorage.getItem('forum_profile_bg') || 'https://nos.netease.com/ysf/72da4f895e178bc08be049495e2b6a36.jpeg');
+            const avatarFileInput = ref(null);
+            const bgFileInput = ref(null);
+
+            // 八卦动态大喇叭滚动文案
+            const marqueeList = [
+                "震惊！仙门昨日因吃火锅引发山火，多名弟子被罚抄书！",
+                "爆料：某二次元魔法美少女在街角买奶茶时魔杖卡在垃圾桶里...",
+                "特大新闻：隔壁贴吧吧主退网，因私房钱藏在键盘下被老婆扫出。",
+                "最新：市民王先生称，他今天早上看到一条神龙在给自家屋顶排水。"
+            ];
+            const currentMarqueeIndex = ref(0);
+            const currentMarqueeText = computed(() => marqueeList[currentMarqueeIndex.value]);
+            setInterval(() => {
+                currentMarqueeIndex.value = (currentMarqueeIndex.value + 1) % marqueeList.length;
+            }, 6000);
+
+            // AI 发布相关表单
+            const aiPosterId = ref('');
+            const aiPostBoard = ref('角色日常');
+
+            // 弹窗与交互状态
+            const showAddPostModal = ref(false);
+            const showAddBoardModal = ref(false);
+            const currentPost = ref(null);
+            const newCommentText = ref('');
+            const newPostData = ref({ title: '', content: '', board: '角色日常' });
+            const newBoardData = ref({ name: '', icon: '', desc: '', moderator: '' });
+
+            // ==========================================
+            // 数据监听器 & 持久化
+            // ==========================================
+            watch([associatedIds, specialAttentionIds, posts, notifications, worldview, boards, profileAvatar, profileBg], () => {
+                localStorage.setItem('forum_associated_ids', JSON.stringify(associatedIds.value));
+                localStorage.setItem('forum_special_attention_ids', JSON.stringify(specialAttentionIds.value));
+                localStorage.setItem('forum_posts', JSON.stringify(posts.value));
+                localStorage.setItem('forum_notifications', JSON.stringify(notifications.value));
+                localStorage.setItem('forum_worldview', worldview.value);
+                localStorage.setItem('forum_boards', JSON.stringify(boards.value));
+                localStorage.setItem('forum_profile_avatar', profileAvatar.value);
+                localStorage.setItem('forum_profile_bg', profileBg.value);
+            }, { deep: true });
+
+            // ==========================================
+            // 修改头像与背景逻辑
+            // ==========================================
+            const changeAvatar = () => {
+                const choice = prompt("请选择修改头像的方式：\n1. 上传本地图片\n2. 输入网络图片URL");
+                if (choice === "1") {
+                    if (avatarFileInput.value) avatarFileInput.value.click();
+                } else if (choice === "2") {
+                    const url = prompt("请输入网络图片URL地址:", profileAvatar.value);
+                    if (url) profileAvatar.value = url;
+                }
+            };
+
+            const changeBackground = () => {
+                const choice = prompt("请选择修改背景图的方式：\n1. 上传本地图片\n2. 输入网络图片URL");
+                if (choice === "1") {
+                    if (bgFileInput.value) bgFileInput.value.click();
+                } else if (choice === "2") {
+                    const url = prompt("请输入网络图片URL地址:", profileBg.value);
+                    if (url) profileBg.value = url;
+                }
+            };
+
+            const handleAvatarUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        profileAvatar.value = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+                event.target.value = '';
+            };
+
+            const handleBgUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        profileBg.value = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+                event.target.value = '';
+            };
+
+            // ==========================================
+            // 新建超话社区逻辑
+            // ==========================================
+            const addNewBoard = () => {
+                if (!newBoardData.value.name.trim()) return alert('超话社区名字不能为空！');
+                const boardName = newBoardData.value.name.trim();
+
+                // 避免重名
+                if (boards.value.some(b => b.name === boardName)) {
+                    return alert('该超话社区已经存在了！');
+                }
+
+                boards.value.push({
+                    name: boardName,
+                    icon: newBoardData.value.icon.trim() || '💬',
+                    desc: newBoardData.value.desc.trim() || '暂无描述信息',
+                    postCount: 0,
+                    moderator: newBoardData.value.moderator.trim() || '管理员'
+                });
+
+                newBoardData.value = { name: '', icon: '', desc: '', moderator: '' };
+                showAddBoardModal.value = false;
+                alert('社区创建成功！');
+            };
+
+            // ==========================================
+            // 初始化帖子种子数据 (当本地为空时)
+            // ==========================================
+            if (posts.value.length === 0) {
+                posts.value = [
+                    {
+                        id: 101,
+                        author: '爆料王',
+                        authorId: 9999,
+                        authorLevel: 8,
+                        title: '关于最近市中心魔法阵紊乱的传言...',
+                        excerpt: '最近听到隔壁王叔叔说，市中心的中央广场一到晚上就会发出蓝光，有人看到了奇奇怪怪的神兽。有课代表来科普下这到底是怎么回事吗？是不是又要版本更新了？',
+                        content: '最近听到隔壁王叔叔说，市中心的中央广场一到晚上就会发出蓝光，有人看到了奇奇怪怪的神兽。有课代表来科普下这到底是怎么回事吗？是不是又要版本更新了？话说我们学校教的魔法理论跟这个对的上吗？',
+                        board: '世界八卦',
+                        time: Date.now() - 3600000 * 2,
+                        views: 524,
+                        likes: 12,
+                        isLiked: false,
+                        comments: [
+                            { author: '路人甲', authorLevel: 3, content: '听说是因为地下管道漏水，折射了霓虹灯吧，别神魔化了。', time: Date.now() - 3600000, likes: 3 }
+                        ]
+                    }
+                ];
+            }
+
+            // ==========================================
+            // 过滤帖子分类逻辑 (全部 / 特关 / 世界八卦)
+            // ==========================================
+            const filteredPosts = computed(() => {
+                let temp = posts.value;
+                if (feedFilter.value === 'attention') {
+                    // 仅显示已加入特别关心的角色的帖子
+                    temp = temp.filter(p => specialAttentionIds.value.includes(p.authorId));
+                } else if (feedFilter.value === 'gossip') {
+                    // 世界八卦板块的帖子
+                    temp = temp.filter(p => p.board === '世界八卦');
+                }
+                // 倒序排列帖子（新发布的在前）
+                return temp.slice().reverse();
+            });
+
+            // 已关联的好友列表
+            const associatedFriends = computed(() => {
+                return friends.value.filter(f => associatedIds.value.includes(f.id));
+            });
+
+            // ==========================================
+            // 角色卡关联和特关交互逻辑
+            // ==========================================
+            const isAssociated = (id) => associatedIds.value.includes(id);
+            const isSpecialAttention = (id) => specialAttentionIds.value.includes(id);
+
+            const toggleAssociation = (id) => {
+                const idx = associatedIds.value.indexOf(id);
+                if (idx > -1) associatedIds.value.splice(idx, 1);
+                else associatedIds.value.push(id);
+            };
+
+            const toggleSpecialAttention = (id) => {
+                const idx = specialAttentionIds.value.indexOf(id);
+                if (idx > -1) specialAttentionIds.value.splice(idx, 1);
+                else specialAttentionIds.value.push(id);
+            };
+
+            const toggleJoinBoard = (board) => {
+                alert(`成功关注超话 [${board.name}] !`);
+            };
+
+            // ==========================================
+            // 用户发帖和基础互动
+            // ==========================================
+            const publishUserPost = () => {
+                if (!newPostData.value.title || !newPostData.value.content) {
+                    return alert('标题和内容不能为空！');
+                }
+                const newPost = {
+                    id: Date.now(),
+                    author: '我',
+                    authorId: 10000,
+                    authorLevel: 1,
+                    title: newPostData.value.title,
+                    excerpt: newPostData.value.content.substring(0, 80) + '...',
+                    content: newPostData.value.content,
+                    board: newPostData.value.board,
+                    time: Date.now(),
+                    views: 1,
+                    likes: 0,
+                    isLiked: false,
+                    comments: []
+                };
+                posts.value.push(newPost);
+                showAddPostModal.value = false;
+                newPostData.value = { title: '', content: '', board: '角色日常' };
+                alert('博文发表成功！');
+
+                // 如果用户发在“角色日常”或有已关联的角色，有 80% 概率触发 AI 自动评论
+                if (associatedFriends.value.length > 0 && Math.random() < 0.8) {
+                    setTimeout(() => {
+                        aiCommentOnPostAutomatically(newPost);
+                    }, 3000);
+                }
+            };
+
+            const openPostDetail = (post) => {
+                post.views += 1;
+                currentPost.value = post;
+            };
+
+            const closePostDetail = () => {
+                currentPost.value = null;
+            };
+
+            const likePost = (post) => {
+                if (post.isLiked) {
+                    post.likes -= 1;
+                    post.isLiked = false;
+                } else {
+                    post.likes += 1;
+                    post.isLiked = true;
+                }
+            };
+
+            const sharePost = (post) => {
+                alert(`成功复制分享链接到剪贴板！\n[博文：${post.title}]`);
+            };
+
+            const likeComment = (cmt) => {
+                cmt.likes = (cmt.likes || 0) + 1;
+            };
+
+            // 用户评论发送
+            const sendUserComment = () => {
+                if (!newCommentText.value.trim()) return;
+                const newCmt = {
+                    author: '我',
+                    authorLevel: 1,
+                    content: newCommentText.value,
+                    time: Date.now(),
+                    likes: 0
+                };
+                currentPost.value.comments.push(newCmt);
+                
+                // 触发通知回显逻辑（如果不是自己发的帖子，产生一条通知）
+                if (currentPost.value.author !== '我') {
+                    notifications.value.push({
+                        id: Date.now(),
+                        sender: '我',
+                        time: Date.now(),
+                        text: `在您的帖子《${currentPost.value.title}》发表了评论: "${newCommentText.value}"`,
+                        postTitle: currentPost.value.title
+                    });
+                }
+
+                const sentText = newCommentText.value;
+                newCommentText.value = '';
+
+                // 如果用户评论了关联角色发的帖，或者发在有角色的论坛里，AI 角色会概率回复用户评论
+                if (associatedFriends.value.length > 0 && Math.random() < 0.9) {
+                    setTimeout(() => {
+                        aiReplyToUserComment(currentPost.value, sentText);
+                    }, 2500);
+                }
+            };
+
+            // ==========================================
+            // AI 核心接口逻辑 (全面对接主页面配置)
+            // ==========================================
+
+            // 【AI角色自动生成帖子】
+            const triggerAIPost = async () => {
+                if (!aiPosterId.value) return alert('请先选择发帖角色卡！');
+                const char = friends.value.find(f => f.id === parseInt(aiPosterId.value));
+                if (!char) return;
+
+                const apiKey = getApiKey();
+                const apiUrl = getCleanApiUrl();
+                const selectedModel = getSelectedModel();
+
+                if (!apiKey || !apiUrl || !selectedModel) {
+                    return alert('请先在系统主页面的 [设置] 中，配置好 API 地址、密钥和模型。');
+                }
+
+                alert(`正在呼唤 ${char.name} 组织语言发帖中...`);
+
+                const sysPrompt = `# Role
+你现在扮演微博论坛（贴吧）用户[${char.name}]。
+你的性格设定：${char.persona || '普通人'}
+当前论坛所在的世界观与背景设定：
+${worldview.value}
+
+# 论坛发帖输出规则 (重点)
+1. 你要发表一个符合上述【世界观】以及符合你【性格人设】的论坛帖子。
+2. 帖子内容可以是对生活琐事的吐槽、八卦的爆料、求助、或者是展示优越感的日常，需要有强烈的“贴子活人感”。
+3. 必须输出以下格式，不要有任何多余的话和括号标记：
+标题：[填帖子标题]
+正文：[填帖子详细内容]`;
+
+                try {
+                    const res = await fetch(`${apiUrl}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey.trim()}`
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [
+                                { role: 'system', content: sysPrompt },
+                                { role: 'user', content: '请立即发布一篇契合当前世界观背景的博文贴。' }
+                            ],
+                            temperature: 0.85
+                        })
+                    });
+
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    const reply = data.choices[0].message.content.trim();
+
+                    // 解析格式
+                    const titleMatch = reply.match(/标题\s*[:：]\s*(.*)/);
+                    const contentMatch = reply.match(/正文\s*[:：]\s*([\s\S]*)/);
+
+                    const title = titleMatch ? titleMatch[1].trim() : `${char.name}发表的新鲜事`;
+                    const content = contentMatch ? contentMatch[1].trim() : reply;
+
+                    const newPost = {
+                        id: Date.now(),
+                        author: char.name,
+                        authorId: char.id,
+                        authorLevel: Math.floor(Math.random() * 9) + 2,
+                        title: title,
+                        excerpt: content.substring(0, 80) + '...',
+                        content: content,
+                        board: aiPostBoard.value,
+                        time: Date.now(),
+                        views: 12,
+                        likes: 2,
+                        isLiked: false,
+                        comments: []
+                    };
+
+                    posts.value.push(newPost);
+                    alert(`[${char.name}] 的博文发表成功！已加入到微博流中！`);
+                    currentTab.value = 'feed';
+                } catch(e) {
+                    alert(`AI角色发帖失败：${e.message}`);
+                }
+            };
+
+            // 【AI生成路人吃瓜贴】
+            const triggerGossipPost = async () => {
+                const apiKey = getApiKey();
+                const apiUrl = getCleanApiUrl();
+                const selectedModel = getSelectedModel();
+
+                if (!apiKey || !apiUrl || !selectedModel) {
+                    // 离线兜底路人贴
+                    const npcList = ['吃瓜群众小明', '隔壁修真王叔', '情报商二狗'];
+                    const mockGossip = [
+                        "昨晚城南仓库发生爆炸，听说一个带着大翅膀的天使去灭火了！",
+                        "大新闻！学院的教导主任竟然在跟死敌学校的主任偷偷约会...",
+                        "真的服了，路边卖烤地瓜的大爷居然随手捏出了六阶魔法阵防御寒风。"
+                    ];
+                    const randomIdx = Math.floor(Math.random() * 3);
+                    const newPost = {
+                        id: Date.now(),
+                        author: npcList[randomIdx],
+                        authorId: 8888,
+                        authorLevel: 4,
+                        title: '惊爆大八卦！昨夜城中惊现异界来客！',
+                        excerpt: mockGossip[randomIdx],
+                        content: mockGossip[randomIdx] + '\n大家有看到这个场景吗？听说城防军都惊动了！',
+                        board: '世界八卦',
+                        time: Date.now(),
+                        views: 99,
+                        likes: 6,
+                        isLiked: false,
+                        comments: []
+                    };
+                    posts.value.push(newPost);
+                    alert('模拟路人八卦贴发表成功！');
+                    currentTab.value = 'feed';
+                    return;
+                }
+
+                alert(`正在智能编造世界上发生的奇闻轶事...`);
+                const sysPrompt = `# Role
+你现在扮演一位生活在设定世界下的匿名吃瓜网友。
+当前世界观：${worldview.value}
+# 任务
+请写一篇带有“捕风捉影”、“吃瓜群众”、“震惊”口吻的世界八卦爆料贴。标题要吸引人，内容要结合世界观产生趣味感。
+按以下格式输出，不要有额外内容：
+标题：[标题]
+正文：[正文]`;
+
+                try {
+                    const res = await fetch(`${apiUrl}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey.trim()}`
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [{ role: 'system', content: sysPrompt }],
+                            temperature: 0.9
+                        })
+                    });
+                    const data = await res.json();
+                    const reply = data.choices[0].message.content.trim();
+
+                    const titleMatch = reply.match(/标题\s*[:：]\s*(.*)/);
+                    const contentMatch = reply.match(/正文\s*[:：]\s*([\s\S]*)/);
+                    const title = titleMatch ? titleMatch[1].trim() : '突发世界八卦！';
+                    const content = contentMatch ? contentMatch[1].trim() : reply;
+
+                    posts.value.push({
+                        id: Date.now(),
+                        author: '八卦爆料机',
+                        authorId: 8888,
+                        authorLevel: 5,
+                        title: title,
+                        excerpt: content.substring(0, 80) + '...',
+                        content: content,
+                        board: '世界八卦',
+                        time: Date.now(),
+                        views: 45,
+                        likes: 1,
+                        isLiked: false,
+                        comments: []
+                    });
+                    alert('世界八卦贴爆料成功！');
+                    currentTab.value = 'feed';
+                } catch(e) {
+                    alert(`生成世界八卦失败：${e.message}`);
+                }
+            };
+
+            // 【AI角色在详情页中盖楼评论】
+            const triggerAIComment = async (post) => {
+                if (associatedFriends.value.length === 0) {
+                    return alert('当前没有关联任何AI角色卡，无法完成互动，请前往[我]页面进行勾选。');
+                }
+                const randomChar = associatedFriends.value[Math.floor(Math.random() * associatedFriends.value.length)];
+                
+                const apiKey = getApiKey();
+                const apiUrl = getCleanApiUrl();
+                const selectedModel = getSelectedModel();
+
+                if (!apiKey || !apiUrl || !selectedModel) {
+                    return alert('请先在主页的 [设置] 中配置好 API Key。');
+                }
+
+                alert(`正在召集 [${randomChar.name}] 前来盖楼回复...`);
+
+                const sysPrompt = `# Role
+你现在化身为贴吧（微博）网友[${randomChar.name}]。
+你的人设背景是：${randomChar.persona || '普通人'}
+当前论坛所在的世界观与背景设定：
+${worldview.value}
+
+# 任务
+当前帖子标题为：《${post.title}》
+帖子正文内容为：
+"${post.content}"
+
+请写一条符合你人设、带有口语、情绪化吐槽或趣味性的论坛神评论（30字以内）。不要说多余的解释，直接输出评论正文内容。`;
+
+                try {
+                    const res = await fetch(`${apiUrl}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey.trim()}`
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [{ role: 'system', content: sysPrompt }],
+                            temperature: 0.85
+                        })
+                    });
+                    const data = await res.json();
+                    const reply = data.choices[0].message.content.trim();
+
+                    post.comments.push({
+                        author: randomChar.name,
+                        authorLevel: Math.floor(Math.random() * 5) + 3,
+                        content: reply,
+                        time: Date.now(),
+                        likes: 0
+                    });
+
+                    // 如果是用户发的帖子，产生一条通知通知用户
+                    if (post.author === '我') {
+                        notifications.value.push({
+                            id: Date.now(),
+                            sender: randomChar.name,
+                            time: Date.now(),
+                            text: `在您的帖子《${post.title}》发表了神评论: "${reply}"`,
+                            postTitle: post.title
+                        });
+                    }
+
+                } catch(e) {
+                    alert(`AI角色评论失败：${e.message}`);
+                }
+            };
+
+            // 【AI 自动回复用户的博文】
+            const aiCommentOnPostAutomatically = async (post) => {
+                const char = associatedFriends.value[Math.floor(Math.random() * associatedFriends.value.length)];
+                const apiKey = getApiKey();
+                const apiUrl = getCleanApiUrl();
+                const selectedModel = getSelectedModel();
+
+                if (!apiKey || !apiUrl || !selectedModel) return;
+
+                const sysPrompt = `# Role
+你扮演贴吧网友[${char.name}]，人设：${char.persona}。
+当前世界观：${worldview.value}
+你看到好友【我】发了一条帖子：《${post.title}》，内容是：“${post.content}”
+请以你的口吻写一条简短的论坛跟帖回复（25字以内）。直接输出内容。`;
+                try {
+                    const res = await fetch(`${apiUrl}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey.trim()}`
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [{ role: 'system', content: sysPrompt }],
+                            temperature: 0.85
+                        })
+                    });
+                    const data = await res.json();
+                    const reply = data.choices[0].message.content.trim();
+                    post.comments.push({
+                        author: char.name,
+                        authorLevel: 4,
+                        content: reply,
+                        time: Date.now(),
+                        likes: 0
+                    });
+                } catch(e) {
+                    console.log('AI自动回复博文失败', e);
+                }
+            };
+
+            // 【AI 回复用户在帖子下的评论】
+            const aiReplyToUserComment = async (post, userCommentText) => {
+                const char = associatedFriends.value[Math.floor(Math.random() * associatedFriends.value.length)];
+                const apiKey = getApiKey();
+                const apiUrl = getCleanApiUrl();
+                const selectedModel = getSelectedModel();
+
+                if (!apiKey || !apiUrl || !selectedModel) return;
+
+                const sysPrompt = `# Role
+@扮演微博网友[${char.name}]，人设是：${char.persona}。
+原帖是《${post.title}》。
+你在评论区看到用户发了这条评论：“${userCommentText}”
+请直接针对用户的评论，写一条简短抬杠、赞同、调侃或吐槽的回复盖楼（20字以内）。不要输出额外的前置后置字眼，直接回复。`;
+                try {
+                    const res = await fetch(`${apiUrl}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey.trim()}`
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [{ role: 'system', content: sysPrompt }],
+                            temperature: 0.85
+                        })
+                    });
+                    const data = await res.json();
+                    const reply = data.choices[0].message.content.trim();
+                    post.comments.push({
+                        author: char.name,
+                        authorLevel: 5,
+                        content: `回复 @我 : ${reply}`,
+                        time: Date.now(),
+                        likes: 0
+                    });
+                } catch(e) {
+                    console.log('AI盖楼失败', e);
+                }
+            };
+
+            // 返回系统桌面
+            const backToHome = () => {
+                window.location.href = 'index.html';
+            };
+
+            // 时间格式化
+            const formatTime = (ts) => {
+                const d = new Date(ts);
+                const hrs = d.getHours().toString().padStart(2, '0');
+                const mins = d.getMinutes().toString().padStart(2, '0');
+                return `${d.getMonth() + 1}/${d.getDate()} ${hrs}:${mins}`;
+            };
+
+            return {
+                currentTab, feedFilter, worldview, friends, associatedIds, specialAttentionIds, posts, notifications, boards,
+                currentMarqueeText, aiPosterId, aiPostBoard, showAddPostModal, showAddBoardModal, currentPost, newCommentText, newPostData, newBoardData,
+                filteredPosts, associatedFriends, isAssociated, isSpecialAttention, toggleAssociation, toggleSpecialAttention,
+                toggleJoinBoard, publishUserPost, openPostDetail, closePostDetail, likePost, sharePost, likeComment, sendUserComment,
+                triggerAIPost, triggerGossipPost, triggerAIComment, backToHome, formatTime,
+                // 头像与背景相关
+                profileAvatar, profileBg, avatarFileInput, bgFileInput, changeAvatar, changeBackground, handleAvatarUpload, handleBgUpload,
+                // 超话动态新增社区
+                addNewBoard
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
