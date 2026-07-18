@@ -1103,20 +1103,32 @@
             const feedFilter = ref('all'); // all (全部) | attention (特关) | gossip (八卦)
             const worldview = ref(localStorage.getItem('forum_worldview') || '这是一个现代架空大都市，各种二次元角色和平相处，时常在贴吧互动吐槽。');
             
-            // 聊天应用中的好友配置读取
-            const friends = ref(JSON.parse(localStorage.getItem('chat_friends') || '[]'));
+            // 聊天应用中的好友配置读取（这里已修改为直接读取QQ好友数据，并进行数据适配转换）
+            const rawFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+            const friends = ref(rawFriends.map(f => ({
+                id: f.name,
+                name: f.name,
+                persona: f.persona
+            })));
 
-            // 动态同步并加载主页的 API 设置
+            // 动态同步并加载主页的 API 设置（这里已修改为读取主页面的 `ai_config` 设置）
             const getCleanApiUrl = () => {
-                const endpoint = localStorage.getItem('global_api_endpoint') || localStorage.getItem('chat_api_url') || '';
+                const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+                const endpoint = aiConfig.url || '';
                 let cleanUrl = endpoint.trim().replace(/\/$/, "");
                 if (cleanUrl.endsWith("/chat/completions")) {
                     cleanUrl = cleanUrl.replace(/\/chat\/completions$/, "");
                 }
                 return cleanUrl;
             };
-            const getApiKey = () => localStorage.getItem('global_api_key') || localStorage.getItem('chat_api_key') || '';
-            const getSelectedModel = () => localStorage.getItem('global_api_model') || localStorage.getItem('chat_api_model') || '';
+            const getApiKey = () => {
+                const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+                return aiConfig.key || '';
+            };
+            const getSelectedModel = () => {
+                const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+                return aiConfig.model || '';
+            };
 
             // 论坛单独的角色配置
             const associatedIds = ref(JSON.parse(localStorage.getItem('forum_associated_ids') || '[]'));
@@ -1422,7 +1434,7 @@
             // 【AI角色自动生成帖子】
             const triggerAIPost = async () => {
                 if (!aiPosterId.value) return alert('请先选择发帖角色卡！');
-                const char = friends.value.find(f => f.id === parseInt(aiPosterId.value));
+                const char = friends.value.find(f => f.id === aiPosterId.value);
                 if (!char) return;
 
                 const apiKey = getApiKey();
