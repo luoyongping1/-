@@ -1843,9 +1843,12 @@ async function playMiniMaxVoice(text, btn) {
             finalModel = m;
         }
     }
-    if (!text || String(text).trim() === "") {
-        return alert("语音播放失败：要合成的文本内容为空！");
+let trimText = String(text).trim();
+if (!text || trimText === "") {
+    return alert("语音播放失败：要合成的文本内容为空！");
 }
+text = trimText;
+
 const originalHTML = btn.innerHTML;
 btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
 btn.style.pointerEvents = "none";
@@ -1862,7 +1865,10 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
         model: "speech-01",
         text: text,
         voice_setting: {
-            voice_id: finalVoiceId
+            voice_id: finalVoiceId,
+            speed: 1.0,
+            vol: 1.0,
+            pitch: 0
         },
         audio_setting: {
             sample_rate: 16000,
@@ -1870,6 +1876,7 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
         }
     };
 }
+
 // 改动行：拼接完整接口路径，匹配精准路由
 const apiUrl = `https://shushuxsj.xyz${apiPath}`;
 const response = await fetch(apiUrl, {
