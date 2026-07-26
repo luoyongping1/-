@@ -1853,26 +1853,34 @@ async function playMiniMaxVoice(text, btn) {
         return alert("语音播放失败：要合成的文本内容为空！");
     }
 
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
-    btn.style.pointerEvents = "none";
-    try {
-        const apiUrl = `https://shushuxsj.xyz/v1/text_to_speech?group_id=${mmConfig.groupId}`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${apiKey}`, 
-                'Content-Type': 'application/json' 
-            },
-            body: JSON.stringify({
-                model: finalModel,
-                text: text,
-                voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
-                audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
-            })
-        });
+const originalHTML = btn.innerHTML;
+btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
+btn.style.pointerEvents = "none";
+try {
+    // 自动判定：如果是克隆音色（包含moss__）或者选了speech-01模型，就走 /v1/t2s_pro 高级接口，否则走普通接口
+    let apiPath = "/v1/text_to_speech";
+    let requestBody = {
+        text: text,
+        voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
+        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
+    };
 
-        // 新增校验 1：判断返回的数据是否是 JSON（代表报错信息）
+    if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
+        apiPath = "/v1/t2s_pro";
+        requestBody.model = "speech-01"; // 走 Pro 接口必须带上 model
+    }
+
+    const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 
+            'Authorization': `Bearer ${apiKey}`, 
+            'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    // 新增校验 1：判断返回的数据是否是 JSON（代表报错信息）
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
             const errorJson = await response.json();
