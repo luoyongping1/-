@@ -1876,15 +1876,16 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
     };
 }
 
-const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
+const apiUrl = `https://shushuxsj.xyz`;
 const response = await fetch(apiUrl, {
     method: 'POST',
-    headers: { 
-        'Authorization': `Bearer ${apiKey}`, 
-        'Content-Type': 'application/json' 
+    headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
     },
-        body: JSON.stringify(requestBody)
-    });
+    body: JSON.stringify(requestBody)
+});
+
 
     // 新增校验 1：判断返回的数据是否是 JSON（代表报错信息）
         const contentType = response.headers.get("content-type") || "";
