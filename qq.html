@@ -1843,54 +1843,47 @@ async function playMiniMaxVoice(text, btn) {
             finalModel = m;
         }
     }
-let trimText = String(text).trim();
-let trimText = String(text).trim();
-if (!text || trimText === "") {
-    return alert("语音播放失败：要合成的文本内容为空！");
-}
-text = trimText;
-
-
-const originalHTML = btn.innerHTML;
-btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
-btn.style.pointerEvents = "none";
-try {
-let apiPath = "/v1/text_to_speech";
-let requestBody = {
-    text: text,
-    voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
-    audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
-};
-if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
-    apiPath = "/v1/text_to_speech";
-    requestBody = {
-        model: "speech-01",
-        text: text,
-        voice_setting: {
-            voice_id: finalVoiceId,
-            speed: 1.0,
-            vol: 1.0,
-            pitch: 0
-        },
-        audio_setting: {
-            sample_rate: 16000,
-            format: "mp3"
+    const cleanText = String(text).trim();
+    if (!text || cleanText === "") {
+        return alert("语音播放失败：要合成的文本内容为空！");
+    }
+    text = cleanText;
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
+    btn.style.pointerEvents = "none";
+    try {
+        let apiPath = "/v1/text_to_speech";
+        let requestBody = {
+            text: text,
+            voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
+            audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
+        };
+        if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
+            apiPath = "/v1/text_to_speech";
+            requestBody = {
+                model: "speech-01",
+                text: text,
+                voice_setting: {
+                    voice_id: finalVoiceId,
+                    speed: 1.0,
+                    vol: 1.0,
+                    pitch: 0
+                },
+                audio_setting: {
+                    sample_rate: 16000,
+                    format: "mp3"
+                }
+            };
         }
-    };
-}
-
-
-// 改动行：拼接完整接口路径，匹配精准路由
-const apiUrl = `https://shushuxsj.xyz${apiPath}`;
-const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-});
-    // 新增校验 1：判断返回的数据是否是 JSON（代表报错信息）
+        const apiUrl = `https://shushuxsj.xyz${apiPath}`;
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
             const errorJson = await response.json();
@@ -1902,23 +1895,19 @@ const response = await fetch(apiUrl, {
             }
             throw new Error(`${errorMessage} (发送的音色ID: "${finalVoiceId}", 模型: "${finalModel}")`);
         }
-        // 新增校验 2：如果网络请求状态码不等于 200 OK
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`HTTP状态码 ${response.status}: ${errorText || '未知错误'}`);
         }
-        // 只有通过了上面的校验，才能确认为音频数据，转为 Blob 播放
         const blob = await response.blob();
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         btn.innerHTML = "<span class='voice-icon'>▶</span><span>正在播放</span>";
-        
         audio.onended = () => { 
             btn.innerHTML = originalHTML; 
             btn.style.pointerEvents = "auto"; 
             URL.revokeObjectURL(audioUrl); 
         };
-        // 新增校验 3：捕获音频播放失败的错误
         audio.onerror = (evt) => {
             alert("语音文件加载或播放失败，请检查中转端音频数据是否完整。");
             btn.innerHTML = originalHTML;
@@ -1926,12 +1915,12 @@ const response = await fetch(apiUrl, {
         };
         await audio.play();
     } catch (e) { 
-        // 此时弹窗会精确显示网络失败、跨域、API内部报错
         alert("语音合成失败，具体原因：\n" + e.message); 
         btn.innerHTML = originalHTML; 
         btn.style.pointerEvents = "auto"; 
     }
 }
+
 
 
     function renderMessages(isLoadMore = false) {
