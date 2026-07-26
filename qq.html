@@ -1876,7 +1876,7 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
     };
 }
 
-    const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
+    const apiUrl = `https://thingproxy.freeboard.io/fetch/https://api.minimax.chat${apiPath}?group_id=${mmConfig.groupId}`;
     const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 
