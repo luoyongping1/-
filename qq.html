@@ -1844,10 +1844,12 @@ async function playMiniMaxVoice(text, btn) {
         }
     }
 let trimText = String(text).trim();
+let trimText = String(text).trim();
 if (!text || trimText === "") {
     return alert("语音播放失败：要合成的文本内容为空！");
 }
 text = trimText;
+
 
 const originalHTML = btn.innerHTML;
 btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
@@ -1876,6 +1878,7 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
         }
     };
 }
+
 
 // 改动行：拼接完整接口路径，匹配精准路由
 const apiUrl = `https://shushuxsj.xyz${apiPath}`;
