@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/v1/text_to_speech",
+      "destination": "https://shushuxsj.xyz/v1/text_to_speech"
+    }
+  ]
+}
