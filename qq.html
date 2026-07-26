@@ -1861,16 +1861,13 @@ let requestBody = {
     audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
 };
 
-if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
+if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
     apiPath = "/v1/text_to_speech";
     requestBody = {
         model: "speech-01",
         text: text,
         voice_setting: {
-            voice_id: finalVoiceId,
-            speed: 1.0,
-            vol: 1.0,
-            pitch: 0
+            voice_id: finalVoiceId
         },
         audio_setting: {
             sample_rate: 16000,
