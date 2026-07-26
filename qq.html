@@ -1857,18 +1857,20 @@ const originalHTML = btn.innerHTML;
 btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
 btn.style.pointerEvents = "none";
 try {
-    // 自动判定：如果是克隆音色（包含moss__）或者选了speech-01模型，就走 /v1/t2s_pro 高级接口，否则走普通接口
-    let apiPath = "/v1/text_to_speech";
-    let requestBody = {
-        text: text,
-        voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
-        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
-    };
+// 自动判定：如果是克隆音色（包含moss__）或者选了speech-01模型，就走 /v1/t2s_pro 高级接口，否则走普通接口
+let apiPath = "/v1/text_to_speech";
+let requestBody = {
+    text: text,
+    voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
+    audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
+};
 
-    if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
-        apiPath = "/v1/t2s_pro";
-        requestBody.model = "speech-01"; // 走 Pro 接口必须带上 model
-    }
+if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
+    apiPath = "/v1/t2s_pro";
+    requestBody.model = "speech-01"; // 走 Pro 接口必须带上 model
+    // 极其重要：高级模型 speech-01 不支持 32000Hz，必须降为 24000Hz，否则会报 2013 错误
+    requestBody.audio_setting = { sample_rate: 24000, bitrate: 128000, format: "mp3" };
+}
 
     const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
     const response = await fetch(apiUrl, {
