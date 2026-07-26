@@ -1827,10 +1827,9 @@ async function saveData() {
 async function playMiniMaxVoice(text, btn) {
     const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
     const friend = friends.find(f => f.name === currentFriendName);
-    const apiKey = mmConfig.key || mmConfig.apiKey; // 兼容不同键名
+    const apiKey = mmConfig.key || mmConfig.apiKey;
     if (!apiKey || !mmConfig.groupId) return alert("请在设置中配置 MiniMax，检查 API Key 和 Group ID 是否填写");
 
-    // 严格过滤无效的音色 ID，防止发送空值、"未设置" 等无效文本给 API
     let finalVoiceId = "cherry"; 
     if (friend && friend.voiceId) {
         const vid = String(friend.voiceId).trim();
@@ -1839,7 +1838,6 @@ async function playMiniMaxVoice(text, btn) {
         }
     }
 
-    // 严格过滤并获取有效的模型名称
     let finalModel = "speech-01";
     if (mmConfig.model) {
         const m = String(mmConfig.model).trim();
@@ -1848,7 +1846,6 @@ async function playMiniMaxVoice(text, btn) {
         }
     }
 
-    // 检查要合成的文本是否为空
     if (!text || String(text).trim() === "") {
         return alert("语音播放失败：要合成的文本内容为空！");
     }
@@ -1857,7 +1854,6 @@ const originalHTML = btn.innerHTML;
 btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
 btn.style.pointerEvents = "none";
 try {
-// 自动判定：如果是克隆音色（包含moss__）或者选了speech-01模型，就走 /v1/t2s_pro 高级接口，否则走普通接口
 let apiPath = "/v1/text_to_speech";
 let requestBody = {
     text: text,
@@ -1867,9 +1863,9 @@ let requestBody = {
 
 if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
     apiPath = "/v1/t2s_pro";
-    requestBody.model = "speech-01"; // 走 Pro 接口必须带上 model
-    // 极其重要：高级模型 speech-01 不支持 32000Hz，必须降为 24000Hz，否则会报 2013 错误
-    requestBody.audio_setting = { sample_rate: 24000, bitrate: 128000, format: "mp3" };
+    requestBody.model = "speech-01";
+    // 修复：speech-01 模型改用 16000Hz，这是 MiniMax Pro 模型的标准采样率
+    requestBody.audio_setting = { sample_rate: 16000, bitrate: 128000, format: "mp3" };
 }
 
     const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
