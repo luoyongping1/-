@@ -1829,6 +1829,30 @@ async function playMiniMaxVoice(text, btn) {
     const friend = friends.find(f => f.name === currentFriendName);
     const apiKey = mmConfig.key || mmConfig.apiKey; // 兼容不同键名
     if (!apiKey || !mmConfig.groupId) return alert("请在设置中配置 MiniMax，检查 API Key 和 Group ID 是否填写");
+
+    // 严格过滤无效的音色 ID，防止发送空值、"未设置" 等无效文本给 API
+    let finalVoiceId = "cherry"; 
+    if (friend && friend.voiceId) {
+        const vid = String(friend.voiceId).trim();
+        if (vid !== "" && vid !== "未设置" && vid !== "undefined" && vid !== "null") {
+            finalVoiceId = vid;
+        }
+    }
+
+    // 严格过滤并获取有效的模型名称
+    let finalModel = "speech-01";
+    if (mmConfig.model) {
+        const m = String(mmConfig.model).trim();
+        if (m !== "" && m !== "undefined" && m !== "null") {
+            finalModel = m;
+        }
+    }
+
+    // 检查要合成的文本是否为空
+    if (!text || String(text).trim() === "") {
+        return alert("语音播放失败：要合成的文本内容为空！");
+    }
+
     const originalHTML = btn.innerHTML;
     btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
     btn.style.pointerEvents = "none";
@@ -1841,9 +1865,9 @@ async function playMiniMaxVoice(text, btn) {
                 'Content-Type': 'application/json' 
             },
             body: JSON.stringify({
-                model: mmConfig.model || "speech-01",
+                model: finalModel,
                 text: text,
-                voice_setting: { voice_id: (friend && friend.voiceId) ? friend.voiceId : "cherry", speed: 1.0, vol: 1.0, pitch: 0 },
+                voice_setting: { voice_id: finalVoiceId, speed: 1.0, vol: 1.0, pitch: 0 },
                 audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
             })
         });
@@ -1858,7 +1882,7 @@ async function playMiniMaxVoice(text, btn) {
             } else {
                 errorMessage = JSON.stringify(errorJson);
             }
-            throw new Error(errorMessage);
+            throw new Error(`${errorMessage} (发送的音色ID: "${finalVoiceId}", 模型: "${finalModel}")`);
         }
 
         // 新增校验 2：如果网络请求状态码不等于 200 OK
