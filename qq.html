@@ -1863,9 +1863,17 @@ let requestBody = {
 
 if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
     apiPath = "/v1/t2s_pro";
-    requestBody.model = "speech-01";
-    // 修复：speech-01 模型改用 16000Hz，这是 MiniMax Pro 模型的标准采样率
-    requestBody.audio_setting = { sample_rate: 16000, bitrate: 128000, format: "mp3" };
+    requestBody = {
+        model: "speech-01",
+        text: text,
+        voice_setting: {
+            voice_id: finalVoiceId
+        },
+        audio_setting: {
+            sample_rate: 16000,
+            format: "mp3"
+        }
+    };
 }
 
     const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
