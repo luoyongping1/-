@@ -1867,7 +1867,10 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
         model: "speech-01",
         text: text,
         voice_setting: {
-            voice_id: finalVoiceId
+            voice_id: finalVoiceId,
+            speed: 1.0,
+            vol: 1.0,
+            pitch: 0
         },
         audio_setting: {
             sample_rate: 16000,
@@ -1876,13 +1879,13 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss__")) {
     };
 }
 
-    const apiUrl = `https://thingproxy.freeboard.io/fetch/https://api.minimax.chat${apiPath}?group_id=${mmConfig.groupId}`;
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 
-            'Authorization': `Bearer ${apiKey}`, 
-            'Content-Type': 'application/json' 
-        },
+const apiUrl = `https://shushuxsj.xyz${apiPath}?group_id=${mmConfig.groupId}`;
+const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 
+        'Authorization': `Bearer ${apiKey}`, 
+        'Content-Type': 'application/json' 
+    },
         body: JSON.stringify(requestBody)
     });
 
