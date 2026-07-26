@@ -1875,15 +1875,15 @@ async function playMiniMaxVoice(text, btn) {
                 }
             };
         }
-        const apiUrl = `https://shushuxsj.xyz${apiPath}`;
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
+const apiUrl = `https://shushuxsj.xyz${apiPath}?GroupId=${mmConfig.groupId}`;
+const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+});
         const contentType = response.headers.get("content-type") || "";
         if (contentType.includes("application/json")) {
             const errorJson = await response.json();
