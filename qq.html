@@ -1870,7 +1870,8 @@ if (finalModel === "speech-01" || finalVoiceId.startsWith("moss_")) {
         }
     };
 }
-const apiUrl = `https://shushuxsj.xyz`;
+// 改动行：拼接完整接口路径，匹配精准路由
+const apiUrl = `https://shushuxsj.xyz${apiPath}`;
 const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
