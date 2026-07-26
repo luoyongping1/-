@@ -1824,35 +1824,76 @@ async function saveData() {
         applyGlobalStyles();
         }
 
-        async function playMiniMaxVoice(text, btn) {
-            const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
-            const friend = friends.find(f => f.name === currentFriendName);
-            const apiKey = mmConfig.key || mmConfig.apiKey; // 兼容不同键名
-            if (!apiKey || !mmConfig.groupId) return alert("请在设置中配置 MiniMax");
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
-            btn.style.pointerEvents = "none";
-            try {
-                const apiUrl = `https://shushuxsj.xyz/v1/text_to_speech?group_id=${mmConfig.groupId}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: mmConfig.model || "speech-01",
-                        text: text,
-                        voice_setting: { voice_id: (friend && friend.voiceId) ? friend.voiceId : "cherry", speed: 1.0, vol: 1.0, pitch: 0 },
-                        audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
-                    })
-                });
-                if (!response.ok) throw new Error("合成失败");
-                const blob = await response.blob();
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio(audioUrl);
-                btn.innerHTML = "<span class='voice-icon'>▶</span><span>正在播放</span>";
-                audio.onended = () => { btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto"; URL.revokeObjectURL(audioUrl); };
-                await audio.play();
-            } catch (e) { alert("语音合成失败"); btn.innerHTML = originalHTML; btn.style.pointerEvents = "auto"; }
+async function playMiniMaxVoice(text, btn) {
+    const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+    const friend = friends.find(f => f.name === currentFriendName);
+    const apiKey = mmConfig.key || mmConfig.apiKey; // 兼容不同键名
+    if (!apiKey || !mmConfig.groupId) return alert("请在设置中配置 MiniMax，检查 API Key 和 Group ID 是否填写");
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = "<span class='voice-icon'>⌛</span><span>对方正在说话</span>";
+    btn.style.pointerEvents = "none";
+    try {
+        const apiUrl = `https://shushuxsj.xyz/v1/text_to_speech?group_id=${mmConfig.groupId}`;
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${apiKey}`, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({
+                model: mmConfig.model || "speech-01",
+                text: text,
+                voice_setting: { voice_id: (friend && friend.voiceId) ? friend.voiceId : "cherry", speed: 1.0, vol: 1.0, pitch: 0 },
+                audio_setting: { sample_rate: 32000, bitrate: 128000, format: "mp3" }
+            })
+        });
+
+        // 新增校验 1：判断返回的数据是否是 JSON（代表报错信息）
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+            const errorJson = await response.json();
+            let errorMessage = "接口返回了错误";
+            if (errorJson.base_resp && errorJson.base_resp.status_msg) {
+                errorMessage = `${errorJson.base_resp.status_msg} (错误码: ${errorJson.base_resp.status_code})`;
+            } else {
+                errorMessage = JSON.stringify(errorJson);
+            }
+            throw new Error(errorMessage);
         }
+
+        // 新增校验 2：如果网络请求状态码不等于 200 OK
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP状态码 ${response.status}: ${errorText || '未知错误'}`);
+        }
+
+        // 只有通过了上面的校验，才能确认为音频数据，转为 Blob 播放
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        btn.innerHTML = "<span class='voice-icon'>▶</span><span>正在播放</span>";
+        
+        audio.onended = () => { 
+            btn.innerHTML = originalHTML; 
+            btn.style.pointerEvents = "auto"; 
+            URL.revokeObjectURL(audioUrl); 
+        };
+
+        // 新增校验 3：捕获音频播放失败的错误
+        audio.onerror = (evt) => {
+            alert("语音文件加载或播放失败，请检查中转端音频数据是否完整。");
+            btn.innerHTML = originalHTML;
+            btn.style.pointerEvents = "auto";
+        };
+
+        await audio.play();
+    } catch (e) { 
+        // 此时弹窗会精确显示究竟是网络失败、跨域阻拦、还是API内部的具体报错文案
+        alert("语音合成失败，具体原因：\n" + e.message); 
+        btn.innerHTML = originalHTML; 
+        btn.style.pointerEvents = "auto"; 
+    }
+}
 
     function renderMessages(isLoadMore = false) {
 // 增加这一行：每次画消息前，先从存储里同步最新的聊天历史
