@@ -4197,7 +4197,7 @@ async function getDatingAiReply() {
     if(!aiConfig.key) return;
     const friend = friends.find(f => f.name === currentFriendName);
     const history = (datingHistories[currentFriendName] || []).slice(-10).map(m => ({ role: m.type === 'self' ? 'user' : 'assistant', content: m.text }));
-    let sys = `# Role\n你现在正和用户进行[线下约会]。人设：${friend.persona}。\n# 任务\n请进行沉浸式的互动描述，包括你的动作、神态、环境和对话。使用长文字输出，严禁拆分成短句。不要发送HTML代码。严禁输出任何分析过程或类似“* 注意：”的解释性文字。`;
+    let sys = `# Role\n你现在正和用户进行[线下约会]。人设：${friend.persona}。\n# 任务\n请进行沉浸式的互动描述，包括你的动作、神态、环境和对话。使用长文字输出，严禁拆分成短句。不要发送HTML代码。严禁输出任何分析过程或类似“* 注意：”的解释性文字。\n【硬性要求】：你每次的回复必须在800字以上！请务必通过极其详尽、细腻的细节描写来扩充字数，包括但不限于：眼神交流、微表情、肢体触碰、背景声音、周围环境的色彩与温度，以及你内心的情感波折和想法。使用大量生动具体的慢节奏叙事，保证内容充实饱满。`;
     
     // 新增：显示正在输入状态
     const typingStatus = document.getElementById('dating-typing');
