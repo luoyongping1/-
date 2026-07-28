@@ -692,23 +692,22 @@ function updateWallpaper() {
 function renderQQList() {
     const content = document.getElementById('app-content');
 
-    // 如果内存里没有好友，先从 localStorage 读取 qq_friends
-    if (currentQQFriends.length === 0) {
+    // 优先从本地缓存中读取上一次破解取证出来的虚拟QQ好友和记录
+    const checkFriends = localStorage.getItem('qq_check_friends');
+    const checkHistory = localStorage.getItem('qq_check_history');
+
+    if (checkFriends && checkHistory) {
+        currentQQFriends = JSON.parse(checkFriends);
+        qqChatHistories = JSON.parse(checkHistory);
+    } else {
+        // 如果从未破解过，且主页面有真实好友，加载真实好友数据并置灰提示需要破解
         const storedFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
         if (storedFriends.length === 0) {
             content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><i class="fas fa-lock" style="font-size:40px; margin-bottom:10px;"></i><p>QQ 已加密</p><p style="font-size:12px;">点击右上角 AI 按钮破解数据</p></div>`;
             return;
         }
-        // 把 qq_friends 里的好友直接显示出来
-        currentQQFriends = storedFriends.map(f => ({
-            name: f.name,
-            relation: f.group || '好友'
-        }));
-        // 同时从 qq_history 里读取聊天记录，用于显示最后一条消息
-        const storedHistory = JSON.parse(localStorage.getItem('qq_history') || '{}');
-        Object.keys(storedHistory).forEach(name => {
-            qqChatHistories[name] = storedHistory[name];
-        });
+        content.innerHTML = `<div style="text-align:center; margin-top:100px; color:#999;"><i class="fas fa-lock" style="font-size:40px; margin-bottom:10px;"></i><p>QQ 已加密</p><p style="font-size:12px;">点击右上角 AI 按钮破解数据</p></div>`;
+        return;
     }
 
     content.innerHTML = currentQQFriends.map(f => {
@@ -753,6 +752,9 @@ async function sendQQMsg() {
     input.value = '';
     renderMessages();
 
+    // 实时保存自己发送的消息
+    localStorage.setItem('qq_check_history', JSON.stringify(qqChatHistories));
+
     const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
     if (!aiConfig.key) return;
 
@@ -771,6 +773,8 @@ async function sendQQMsg() {
         if (replyText) {
             qqChatHistories[currentChatFriend].push({ type: 'friend', text: replyText });
             renderMessages();
+            // 实时保存AI回复的消息
+            localStorage.setItem('qq_check_history', JSON.stringify(qqChatHistories));
         }
     } catch (e) {
         console.error("QQ Chat Error:", e);
@@ -837,22 +841,25 @@ async function triggerAI() {
                 text: m.text
             }));
 
-            // 2. 解析 AI 生成的其他路人
-            const items = rawData.split('|').filter(i => i.includes(':'));
-            items.forEach(item => {
-                const parts = item.split(':');
-                if (parts.length >= 3) {
-                    const name = parts[0].trim();
-                    const relation = parts[1].trim();
-                    const msgs = parts.slice(2).join(':').split('#').filter(m => m.trim());
-                    currentQQFriends.push({ name, relation });
-                    qqChatHistories[name] = msgs.map((text, idx) => ({
-                        type: idx % 2 === 0 ? 'friend' : 'self', text: text.trim()
-                    }));
-                }
-            });
-            renderQQList();
-        } else if (currentAppId === 'browser') {
+                            // 2. 解析 AI 生成的其他路人
+                const items = rawData.split('|').filter(i => i.includes(':'));
+                items.forEach(item => {
+                    const parts = item.split(':');
+                    if (parts.length >= 3) {
+                        const name = parts[0].trim();
+                        const relation = parts[1].trim();
+                        const msgs = parts.slice(2).join(':').split('#').filter(m => m.trim());
+                        currentQQFriends.push({ name, relation });
+                        qqChatHistories[name] = msgs.map((text, idx) => ({
+                            type: idx % 2 === 0 ? 'friend' : 'self', text: text.trim()
+                        }));
+                    }
+                });
+                // 将取证出来的新数据永久写入浏览器缓存
+                localStorage.setItem('qq_check_friends', JSON.stringify(currentQQFriends));
+                localStorage.setItem('qq_check_history', JSON.stringify(qqChatHistories));
+                renderQQList();
+            } else if (currentAppId === 'browser') {
             const res = await fetch(url, {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `暴露隐私：虚构8条[${targetName}]的搜索记录。人设：${targetPersona}。格式：标题|网址|时间。用#隔开。不要代码块！` }] })
