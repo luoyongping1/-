@@ -416,6 +416,7 @@
         <span id="app-title">Application</span>
         <div style="display: flex; gap: 10px; align-items: center;">
             <div id="diary-fav-btn" style="display:none; color: #ff4d4f; font-size: 20px; cursor: pointer;" onclick="saveCurrentDiary()"><i class="far fa-heart"></i></div>
+            <div class="ai-btn" id="forward-app-btn" style="display:none; background: #8c8273; color: white; width: 36px; height: 36px; border-radius: 50%; justify-content: center; align-items: center; cursor: pointer;" onclick="openForwardModal()"><i class="fas fa-share-square"></i></div>
             <div class="ai-btn" id="ai-scan-btn" onclick="triggerAI()"><i class="fas fa-sync-alt"></i></div>
         </div>
     </div>
@@ -426,6 +427,7 @@
         <div class="chat-header">
             <i class="fas fa-chevron-left" onclick="closeQQChat()" style="margin-right:15px; cursor: pointer;"></i>
             <span id="chat-friend-name">好友名字</span>
+            <i class="fas fa-share-square" onclick="openForwardModal()" style="margin-left: auto; cursor: pointer; color: var(--text-color); font-size: 18px;"></i>
         </div>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-bar">
@@ -445,6 +447,19 @@
 </div>
 
 <div class="home-bar" onclick="closeApp()"></div>
+
+<!-- 转发联系人选择弹窗 -->
+<div id="forward-select-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
+    <div style="background: #fdfcfb; width: 85%; max-width: 320px; border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(140, 130, 115, 0.15); border: 1px solid rgba(218, 210, 196, 0.8); box-sizing: border-box; display: flex; flex-direction: column; gap: 15px;">
+        <h3 style="margin: 0; font-size: 16px; color: #5a5144; text-align: center; font-weight: 600;">选择要转发的联系人</h3>
+        <div id="forward-friends-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
+            <!-- 动态生成好友列表 -->
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 5px;">
+            <button onclick="closeForwardModal()" style="flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #e0d9cf; background: white; color: #8c8273; font-size: 14px; cursor: pointer;">取消</button>
+        </div>
+    </div>
+</div>
 
 <script>
  let layout = [
@@ -615,7 +630,15 @@ function openApp(id) {
 
     if(id === 'appearance') {
         document.getElementById('app-appearance').style.display = 'flex';
+        document.getElementById('forward-app-btn').style.display = 'none';
         return;
+    }
+
+    // QQ列表页面的转发没有意义（我们需要进入具体聊天再转发），因此在QQ列表时隐藏顶部转发按钮
+    if (id === 'qq') {
+        document.getElementById('forward-app-btn').style.display = 'none';
+    } else {
+        document.getElementById('forward-app-btn').style.display = 'flex';
     }
 
     document.getElementById('ai-scan-btn').style.display = 'flex';
@@ -1069,6 +1092,137 @@ async function refreshMood() {
         const content = (data.choices?.[0]?.message?.content || data.content || "").trim();
         if (content) document.getElementById('mood-text').innerText = content;
     } catch (e) {}
+}
+
+/* ================= 转发卡片逻辑函数 ================= */
+function getForwardContent() {
+    let appName = "";
+    let contentSummary = "";
+
+    // 判断如果打开了具体的 QQ 聊天界面，则单独转发当前的 QQ 聊天线索
+    const qqChatView = document.getElementById('qq-chat-view');
+    if (qqChatView && qqChatView.style.display === 'flex' && currentChatFriend) {
+        appName = `QQ 聊天记录 - ${currentChatFriend}`;
+        const history = qqChatHistories[currentChatFriend] || [];
+        if (history.length === 0) {
+            contentSummary = "暂无聊天记录";
+        } else {
+            // 获取最后 4 条聊天摘要
+            contentSummary = history.slice(-4).map(m => {
+                const sender = m.type === 'self' ? '机主' : currentChatFriend;
+                return `${sender}: ${m.text}`;
+            }).join('\n');
+        }
+        return { appName, contentSummary };
+    }
+
+    // 根据当前应用，打包不同的卡片内容
+    if (currentAppId === 'browser') {
+        appName = "浏览器搜索历史";
+        contentSummary = browserHistory.length > 0 
+            ? browserHistory.map(h => `• ${h.title}`).join('\n') 
+            : "暂无最近浏览器搜索记录";
+    } else if (currentAppId === 'shop') {
+        appName = "购物车加购清单";
+        contentSummary = shopCartData.length > 0 
+            ? shopCartData.map(i => `• ${i.name} (￥${i.price})`).join('\n') 
+            : "暂无任何购物车加购数据";
+    } else if (currentAppId === 'diary') {
+        appName = "私密备忘日记";
+        if (currentDiaryData) {
+            const clean = t => t.replace(/\[\/?(日期|正文|秘密|心情)\]/g, '').replace(/日期：|正文：|秘密：/g, '').trim();
+            contentSummary = `日期: ${clean(currentDiaryData.date)}\n碎碎念: ${clean(currentDiaryData.body)}`;
+        } else {
+            contentSummary = "当前未加载任何日记详情";
+        }
+    } else if (currentAppId === 'photo') {
+        appName = "私密相册照片";
+        contentSummary = albumData.length > 0 
+            ? albumData.map((p, idx) => `[已删照片${idx + 1}] ${p.desc}`).join('\n') 
+            : "相册里没有检测到照片";
+    } else if (currentAppId === 'wallet') {
+        appName = "手机零钱流水";
+        if (walletHistory) {
+            contentSummary = `余额: ￥${walletHistory.balance}\n近期交易记录:\n` + 
+                walletHistory.list.slice(0, 3).map(t => `• ${t.title}: ${t.price}`).join('\n');
+        } else {
+            contentSummary = "暂无零钱与流水记录";
+        }
+    } else if (currentAppId === 'fav') {
+        appName = "手机本地收藏";
+        contentSummary = savedDiaries.length > 0 
+            ? savedDiaries.map((d, idx) => `• 收藏${idx + 1}: ${d.body.substring(0, 15)}...`).join('\n') 
+            : "收藏夹内暂无任何数据";
+    } else {
+        appName = "搜查应用数据";
+        contentSummary = "暂无可用详情数据";
+    }
+    return { appName, contentSummary };
+}
+
+function openForwardModal() {
+    const modal = document.getElementById('forward-select-modal');
+    const listContainer = document.getElementById('forward-friends-list');
+    
+    // 读取 localStorage 中的 qq_friends 好友列表数据
+    const friendsList = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+    if (friendsList.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; color:#8c8273; font-size:13px; padding: 20px;">未发现微信或QQ的通讯录联系人，请先到聊天页面创建或加载好友。</div>';
+    } else {
+        listContainer.innerHTML = friendsList.map(f => `
+            <div onclick="selectForwardTarget('${f.name}')" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid rgba(230, 222, 209, 0.4); border-radius: 12px; cursor: pointer; background: white; transition: background 0.2s;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #bcae97; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">${f.name[0]}</div>
+                <span style="font-size: 14px; color: #5a5144; font-weight: 500;">${f.name}</span>
+            </div>
+        `).join('');
+    }
+    modal.style.display = 'flex';
+}
+
+function closeForwardModal() {
+    document.getElementById('forward-select-modal').style.display = 'none';
+}
+
+function selectForwardTarget(targetFriend) {
+    const data = getForwardContent();
+    
+    // 渲染卡片的 HTML
+    const cardHtml = `
+        <div style="background: #ffffff; border: 1px solid #e0d9cf; border-radius: 12px; padding: 12px; width: 220px; box-shadow: 0 2px 8px rgba(140, 130, 115, 0.1); font-family: system-ui, sans-serif; color: #5a5144; text-align: left;">
+            <div style="font-size: 11px; color: #bcae97; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #f5f0e6; padding-bottom: 6px;">
+                📬 搜查手机分享
+            </div>
+            <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #5a5144;">${data.appName}</div>
+            <div style="font-size: 12px; color: #8c8273; line-height: 1.4; max-height: 80px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; word-break: break-all; white-space: pre-wrap;">${data.contentSummary}</div>
+            <div style="font-size: 10px; color: #bcae97; margin-top: 8px; text-align: right; border-top: 1px dashed #f5f0e6; padding-top: 6px; font-weight: bold;">
+                点击查收线索 ➔
+            </div>
+        </div>
+    `;
+
+    // 加载并写入聊天数据库 localStorage ('qq_history')
+    const historyDb = JSON.parse(localStorage.getItem('qq_history') || '{}');
+    if (!historyDb[targetFriend]) {
+        historyDb[targetFriend] = [];
+    }
+    historyDb[targetFriend].push({
+        type: 'self', // 视为玩家发送给 AI
+        text: cardHtml,
+        isForwardedCard: true, // 渲染标志
+        time: Date.now()
+    });
+    localStorage.setItem('qq_history', JSON.stringify(historyDb));
+
+    // 同步更新列表中好友的最新的消息预览
+    const friendsList = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+    const friendObj = friendsList.find(f => f.name === targetFriend);
+    if (friendObj) {
+        friendObj.lastMsg = "[搜查手机分享]";
+        localStorage.setItem('qq_friends', JSON.stringify(friendsList));
+    }
+
+    closeForwardModal();
+    alert(`成功将“${data.appName}”的数据转发给：${targetFriend}`);
 }
 </script>
 </body>

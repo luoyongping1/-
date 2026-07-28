@@ -2131,11 +2131,15 @@ if (m.isShoppingPay) {
             <div class="rp-footer">${m.rpOpened ? '红包已被领取' : '微信红包'}</div>
         </div>`;
     useBubble = false;
+} else if (m.isForwardedCard) {
+    // 转发卡片：直接显示内部HTML，不使用外部绿色/白色微信气泡框
+    contentHtml = m.text;
+    useBubble = false;
 } else if (m.isSticker) {
-                    // 表情包：直接显示，不用气泡
-                    contentHtml = `<img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">`;
-                    useBubble = false;
-                } else if (m.isRealImage) {
+    // 表情包：直接显示，不用气泡
+    contentHtml = `<img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">`;
+    useBubble = false;
+} else if (m.isRealImage) {
                     contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">`;
                     useBubble = false;
                 } else if (m.isDescribeCard) {
