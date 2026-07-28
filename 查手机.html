@@ -7,11 +7,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --bg: #ffffff;
-            --ins-blue: #0095f6;
-            --radius-app: 18px;
-            --radius-widget: 28px;
-            --qq-blue: #1296db;
+            --bg: #fcfbfa;
+            --ins-blue: #bcae97;
+            --radius-app: 16px;
+            --radius-widget: 24px;
+            --qq-blue: #8c8273;
+            --text-color: #5a5144;
         }
 
         * {
@@ -29,9 +30,11 @@
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            background: transparent; 
-            font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg); 
+            font-family: -apple-system, "STSong", "SimSun", "PingFang SC", serif;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         #wallpaper {
@@ -40,15 +43,69 @@
             z-index: -1; transition: 0.5s;
         }
 
+        /* 顶部文案卡片样式 */
+        .phone-header {
+            padding: calc(env(safe-area-inset-top) + 20px) 24px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .time-header {
+            text-align: center;
+            font-size: 11px;
+            color: #8c8273;
+            letter-spacing: 1px;
+            font-weight: 500;
+            font-family: -apple-system, sans-serif;
+        }
+        .quote-card {
+            background: linear-gradient(135deg, rgba(255, 253, 250, 0.9) 0%, rgba(245, 240, 232, 0.9) 100%);
+            border: 1px solid rgba(218, 210, 196, 0.6);
+            border-radius: 20px;
+            padding: 16px 20px;
+            box-shadow: 0 8px 24px rgba(180, 170, 150, 0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .quote-zh {
+            font-family: 'STSong', 'SimSun', serif;
+            font-size: 21px;
+            color: #4a4135;
+            letter-spacing: 3px;
+            font-weight: 600;
+            text-shadow: 0 1px 0px rgba(255,255,255,0.8);
+        }
+        .quote-en-line {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-top: 10px;
+            gap: 8px;
+        }
+        .quote-line {
+            width: 20px; height: 1px; background: #bcae97;
+        }
+        .quote-en {
+            font-family: 'Georgia', serif;
+            font-size: 10.5px;
+            color: #7c705f;
+            font-style: italic;
+            letter-spacing: 0.5px;
+        }
+
         /* 主屏幕网格 */
         #home-screen {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            grid-auto-rows: 85px;
+            grid-auto-rows: 62px;
             grid-auto-flow: dense;
-            gap: 20px;
-            padding: 60px 25px;
-            width: 100%; height: 100%;
+            gap: 16px;
+            padding: 10px 24px 100px;
+            width: 100%;
+            flex: 1;
+            overflow-y: auto;
         }
 
         /* 基础项 */
@@ -61,26 +118,39 @@
         }
 
         .widget-2x2 { grid-column: span 2; grid-row: span 2; }
+        .widget-4x2 { grid-column: span 4; grid-row: span 2; }
 
         /* APP 视觉样式 */
         .app-icon {
-            width: 65px; height: 65px;
+            width: 48px; height: 48px;
             border-radius: var(--radius-app);
-            background-size: cover; background-position: center;
-            background-color: #f9f9f9;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            margin-bottom: 8px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            font-size: 22px;
+            transition: background 0.2s;
         }
-        .app-name { font-size: 11px; color: #262626; font-weight: 500; }
+        .app-icon:active {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .app-name { font-size: 11px; color: var(--text-color); font-weight: 500; margin-top: 4px; }
 
         /* 组件样式 */
         .widget-inner {
             width: 100%; height: 100%; background: white;
             border-radius: var(--radius-widget);
-            border: 1px solid #f2f2f2; padding: 18px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
-            display: flex; flex-direction: column; justify-content: space-between;
+            border: 1px solid rgba(218, 210, 196, 0.4);
+            box-shadow: 0 4px 16px rgba(180, 170, 150, 0.04);
             overflow: hidden;
+        }
+        .banner-widget, .art-widget {
+            background-size: cover;
+            background-position: center;
+            filter: grayscale(1) brightness(1.2) contrast(0.8);
+            opacity: 0.85;
+            width: 100%; height: 100%;
         }
 
         /* 编辑模式 */
@@ -109,10 +179,39 @@
             pointer-events: none;
         }
 
+        /* 底部 Dock 栏 */
+        .phone-dock {
+            position: fixed;
+            bottom: calc(15px + env(safe-area-inset-bottom));
+            left: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(230, 222, 209, 0.5);
+            border-radius: 24px;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 8px 32px rgba(140, 130, 115, 0.05);
+            z-index: 100;
+        }
+        .dock-item {
+            color: var(--text-color);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
         /* 子页面 */
         .app-page {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 1000;
+            background: #fcfbfa; z-index: 1000;
             display: none; flex-direction: column;
             animation: appIn 0.3s ease-out;
         }
@@ -123,14 +222,15 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center;
-            border-bottom: 1px solid #f2f2f2; 
+            border-bottom: 1px solid rgba(230, 222, 209, 0.4); 
             font-weight: 600;
+            color: var(--text-color);
             height: calc(65px + env(safe-area-inset-top));
             box-sizing: border-box;
         }
         .ai-btn {
             width: 36px; height: 36px;
-            background: linear-gradient(45deg, #f09433, #bc1888);
+            background: #bcae97;
             border-radius: 50%; color: white;
             display: flex; justify-content: center; align-items: center;
             cursor: pointer;
@@ -144,12 +244,12 @@
         }
         .home-bar {
             position: fixed; 
-            bottom: calc(10px + env(safe-area-inset-bottom)); 
+            bottom: calc(5px + env(safe-area-inset-bottom)); 
             left: 50%; 
             transform: translateX(-50%);
             width: 130px; 
             height: 5px; 
-            background: #e0e0e0; 
+            background: #e0dcd3; 
             border-radius: 10px;
             z-index: 1100;
         }
@@ -157,29 +257,30 @@
         /* QQ 样式增强 */
         .qq-list-item {
             display: flex; align-items: center; padding: 15px 12px;
-            border-bottom: 1px solid #f5f5f5; cursor: pointer;
+            border-bottom: 1px solid #f5f0e6; cursor: pointer;
         }
-        .qq-list-item:active { background: #f0f0f0; }
+        .qq-list-item:active { background: #f5f0e6; }
         .qq-avatar {
             width: 48px; height: 48px; border-radius: 50%;
-            background: var(--qq-blue); margin-right: 12px;
+            background: rgba(230, 222, 209, 0.6); margin-right: 12px;
             display: flex; align-items: center; justify-content: center; 
-            color: white; font-weight: bold; font-size: 18px;
+            color: var(--text-color); font-weight: bold; font-size: 18px;
             flex-shrink: 0;
         }
         .qq-info { flex: 1; min-width: 0; }
-        .qq-name { font-size: 16px; font-weight: 500; color: #333; }
-        .qq-msg-preview { font-size: 13px; color: #999; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .qq-name { font-size: 16px; font-weight: 500; color: var(--text-color); }
+        .qq-msg-preview { font-size: 13px; color: #8c8273; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         #qq-chat-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #f2f2f2; display: none; flex-direction: column; z-index: 1100;
+            background: #fdfcfb; display: none; flex-direction: column; z-index: 1100;
         }
         .chat-header {
             padding: calc(env(safe-area-inset-top) + 15px) 15px 15px; 
-            background: #f2f2f2;
-            display: flex; align-items: center; border-bottom: 1px solid #ddd;
+            background: #fdfcfb;
+            display: flex; align-items: center; border-bottom: 1px solid #f0e6d6;
             font-weight: 600;
+            color: var(--text-color);
         }
         .chat-messages { 
             flex: 1; 
@@ -195,83 +296,108 @@
             word-wrap: break-word; position: relative;
         }
         .chat-bubble.friend { 
-            align-self: flex-start; background: white; color: black; 
+            align-self: flex-start; background: #f4efebd9; color: var(--text-color); 
             border-top-left-radius: 2px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            border: 1px solid rgba(230,222,209,0.3);
         }
         .chat-bubble.self { 
-            align-self: flex-end; background: var(--qq-blue); color: white; 
+            align-self: flex-end; background: var(--ins-blue); color: white; 
             border-top-right-radius: 2px;
-            box-shadow: 0 2px 4px rgba(0,150,255,0.1);
+            box-shadow: 0 2px 4px rgba(188, 174, 151, 0.2);
         }
 
         .chat-input-bar {
-            padding: 10px 15px; background: #f8f8f8; display: flex; gap: 10px; align-items: center;
-            border-top: 1px solid #ddd;
+            padding: 10px 15px; background: #fdfcfb; display: flex; gap: 10px; align-items: center;
+            border-top: 1px solid #f0e6d6;
             padding-bottom: calc(10px + env(safe-area-inset-bottom));
         }
         .chat-input-bar input {
-            flex: 1; border: 1px solid #ddd; padding: 10px 15px; border-radius: 22px; outline: none;
-            font-size: 15px; background: white;
+            flex: 1; border: 1px solid #e0d9cf; padding: 10px 15px; border-radius: 22px; outline: none;
+            font-size: 15px; background: white; color: var(--text-color);
         }
         .chat-send-btn { 
-            background: var(--qq-blue); color: white; padding: 6px 15px; 
+            background: var(--ins-blue); color: white; padding: 6px 15px; 
             border-radius: 18px; font-weight: 500; cursor: pointer; font-size: 14px;
         }
 
-        /* 其他模块样式保留... */
+        /* 其他模块样式 */
         .browser-list { display: flex; flex-direction: column; gap: 12px; padding: 5px 0; }
         .browser-item {
-            background: #ffffff; padding: 15px; border-radius: 16px; border: 1px solid #f2f2f2;
+            background: #ffffff; padding: 15px; border-radius: 16px; border: 1px solid rgba(230,222,209,0.4);
             display: flex; align-items: flex-start; gap: 15px; transition: background 0.2s;
         }
-        .browser-title { font-size: 14px; font-weight: 600; color: #262626; line-height: 1.4; }
-        .browser-url { font-size: 11px; color: #8e8e8e; margin-top: 4px; word-break: break-all; }
+        .browser-title { font-size: 14px; font-weight: 600; color: var(--text-color); line-height: 1.4; }
+        .browser-url { font-size: 11px; color: #8c8273; margin-top: 4px; word-break: break-all; }
         .browser-time { font-size: 11px; color: #c7c7c7; flex-shrink: 0; }
         .shop-cart-list { display: flex; flex-direction: column; gap: 15px; padding-bottom: 20px; }
-        .shop-item-card { background: #ffffff; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .shop-item-card { background: #ffffff; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.01); border: 1px solid rgba(230,222,209,0.4); }
         .shop-item-main { display: flex; gap: 12px; }
-        .shop-item-img { width: 85px; height: 85px; background: #f7f7f7; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 24px; }
-        .scrapbook { background: #fffef9; border-radius: 12px; padding: 25px 20px; background-image: radial-gradient(#e5e5e5 1px, transparent 1px); background-size: 20px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); font-family: "PingFang SC", "STHeiti", cursive; color: #4a4a4a; position: relative; min-height: 100%; margin-bottom: 20px; }
-        .scrapbook-section { background: rgba(255,255,255,0.7); border: 1px dashed #d9d9d9; border-radius: 8px; padding: 15px; margin-bottom: 15px; line-height: 1.8; font-size: 15px; word-wrap: break-word; white-space: pre-wrap; }
+        .shop-item-img { width: 85px; height: 85px; background: #fbfaf8; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 24px; }
+        .scrapbook { background: #fffefb; border-radius: 12px; padding: 25px 20px; background-image: radial-gradient(#eceae4 1px, transparent 1px); background-size: 20px 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); font-family: "STSong", "SimSun", cursive; color: var(--text-color); position: relative; min-height: 100%; margin-bottom: 20px; }
+        .scrapbook-section { background: rgba(255,255,255,0.7); border: 1px dashed #dcd8d0; border-radius: 8px; padding: 15px; margin-bottom: 15px; line-height: 1.8; font-size: 15px; word-wrap: break-word; white-space: pre-wrap; }
         .photo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding-bottom: 20px; }
-        .photo-card { aspect-ratio: 1 / 1; background: #ffffff; border-radius: 12px; border: 1px solid #f0f0f0; position: relative; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .photo-card { aspect-ratio: 1 / 1; background: #ffffff; border-radius: 12px; border: 1px solid #f2ede4; position: relative; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.01); }
         
-        /* 银行 App 风格钱包 */
+        /* 奶油风钱包 */
         .wallet-container { padding: 5px 0; }
         .wallet-card { 
-            background: linear-gradient(135deg, #2c3e50 0%, #000000 100%); 
+            background: linear-gradient(135deg, #8c8273 0%, #5a5144 100%); 
             border-radius: 20px; padding: 25px; color: white; margin-bottom: 25px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); position: relative; overflow: hidden;
+            box-shadow: 0 10px 25px rgba(140, 130, 115, 0.15); position: relative; overflow: hidden;
         }
         .wallet-card::after {
             content: ''; position: absolute; top: -50%; right: -20%; width: 150px; height: 150px;
-            background: rgba(255,255,255,0.05); border-radius: 50%;
+            background: rgba(255,255,255,0.04); border-radius: 50%;
         }
-        .wallet-label { font-size: 11px; opacity: 0.7; letter-spacing: 1px; margin-bottom: 8px; }
-        .wallet-balance-num { font-size: 30px; font-weight: 700; font-family: 'Helvetica Neue', sans-serif; }
-        .trans-section-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; padding-left: 5px; }
+        .wallet-label { font-size: 11px; opacity: 0.8; letter-spacing: 1px; margin-bottom: 8px; }
+        .wallet-balance-num { font-size: 30px; font-weight: 700; font-family: 'Georgia', serif; }
+        .trans-section-title { font-size: 16px; font-weight: 600; color: var(--text-color); margin-bottom: 15px; padding-left: 5px; }
         .trans-item {
-            background: #fff; padding: 15px; border-radius: 16px; border: 1px solid #f8f8f8;
-            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            background: #fff; padding: 15px; border-radius: 16px; border: 1px solid rgba(230,222,209,0.3);
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.01);
         }
         .trans-main { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .trans-title { font-size: 15px; font-weight: 500; color: #262626; }
-        .trans-price { font-size: 16px; font-weight: 700; color: #ff3b30; }
-        .trans-price.income { color: #34c759; }
+        .trans-title { font-size: 15px; font-weight: 500; color: var(--text-color); }
+        .trans-price { font-size: 16px; font-weight: 700; color: #df7a73; }
+        .trans-price.income { color: #8ca381; }
         .trans-time { font-size: 12px; color: #999; margin-bottom: 8px; }
         .trans-comment { 
-            font-size: 13px; color: #666; background: #f9f9f9; padding: 10px; 
-            border-radius: 10px; line-height: 1.4; border-left: 3px solid #ddd;
+            font-size: 13px; color: #7c705f; background: #fdfcfb; padding: 10px; 
+            border-radius: 10px; line-height: 1.4; border-left: 3px solid #dcd8d0;
         }
     </style>
 </head>
-<body oncontextmenu="return false;">
+ <body oncontextmenu="return false;">
 
 <div id="wallpaper"></div>
+
+<!-- 顶部状态栏与文案卡片 -->
+<div class="phone-header">
+    <div class="time-header">
+        <span class="date-val">2026年6月12日周五</span> &nbsp;·&nbsp; <span class="time-val">12:09</span>
+    </div>
+    <div class="quote-card">
+        <div class="quote-zh">枯木不语，逢我而春</div>
+        <div class="quote-en-line">
+            <div class="quote-line"></div>
+            <div class="quote-en">Silent wood blooms upon meeting me.</div>
+        </div>
+    </div>
+</div>
+
+<!-- 主屏幕网格 -->
 <div id="home-screen"></div>
 
-<div id="app-window" class="app-page">
+<!-- 底部悬浮 Dock 栏 -->
+<div class="phone-dock">
+    <div class="dock-item" onclick="openApp('qq')"><i class="far fa-comment-dots"></i></div>
+    <div class="dock-item" onclick="openApp('browser')"><i class="fas fa-compass"></i></div>
+    <div class="dock-item" onclick="openApp('appearance')"><i class="fas fa-palette"></i></div>
+    <div class="dock-item" onclick="openApp('wallet')"><i class="far fa-credit-card"></i></div>
+</div>
+
+<div id="app-window" class="app-page"> 
     <div class="nav-bar">
         <i class="fas fa-times" onclick="closeApp()"></i>
         <span id="app-title">Application</span>
@@ -308,18 +434,19 @@
 <div class="home-bar" onclick="closeApp()"></div>
 
 <script>
-let layout = [
-    { id: 'time', type: 'w', name: 'Time' },
-    { id: 'qq', type: 'a', name: 'QQ', icon: 'https://img.icons8.com/color/144/qq.png' },
-    { id: 'browser', type: 'a', name: '浏览器', icon: 'https://img.icons8.com/color/144/safari.png' },
-    { id: 'shop', type: 'a', name: '购物车', icon: 'https://img.icons8.com/fluency/144/shopping-cart.png' },
-    { id: 'diary', type: 'a', name: '日记', icon: 'https://img.icons8.com/fluency/144/journal.png' },
-    { id: 'photo', type: 'a', name: '相册', icon: 'https://img.icons8.com/color/144/gallery.png' },
-    { id: 'wallet', type: 'a', name: '钱包', icon: 'https://img.icons8.com/fluency/144/wallet.png' },
-    { id: 'appearance', type: 'a', name: '外观', icon: 'https://img.icons8.com/color/144/settings.png' },
-    { id: 'fav', type: 'a', name: '收藏', icon: 'https://img.icons8.com/fluency/144/filled-star.png' },
-    { id: 'mood', type: 'w', name: 'Mood' }
-];
+ let layout = [
+    { id: 'banner', type: 'w', name: 'Banner' },
+    { id: 'qq', type: 'a', name: 'QQ', icon: 'far fa-comment-dots' },
+    { id: 'browser', type: 'a', name: '浏览器', icon: 'fas fa-compass' },
+    { id: 'piano', type: 'w', name: 'Piano' },
+    { id: 'shop', type: 'a', name: '购物车', icon: 'fas fa-shopping-bag' },
+    { id: 'photo', type: 'a', name: '相册', icon: 'far fa-images' },
+    { id: 'letter', type: 'w', name: 'Letter' },
+    { id: 'diary', type: 'a', name: '日记', icon: 'far fa-edit' },
+    { id: 'wallet', type: 'a', name: '钱包', icon: 'far fa-credit-card' },
+    { id: 'fav', type: 'a', name: '收藏', icon: 'far fa-star' },
+    { id: 'appearance', type: 'a', name: '外观', icon: 'fas fa-palette' }
+]; 
 
 let isEditMode = false;
 let draggedEl = null;
@@ -335,21 +462,23 @@ let savedDiaries = JSON.parse(localStorage.getItem('saved_diaries')) || [];
 let albumData = []; 
 let walletHistory = null;
 
-window.onload = () => {
+ window.onload = () => {
     const targetName = localStorage.getItem('target_check_name') || "手机";
     document.title = targetName + "的手机";
-    const saved = localStorage.getItem('ai_persona_v6');
+    const saved = localStorage.getItem('ai_persona_v7');
     if(saved) {
         const data = JSON.parse(saved);
         layout = data.layout;
         if(data.wallpaper) {
             document.getElementById('wallpaper').style.backgroundImage = data.wallpaper;
         }
+    } else {
+        localStorage.removeItem('ai_persona_v6');
     }
     render();
     updateTime();
     setInterval(updateTime, 1000);
-};
+}; 
 
 function updateTime() {
     const now = new Date();
@@ -370,47 +499,43 @@ function render() {
 
     layout.forEach((data, index) => {
         const item = document.createElement('div');
-        item.className = data.type === 'w' ? 'item widget-2x2' : 'item';
+        
+        // 根据组件类型，赋予不同的尺寸网格占位
+        if (data.id === 'banner') {
+            item.className = 'item widget-4x2';
+        } else if (data.type === 'w') {
+            item.className = 'item widget-2x2';
+        } else {
+            item.className = 'item';
+        }
+        
         item.dataset.index = index;
         item.dataset.id = data.id;
 
-        if(data.id === 'time') {
+        if (data.id === 'banner') {
             item.innerHTML = `
-                <div class="widget-inner">
-                    <div>
-                        <div class="time-val" style="font-size:32px; font-weight:700;">12:00</div>
-                        <div class="date-val" style="color:#888; font-size:14px; margin-top:4px;">8月24日 星期六</div>
-                    </div>
-                    <div style="margin-top:12px; display:flex; align-items:center; gap:8px; color:#555;">
-                        <i class="fas fa-cloud-sun" style="color:#ffb800; font-size:22px;"></i>
-                        <div style="display:flex; flex-direction:column;">
-                            <span style="font-size:14px; font-weight:600;">26°C</span>
-                            <span style="font-size:11px; color:#999;">空气质量：优</span>
-                        </div>
-                    </div>
-                </div>`;
-        } else if(data.id === 'mood') {
+                <div class="widget-inner banner-widget" style="background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600');"></div>
+            `;
+        } else if (data.id === 'piano') {
             item.innerHTML = `
-                <div class="widget-inner" style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); padding: 15px;">
-                    <div style="color:#ff4d4f; font-weight:600; font-size:13px; margin-bottom:4px;">
-                        <i class="fas fa-heart"></i> Ta的心声
-                    </div>
-                    <div id="mood-text" style="font-size:11.5px; line-height:1.4; color:#444; font-style: italic; flex: 1; display: flex; align-items: center;">
-                        “哪怕我有千万行代码，也无法在这一刻停止对你的感激...”
-                    </div>
-                    <div id="mood-status" style="font-size:9px; color:#bbb; margin-top:4px; text-align:right; cursor:pointer;" onclick="event.stopPropagation(); refreshMood()">—— 正在感知中</div>
-                </div>`;
+                <div class="widget-inner art-widget" style="background-image: url('https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=300');"></div>
+            `;
+        } else if (data.id === 'letter') {
+            item.innerHTML = `
+                <div class="widget-inner art-widget" style="background-image: url('https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300');"></div>
+            `;
         } else {
+            // 普通 APP 的渲染，渲染出圆角线条风格的矢量图标
             item.innerHTML = `
                 <div class="edit-badge" onclick="event.stopPropagation(); editIcon(${index})"><i class="fas fa-pen"></i></div>
-                <div class="app-icon" style="background-image:url('${data.icon}')"></div>
+                <div class="app-icon"><i class="${data.icon}"></i></div>
                 <div class="app-name">${data.name}</div>
             `;
         }
         item.onpointerdown = (e) => onPointerDown(e, item);
         screen.appendChild(item);
     });
-}
+} 
 
 function onPointerDown(e, el) {
     startX = e.clientX; startY = e.clientY;
@@ -520,8 +645,8 @@ function closeApp() {
     closeQQChat();
 }
 
-function save() { localStorage.setItem('ai_persona_v6', JSON.stringify({ layout: layout, wallpaper: document.getElementById('wallpaper').style.backgroundImage })); }
-function editIcon(idx) { const url = prompt("图标 URL:", layout[idx].icon); if(url) { layout[idx].icon = url; render(); save(); } }
+ function save() { localStorage.setItem('ai_persona_v7', JSON.stringify({ layout: layout, wallpaper: document.getElementById('wallpaper').style.backgroundImage })); }
+function editIcon(idx) { const cls = prompt("图标 FontAwesome 类名 (例如: fas fa-palette):", layout[idx].icon); if(cls) { layout[idx].icon = cls; render(); save(); } } 
 function updateWallpaper() { 
     const url = document.getElementById('wp-url').value.trim(); 
     if (url) { document.getElementById('wallpaper').style.backgroundImage = "url('" + url + "')"; save(); alert("壁纸更新成功！"); }
