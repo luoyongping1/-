@@ -2148,17 +2148,40 @@ const appNames = {
 };
 function showAppListModal() {
     const container = document.getElementById('app-items-container');
-    container.innerHTML = "";
+    const customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
+    
+    // 预设好所有 App 图标的默认静态图片，无需访问 DOM 元素，从根本上解决卡顿
+    const defaultIconUrls = {
+        'item-wb': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp',
+        'item-qq': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vbJJ/1080X1080/image_1776692512012.png/webp',
+        'item-xhs': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/K1R2/1080X1080/image_1776692583750.png/webp',
+        'item-face': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp',
+        'item-set': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp',
+        'item-self': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp',
+        'item-gacha': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp',
+        'item-checkphone': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/cJUV/1080X1080/image_1776692589613.png/webp',
+        'item-wl': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp',
+        'item-shop': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp',
+        'item-ddp': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp',
+        'item-shouna': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp',
+        'item-forum': 'https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp'
+    };
+
+    let htmlContent = "";
     Object.keys(appNames).forEach(id => {
-        const div = document.createElement('div');
-        div.style = "background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; align-items:center; cursor:pointer;";
-        div.onclick = () => showIconChoiceModal(id);
-        const currentImg = document.getElementById(id).style.backgroundImage;
-        div.innerHTML = `
-            <div style="width:40px; height:40px; border-radius:10px; background:${currentImg || 'var(--glass-bg)'}; background-size:cover; background-position:center; margin-right:15px; border:1px solid #ddd;"></div>
-            <div style="font-weight:bold;">${appNames[id]}</div>`;
-        container.appendChild(div);
+        // 直接从内存的缓存中提取图像数据，若无自定义图像则回退至默认图标地址
+        const currentImg = customIcons[id] || defaultIconUrls[id] || '';
+        const backgroundStyle = currentImg ? `url("${currentImg}")` : 'var(--glass-bg)';
+        
+        htmlContent += `
+            <div style="background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-bottom:10px; display:flex; align-items:center; cursor:pointer;" onclick="showIconChoiceModal('${id}')">
+                <div style="width:40px; height:40px; border-radius:10px; background-image:${backgroundStyle}; background-size:cover; background-position:center; margin-right:15px; border:1px solid #ddd;"></div>
+                <div style="font-weight:bold; color:#333;">${appNames[id]}</div>
+            </div>`;
     });
+    
+    // 一次性渲染容器内部的 HTML，降低重绘频次
+    container.innerHTML = htmlContent;
     document.getElementById('app-list-modal').style.display = "flex";
 }
 function closeAppListModal() { document.getElementById('app-list-modal').style.display = "none"; }
@@ -2179,6 +2202,7 @@ function handleIconUpload(input) {
         }
         reader.readAsDataURL(file);
     }
+    input.value = ""; // 修复上传Bug：每次上传完后把选择框清空，防止连续上传无响应
 }
 function showUrlInputModal() { document.getElementById('icon-url-modal').style.display = "flex"; }
 function closeUrlInputModal() { document.getElementById('icon-url-modal').style.display = "none"; }
@@ -2191,21 +2215,23 @@ function saveIconUrl() {
 }
 function saveAndApplyIcon(imgData) {
     const appEl = document.getElementById(currentEditingAppId);
-    appEl.style.background = `url("${imgData}")`;
+    appEl.style.backgroundImage = `url("${imgData}")`;
     appEl.style.backgroundSize = "cover";
     appEl.style.backgroundPosition = "center";
     appEl.style.backgroundRepeat = "no-repeat";
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
     customIcons[currentEditingAppId] = imgData;
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
+    saveAllWidgets(); // 核心修复：修改完图标后，立即调用保存页面结构，防止刷新后还原
 }
 function resetIcon() {
     const appEl = document.getElementById(currentEditingAppId);
-    appEl.style.backgroundImage = "none";
+    appEl.style.backgroundImage = "";
     appEl.style.background = ""; 
     let customIcons = JSON.parse(localStorage.getItem('app_custom_icons') || '{}');
     if (customIcons[currentEditingAppId]) { delete customIcons[currentEditingAppId]; }
     localStorage.setItem('app_custom_icons', JSON.stringify(customIcons));
+    saveAllWidgets(); // 核心修复：重置图标后，立即重新保存页面结构
     closeIconChoiceModal(); showAppListModal();
 }
 
@@ -2449,31 +2475,31 @@ window.onload = function() {
         { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>` },
         { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` },
         { id: 'item-shouna', html: `<div id="item-shouna" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openShounaApp()"><span>收纳助手</span></div>` },
-    { id: 'item-forum', html: `<div id="item-forum" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openForumApp()"><span>微博论坛</span></div>` }
-];
+        { id: 'item-forum', html: `<div id="item-forum" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openForumApp()"><span>微博论坛</span></div>` }
+    ];
     
     // 监听来自 App（如 qq.html）的消息，用于后台发送通知
-window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-        const isNotify = localStorage.getItem('allow_notifications') === 'true';
-        if (!isNotify) return;
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+            const isNotify = localStorage.getItem('allow_notifications') === 'true';
+            if (!isNotify) return;
 
-        const { title, body } = event.data;
-        
-        // 优先尝试 Service Worker 通知
-        if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification(title, {
-                    body: body,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+            const { title, body } = event.data;
+            
+            // 优先尝试 Service Worker 通知
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body: body,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3670/3670044.png'
+                    });
                 });
-            });
-        } else {
-            // Fallback 方案：普通通知
-            new Notification(title, { body: body });
+            } else {
+                // Fallback 方案：普通通知
+                new Notification(title, { body: body });
+            }
         }
-    }
-});
+    });
 
     defaultApps.forEach(app => {
         const instances = document.querySelectorAll(`#${app.id}`);
@@ -2532,16 +2558,16 @@ window.addEventListener('message', function(event) {
     document.getElementById('notification-toggle').checked = isNotify;
 
     const savedBallCss = localStorage.getItem('custom_ball_css');
-if(savedBallCss) {
-    document.getElementById('custom-ball-css').value = savedBallCss;
-    applyCustomBallCss(savedBallCss);
-}
+    if(savedBallCss) {
+        document.getElementById('custom-ball-css').value = savedBallCss;
+        applyCustomBallCss(savedBallCss);
+    }
 
-setInterval(updateTime, 1000); 
-updateTime();
+    setInterval(updateTime, 1000); 
+    updateTime();
 
-// 初始化悬浮球快捷菜单设置
-initFloatingBallShortcuts();
+    // 初始化悬浮球快捷菜单设置
+    initFloatingBallShortcuts();
 
     const savedTimeColor = localStorage.getItem('time_display_color');
     if (savedTimeColor) {
@@ -2563,6 +2589,24 @@ initFloatingBallShortcuts();
             });
         });
     }
+
+    // === 新增：后台空闲时异步排队预加载 iframe，解决点击卡顿问题 ===
+    setTimeout(() => {
+        // 查找所有带 data-src 属性的 iframe 标签并转化为数组形式
+        const lazyIframes = Array.from(document.querySelectorAll('#app-overlay iframe[data-src]'));
+        let delayTime = 0;
+        
+        lazyIframes.forEach(iframe => {
+            setTimeout(() => {
+                // 如果这个 iframe 还没有载入任何地址（即还没有 src），则在后台开始静默加载它
+                if (!iframe.getAttribute('src')) {
+                    iframe.src = iframe.getAttribute('data-src');
+                }
+            }, delayTime);
+            // 每次加载间隔 600 毫秒，防止由于瞬间加载多个高负载页面抢占系统资源导致卡顿
+            delayTime += 600; 
+        });
+    }, 1500); // 在主屏幕完全加载 1.5 秒（用户空闲时）后，才开始在后台进行预加载
 };
 
 function initFloatingBallShortcuts() {
