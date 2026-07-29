@@ -402,8 +402,16 @@
             border: 2px solid white;
             transition: transform 0.2s;
         }
-        #companion-ball img {
-            width: 100%; height: 100%; object-fit: cover;
+        /* 伴读气泡淡入淡出动画及基础过渡 */
+        #companion-bubble {
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            transform: translateY(0);
+        }
+        /* 当气泡隐藏时，处于完全透明且微微下沉的状态 */
+        #companion-bubble.bubble-hidden {
+            opacity: 0 !important;
+            transform: translateY(10px) !important;
+            pointer-events: none;
         }
 
         /* 伴读闲聊面板 (iOS 卡片样式) */
@@ -927,7 +935,7 @@
             let activeFriend = null;
             let companionName = "AI 伴读";
 
-            // 【黑科技】：优先且直接读取父窗口(qq.html)内存中正在单聊的 currentFriendName 和好友数组，避开缓存延迟
+            // 直接通过父应用内存读取正在单聊的好友名字及好友数组
             try {
                 if (window.parent && window.parent.currentFriendName) {
                     companionName = window.parent.currentFriendName;
@@ -935,10 +943,10 @@
                     activeFriend = parentFriends.find(f => f.name === companionName);
                 }
             } catch(e) {
-                console.log("跨窗口读取被安全策略拦截，启用 localStorage 备用读取机制");
+                console.log("跨窗口读取被安全策略拦截，启用备用读取机制");
             }
 
-            // 备用机制：从缓存数据库中恢复
+            // 备用机制：从本地缓存恢复
             if (!activeFriend) {
                 companionName = localStorage.getItem('active_reading_companion') || "AI 伴读";
                 const friendsList = JSON.parse(localStorage.getItem('qq_friends')) || [];
@@ -950,19 +958,10 @@
                 panelNameEl.innerText = companionName;
             }
 
-            // 确定伴读角色的人设与头像
+            // 获取伴读角色的设定及他本身的头像（不使用用户的面具代号覆盖）
             if (activeFriend) {
                 companionPersona = activeFriend.persona || "性格开朗，喜欢看书";
-                companionAvatar = activeFriend.avatarUrl || "";
-                
-                // 如果该角色在主应用设置了“面具”（我在他面前的人设面具）
-                if (activeFriend.userPersonaId) {
-                    const userPersonas = JSON.parse(localStorage.getItem('qq_user_personas')) || [];
-                    const activePersona = userPersonas.find(u => u.id === activeFriend.userPersonaId);
-                    if (activePersona && activePersona.avatar) {
-                        companionAvatar = activePersona.avatar; 
-                    }
-                }
+                companionAvatar = activeFriend.avatarUrl || ""; // 始终采用好友自身的头像 url/Base64
             } else {
                 companionPersona = "一个忠实的读者，喜欢与你交流";
                 companionAvatar = "";
@@ -971,15 +970,14 @@
             const ballImg = document.getElementById('companion-avatar');
             const textAvatar = document.getElementById('companion-text-avatar');
 
-            // 定义随机渐变底板颜色，用于首字母文字头像，使其更精美
+            // 渐变底板颜色，用于无头像时的文字头像
             const gradients = [
-                "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", // 粉红
-                "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", // 天蓝
-                "linear-gradient(135deg, #76b852 0%, #8DC26F 100%)", // 软绿
-                "linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%)", // 魅紫
-                "linear-gradient(135deg, #f857a6 0%, #ff5858 100%)"  // 珊瑚橘
+                "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
+                "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)",
+                "linear-gradient(135deg, #76b852 0%, #8DC26F 100%)",
+                "linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%)",
+                "linear-gradient(135deg, #f857a6 0%, #ff5858 100%)"
             ];
-            // 根据名字计算固定的颜色索引
             const nameCode = companionName.charCodeAt(0) || 0;
             const gradientBg = gradients[nameCode % gradients.length];
 
@@ -1005,16 +1003,15 @@
                     textAvatar.style.display = "none";
                 }
             } else {
-                // 如果好友未配置头像，直接降级展示炫彩文字头像
+                // 如果好友配置为空，则降级为文字头像
                 showLetterAvatar();
             }
 
-            // 内部辅助函数：用来画炫彩文字头像
             function showLetterAvatar() {
                 ballImg.style.display = "none";
                 textAvatar.style.display = "flex";
                 textAvatar.style.background = gradientBg;
-                textAvatar.innerText = companionName.substring(0, 1); // 提取名字第一个字作为头像
+                textAvatar.innerText = companionName.substring(0, 1);
             }
         }
 
@@ -1723,45 +1720,46 @@
             document.getElementById('companion-chat-box').style.display = 'none';
             input.value = '';
 
-            // 在悬浮球上方升起提示气泡
+            // 在悬浮球上方升起提示气泡，移除隐藏样式，设为对方正在输入状态
             const bubble = document.getElementById('companion-bubble');
+            bubble.classList.remove('bubble-hidden');
             bubble.style.display = 'block';
-            bubble.style.opacity = '1';
-            bubble.innerText = "对方正在思考中...";
+            bubble.innerText = "对方正在输入...";
 
             await fetchCompanionAiReply(text);
         }
 
-        // 核心动态气泡机：接收多行文本，依次淡入淡出显示
+        // 核心动态气泡播放器：接收多行文本，依次淡入淡出显示
         async function displayCompanionBubbles(lines) {
             const bubble = document.getElementById('companion-bubble');
             bubble.style.display = 'block';
-            bubble.style.transition = 'opacity 0.4s ease-in-out';
             
             for (let line of lines) {
-                // 清洗可能携带的系统格式标签
+                // 清洗标签
                 let cleanText = line.replace(/\[.*?\]/g, '').trim();
                 if (!cleanText) continue;
 
-                // 注入文字并淡入显示
+                // 移除隐藏类，写入文字，淡入显示
                 bubble.innerText = cleanText;
-                bubble.style.opacity = '1';
+                bubble.classList.remove('bubble-hidden');
                 
-                // 根据句子的长度计算阅读停留时长 (字数多就停得久一些，最少停 2.5 秒)
-                let readDelay = Math.max(2500, cleanText.length * 60 + 1000);
+                // 停留时间（字数多留得久）
+                let readDelay = Math.max(2000, cleanText.length * 50 + 1000);
                 await new Promise(resolve => setTimeout(resolve, readDelay));
                 
-                // 淡出消失
-                bubble.style.opacity = '0';
-                await new Promise(resolve => setTimeout(resolve, 450)); // 等待淡出动画结束
+                // 添加隐藏类，触发 CSS 过渡淡出
+                bubble.classList.add('bubble-hidden');
+                await new Promise(resolve => setTimeout(resolve, 450)); // 等待淡出动画走完
             }
             bubble.style.display = 'none';
         }
 
+        // 伴读接口通信逻辑
         async function fetchCompanionAiReply(userPrompt) {
             const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
             if (!aiConfig || !aiConfig.key) {
-                appendChatMessage("companion", "您好，我正想和你聊天呢，快去主程序设置好 API Key 吧！");
+                document.getElementById('companion-bubble').style.display = 'none';
+                alert("请先在主应用配置并保存 API Key 才能进行伴读！");
                 return;
             }
 
@@ -1794,19 +1792,30 @@ ${bookContext}
                 });
 
                 const data = await res.json();
+                
+                // 容错：防止 API 返回报错中断执行
+                if (!data.choices || !data.choices[0]) {
+                    throw new Error("API 返回空数据");
+                }
+
                 const reply = data.choices[0].message.content.trim();
                 const cleanReply = reply.replace(/\[.*?\]/g, '').trim();
                 
-                // 按换行符进行拆句分段，过滤掉空白字符行
+                // 按行切割成气泡队列
                 const sentenceLines = cleanReply.split('\n').map(l => l.trim()).filter(l => l.length > 0);
                 
-                // 先隐藏提示框，然后调起排队气泡显示
-                document.getElementById('companion-bubble').style.display = 'none';
+                // 暂时把“输入中”气泡置为隐藏，然后开始排队展示真正的回复
+                document.getElementById('companion-bubble').classList.add('bubble-hidden');
+                await new Promise(r => setTimeout(r, 100));
+                
                 await displayCompanionBubbles(sentenceLines);
 
             } catch(e) {
-                document.getElementById('companion-bubble').style.display = 'none';
-                await displayCompanionBubbles(["刚才有点分神了，你刚才说什么？"]);
+                console.error(e);
+                const bubble = document.getElementById('companion-bubble');
+                bubble.classList.add('bubble-hidden');
+                await new Promise(r => setTimeout(r, 100));
+                await displayCompanionBubbles(["（他刚才开小差了，没有听清你说话）"]);
             }
         }
 
