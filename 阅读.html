@@ -555,6 +555,42 @@
             flex-direction: column;
         }
 
+        .comment-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 48px;
+            padding: 0 20px;
+            border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            background: white;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .comment-drawer-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-dark);
+        }
+
+        .comment-drawer-refresh-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.04);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--primary-blue);
+        }
+
+        .comment-drawer-refresh-btn:active {
+            background: rgba(0,0,0,0.08);
+            transform: rotate(180deg);
+        }
+
         /* ================= 沉浸式阅读器新样式 ================= */
         /* 阅读器运行界面不同护眼主题 */
         #reader-view.theme-paper { background-color: #f4f0e6 !important; color: #3f2f1f !important; }
@@ -707,20 +743,47 @@
             border-color: #007aff;
         }
 
-        /* 段评气泡 */
-        .para-comment-badge {
-            display: inline-flex;
-            align-items: center;
-            background: rgba(52, 199, 89, 0.15);
-            color: var(--primary-green);
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 5px;
-            cursor: pointer;
-            vertical-align: middle;
-            font-weight: bold;
-        }
+        /* 段评和笔记双子星容器 */
+.para-badge-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+    transform: translateY(-1px);
+}
+
+/* 段评气泡与批注笔通用精致样式 */
+.para-comment-badge, .para-note-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.05);
+    color: currentColor;
+    opacity: 0.5;
+    cursor: pointer;
+    border: none;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.para-comment-badge:hover, .para-note-badge:hover {
+    background: rgba(0, 0, 0, 0.1);
+    opacity: 0.85;
+}
+
+/* 夜间主题下的背景色彩适配 */
+#reader-view.theme-night .para-comment-badge,
+#reader-view.theme-night .para-note-badge {
+    background: rgba(255, 255, 255, 0.08);
+}
+#reader-view.theme-night .para-comment-badge:hover,
+#reader-view.theme-night .para-note-badge:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
 
         /* 划线弹出浮动菜单（z-index 提高，防遮挡） */
         #selection-menu {
@@ -972,9 +1035,17 @@
 
     <!-- 段评查看层 -->
     <div id="comment-drawer">
-        <div class="chat-panel-header">
-            <span>段落点评</span>
-            <span onclick="closeCommentDrawer()" style="cursor:pointer; color:#999;">✕</span>
+        <div class="comment-drawer-header">
+            <span class="comment-drawer-title">段落点评</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="comment-drawer-refresh-btn" onclick="openGenerateCommentModal()" title="生成段评">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 4v6h6M23 20v-6h-6"></path>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64M3.51 15A9 9 0 0 0 18.36 18.36"></path>
+                    </svg>
+                </button>
+                <button onclick="closeCommentDrawer()" style="width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,0.04); border:none; cursor:pointer; color:#999; font-size:18px; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
         </div>
         <div id="comment-drawer-list" class="chat-panel-messages">
             <!-- 段评内容 -->
@@ -1746,11 +1817,11 @@
             const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
             const existingComments = JSON.parse(localStorage.getItem(commentsKey)) || {};
 
-            body.innerHTML = paragraphs.map((text, idx) => {
-                const commentCount = existingComments[idx] ? existingComments[idx].length : 0;
-                const badge = commentCount > 0 ? `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawer(${idx})">💬 ${commentCount}</span>` : '';
-                return `<p class="read-para" data-para-idx="${idx}">${text}${badge}</p>`;
-            }).join('');
+body.innerHTML = paragraphs.map((text, idx) => {
+    const commentBadge = `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawerForPara(${idx})" title="查看段评"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`;
+    const noteBadge = `<span class="para-note-badge" onclick="event.stopPropagation(); openNoteModalForPara(${idx})" title="添加批注"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>`;
+    return `<p class="read-para" data-para-idx="${idx}">${text}<span class="para-badge-wrap">${commentBadge}${noteBadge}</span></p>`;
+}).join('');
 
             // 检查并恢复上次看到的具体段落位置
             if (window.restoreParaIndexNeeded && currentBook.readingState && currentBook.readingState.paraIndex !== undefined) {
@@ -1905,6 +1976,21 @@ function handleTextSelection(event) {
             document.getElementById('note-modal').style.display = 'none';
         }
 
+// 新增：从段落末尾的笔icon打开批注框
+function openNoteModalForPara(paraIdx) {
+    const body = document.getElementById('reader-body');
+    const para = body.querySelector(`[data-para-idx="${paraIdx}"]`);
+    
+    if (!para) return;
+
+    selectText = para.childNodes[0].textContent.trim();
+    selectedParagraphIdx = paraIdx;
+    
+    document.getElementById('note-selected-text').innerText = `"${selectText.substring(0, 50)}${selectText.length > 50 ? '...' : ''}"`;
+    document.getElementById('note-input').value = '';
+    document.getElementById('note-modal').style.display = 'flex';
+}
+
         // 新建聊天记录追加器，用于存放并处理聊天流程，防系统崩溃报错
         function appendChatMessage(sender, text) {
             if (!window.companionChatLogs) {
@@ -1942,6 +2028,7 @@ function handleTextSelection(event) {
             document.getElementById('selection-menu').style.display = 'none';
             document.getElementById('comment-type-modal').style.display = 'flex';
         }
+        
         function closeCommentTypeModal() {
             document.getElementById('comment-type-modal').style.display = 'none';
         }
@@ -2068,8 +2155,35 @@ function handleTextSelection(event) {
 
             document.getElementById('comment-drawer').style.display = 'flex';
         }
+
+        // 新增：从段落末尾的气泡icon打开段评抽屉
+        function openCommentDrawerForPara(paraIdx) {
+            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
+            const list = commentsMap[paraIdx] || [];
+
+            const container = document.getElementById('comment-drawer-list');
+            if (list.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:var(--text-muted); margin-top:30px; font-size:13px;">暂无段评，点击右上角生成按钮为本段落生成点评</div>`;
+            } else {
+                container.innerHTML = list.map(c => `
+                    <div class="chat-bubble companion" style="background:#e5f9e7; align-self:stretch; max-width:100%; border-radius:12px;">
+                        <div style="font-weight:bold; font-size:11px; color:var(--primary-green); margin-bottom:4px;">${c.name} 的点评</div>
+                        <div>${c.text}</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('comment-drawer').style.display = 'flex';
+        }
+
         function closeCommentDrawer() {
             document.getElementById('comment-drawer').style.display = 'none';
+        }
+
+        // 新增：打开段评生成选项框
+        function openGenerateCommentModal() {
+            document.getElementById('comment-type-modal').style.display = 'flex';
         }
 
         // --- 伴读悬浮微型输入栏开关控制 ---
