@@ -1171,71 +1171,84 @@ input:checked + .slider:before {
     <!-- 发送按钮 -->
     <button class="btn-green" onclick="sendMsg()">发送</button>
 </div>
-        <!-- 🔮 替换后的极简线条工具栏 -->
-<div id="tool-box" style="display:none; background: rgba(247, 247, 247, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid #ccc; padding:20px; display:none; grid-template-columns: repeat(4, 1fr); gap:20px; padding-bottom: calc(20px + env(safe-area-inset-bottom));">
-    
-    <!-- 1. 表情 -->
-    <div class="tool-item-new" onclick="toggleStickerPanel()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+        <!-- 🔮 替换后的极简线条左右滑动工具栏 -->
+<div id="tool-box" style="display:none; background: rgba(247, 247, 247, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid #ccc; padding:10px 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); flex-direction: column;">
+    <div id="tool-box-slider" style="display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; width: 100%;" onscroll="updateToolBoxPageIndicator()">
+        <!-- 第一页（8个功能） -->
+        <div style="flex: 0 0 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px 10px; box-sizing: border-box; padding: 10px 15px; scroll-snap-align: start;">
+            <!-- 1. 表情 -->
+            <div class="tool-item-new" onclick="toggleStickerPanel()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                </div>
+                <div class="tool-label-new">表情</div>
+            </div>
+            <!-- 2. 图片 -->
+            <div class="tool-item-new" onclick="openImageChoiceModal()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                </div>
+                <div class="tool-label-new">图片</div>
+            </div>
+            <!-- 3. 约会 -->
+            <div class="tool-item-new" onclick="openDatingPage()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.72-8.72 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                </div>
+                <div class="tool-label-new">约会</div>
+            </div>
+            <!-- 4. 转账 -->
+            <div class="tool-item-new" onclick="openTransferModal()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line><path d="M16 14h.01M12 14h.01M8 14h.01"></path></svg>
+                </div>
+                <div class="tool-label-new">转账</div>
+            </div>
+            <!-- 5. 红包 -->
+            <div class="tool-item-new" onclick="openRedPacketModal()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M6 9c2 2 10 2 12 0"></path><circle cx="12" cy="13" r="2"></circle></svg>
+                </div>
+                <div class="tool-label-new">红包</div>
+            </div>
+            <!-- 6. 修罗场 -->
+            <div class="tool-item-new" onclick="toggleShuraMode()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+                </div>
+                <div class="tool-label-new">修罗场</div>
+            </div>
+            <!-- 7. 追剧 -->
+            <div class="tool-item-new" onclick="openTheaterModal()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+                </div>
+                <div class="tool-label-new">追剧</div>
+            </div>
+            <!-- 8. 小火人 -->
+            <div class="tool-item-new" onclick="handleFireEntry()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                </div>
+                <div class="tool-label-new">小火人</div>
+            </div>
         </div>
-        <div class="tool-label-new">表情</div>
+        <!-- 第二页 -->
+        <div style="flex: 0 0 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px 10px; box-sizing: border-box; padding: 10px 15px; scroll-snap-align: start;">
+            <!-- 9. 阅读 -->
+            <div class="tool-item-new" onclick="openReadingSystem()">
+                <div class="tool-icon-bg-new">
+                    <svg class="tool-svg-icon" viewBox="0 0 24 24" style="stroke: #ff6b6b;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                </div>
+                <div class="tool-label-new">阅读</div>
+            </div>
+            <div></div><div></div><div></div>
+        </div>
     </div>
-
-    <!-- 2. 图片 -->
-    <div class="tool-item-new" onclick="openImageChoiceModal()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-        </div>
-        <div class="tool-label-new">图片</div>
-    </div>
-
-    <!-- 3. 约会 -->
-    <div class="tool-item-new" onclick="openDatingPage()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.72-8.72 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        </div>
-        <div class="tool-label-new">约会</div>
-    </div>
-
-    <!-- 4. 转账 -->
-    <div class="tool-item-new" onclick="openTransferModal()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line><path d="M16 14h.01M12 14h.01M8 14h.01"></path></svg>
-        </div>
-        <div class="tool-label-new">转账</div>
-    </div>
-
-    <!-- 5. 红包 -->
-    <div class="tool-item-new" onclick="openRedPacketModal()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"></rect><path d="M6 9c2 2 10 2 12 0"></path><circle cx="12" cy="13" r="2"></circle></svg>
-        </div>
-        <div class="tool-label-new">红包</div>
-    </div>
-
-    <!-- 6. 修罗场 -->
-    <div class="tool-item-new" onclick="toggleShuraMode()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
-        </div>
-        <div class="tool-label-new">修罗场</div>
-    </div>
-
-    <!-- 7. 追剧 -->
-    <div class="tool-item-new" onclick="openTheaterModal()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
-        </div>
-        <div class="tool-label-new">追剧</div>
-    </div>
-
-    <!-- 8. 小火人 -->
-    <div class="tool-item-new" onclick="handleFireEntry()">
-        <div class="tool-icon-bg-new">
-            <svg class="tool-svg-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-        </div>
-        <div class="tool-label-new">小火人</div>
+    <!-- 滑动页码指示器 -->
+    <div style="display: flex; justify-content: center; gap: 5px; margin-top: 5px;">
+        <span id="toolbox-dot-1" style="width: 6px; height: 6px; border-radius: 50%; background: #07c160;"></span>
+        <span id="toolbox-dot-2" style="width: 6px; height: 6px; border-radius: 50%; background: #ccc;"></span>
     </div>
 </div>
     </div>
@@ -2131,7 +2144,7 @@ if (m.isShoppingPay) {
             <div class="rp-footer">${m.rpOpened ? '红包已被领取' : '微信红包'}</div>
         </div>`;
     useBubble = false;
-} else if (m.isForwardedCard) {
+} else if (m.isForwardedCard || m.isMomentForwardCard) {
     // 转发卡片：直接显示内部HTML，不使用外部绿色/白色微信气泡框
     contentHtml = m.text;
     useBubble = false;
@@ -2437,7 +2450,11 @@ const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => {
         contentText = `[发送了图片]`;
     } else if (m.isDescribeCard) {
         contentText = `[发送了图片描述: ${m.text}]`;
-    } else if (m.isShoppingPay) {
+    } else if (m.isMomentForwardCard) {
+    const isUserSelf = m.momentAuthor === myInfo.name;
+    const authorDesc = isUserSelf ? `当前与你对话的用户自己（即 ${m.momentAuthor}）` : `好友“${m.momentAuthor}”`;
+    contentText = `[系统通知：用户向你分享转发了一条朋友圈动态（注意：这只是普通的朋友圈图文内容分享，并不是给你发送了视频链接或外部链接，请勿误会）。该朋友圈发布者是：${authorDesc}，朋友圈的正文内容是：“${m.momentText || ''}”${m.momentImagesCount ? `，附带了 ${m.momentImagesCount} 张图片` : ''}。请结合此朋友圈内容，以聊天形式与对方直接开展交流互动。]`;
+} else if (m.isShoppingPay) {
         contentText = `[发送了代付请求卡片：代付商品是“${m.payItems}”，金额为 ￥${m.text} 元，等待你支付。如果你同意付钱，请在回复末尾带上 [PAY_SUCCESS] 标签；如果你决定拒绝支付，请在回复末尾带上 [PAY_REFUSED] 标签。]`;
     } else if (m.isShoppingPayResponse) {
         contentText = `[已发送代付处理结果卡片：商品为“${m.payItems}”，金额为 ￥${m.text} 元，处理状态为：${m.payStatus === 'paid' ? '已完成支付' : '已拒绝代付'}。]`;
@@ -3058,7 +3075,7 @@ if (rawText.includes("[SEND_MONEY]")) {
                     });
                     imgsHtml += `</div>`;
                 }
-                listArr.push(`<div class="moment-item"><div class="moment-avatar">${av}</div><div class="moment-content"><div class="moment-name" onclick="showCommentInput(${realIdx}, '${m.name}')">${m.name}</div><div class="moment-text">${m.text}</div>${imgsHtml}<div class="moment-footer"><span>刚刚 ${m.visibleTo && m.visibleTo.length > 0 ? `<span style="color:#888;margin-left:5px;">🔒部分可见</span>`:''}</span><div class="moment-menu-wrap"><div class="moment-menu-btn" onclick="toggleMomentMenu(${realIdx}, event)">..</div><div id="moment-pop-${realIdx}" class="moment-pop-menu"><div class="menu-action" onclick="likeMoment(${realIdx})">❤ 点赞</div><div class="menu-action" onclick="showCommentInput(${realIdx})">💬 评论</div></div></div></div><div id="feedback-${realIdx}" class="moment-feedback" style="display:${(m.likes && m.likes.length) || (m.comments && m.comments.length) ? 'block' : 'none'}">${m.likes && m.likes.length ? `<div class="like-section">❤ ${m.likes.join(', ')}</div>` : ''}${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `<div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')"><span class="comment-user">${c.name}</span>${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}</div>`).join('')}</div>` : ''}</div></div></div>`);
+                listArr.push(`<div class="moment-item"><div class="moment-avatar">${av}</div><div class="moment-content"><div class="moment-name" onclick="showCommentInput(${realIdx}, '${m.name}')">${m.name}</div><div class="moment-text">${m.text}</div>${imgsHtml}<div class="moment-footer"><span>刚刚 ${m.visibleTo && m.visibleTo.length > 0 ? `<span style="color:#888;margin-left:5px;">🔒部分可见</span>`:''}</span><div class="moment-menu-wrap"><div class="moment-menu-btn" onclick="toggleMomentMenu(${realIdx}, event)">..</div><div id="moment-pop-${realIdx}" class="moment-pop-menu"><div class="menu-action" onclick="likeMoment(${realIdx})">❤ 点赞</div><div class="menu-action" onclick="showCommentInput(${realIdx})">💬 评论</div><div class="menu-action" onclick="forwardMoment(${realIdx})">➔ 转发</div></div></div></div><div id="feedback-${realIdx}" class="moment-feedback" style="display:${(m.likes && m.likes.length) || (m.comments && m.comments.length) ? 'block' : 'none'}">${m.likes && m.likes.length ? `<div class="like-section">❤ ${m.likes.join(', ')}</div>` : ''}${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `<div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')"><span class="comment-user">${c.name}</span>${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}</div>`).join('')}</div>` : ''}</div></div></div>`);
             });
             document.getElementById('moments-list').innerHTML = listArr.join('');
         }
@@ -3092,7 +3109,86 @@ if (rawText.includes("[SEND_MONEY]")) {
         }
         function toggleMomentMenu(idx, e) { e.stopPropagation(); document.querySelectorAll('.moment-pop-menu').forEach(m => { if(m.id !== `moment-pop-${idx}`) m.classList.remove('active'); }); document.getElementById(`moment-pop-${idx}`).classList.toggle('active'); setTimeout(() => document.addEventListener('click', function c(){ if(document.getElementById(`moment-pop-${idx}`)) document.getElementById(`moment-pop-${idx}`).classList.remove('active'); document.removeEventListener('click', c); }), 10); }
         function likeMoment(idx) { const m = moments[idx]; if(!m.likes) m.likes = []; if(!m.likes.includes(myInfo.name)) { m.likes.push(myInfo.name); saveData(); renderMoments(); aiReactToMoment(idx, 'like'); } }
-        function showCommentInput(idx, replyTo = null) { const txt = prompt(replyTo ? `回复 ${replyTo}:` : "评论:"); if(txt) { if(!moments[idx].comments) moments[idx].comments = []; moments[idx].comments.push({ name: myInfo.name, text: txt, replyTo: replyTo }); saveData(); renderMoments(); aiReactToMoment(idx, 'comment', txt, replyTo); } }
+function showCommentInput(idx, replyTo = null) { const txt = prompt(replyTo ? `回复 ${replyTo}:` : "评论:"); if(txt) { if(!moments[idx].comments) moments[idx].comments = []; moments[idx].comments.push({ name: myInfo.name, text: txt, replyTo: replyTo }); saveData(); renderMoments(); aiReactToMoment(idx, 'comment', txt, replyTo); } }
+
+function forwardMoment(idx) {
+    const list = document.getElementById('moment-forward-list');
+    list.innerHTML = friends.map(f => `
+        <div style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; border:1px solid #ddd; cursor:pointer; background: white;" onclick="selectForwardMomentTarget('${f.name}', ${idx})">
+            <div style="width:30px; height:30px; border-radius:4px; overflow:hidden; background:#eee; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color: #fff;">
+                ${f.avatarUrl ? `<img src="${f.avatarUrl}" style="width:100%; height:100%; object-fit:cover;">` : f.initial}
+            </div>
+            <span style="font-weight:bold; font-size:14px; color:#333;">${f.name}</span>
+        </div>
+    `).join('');
+    document.getElementById('moment-forward-modal').style.display = 'flex';
+}
+
+function selectForwardMomentTarget(friendName, momentIdx) {
+    const m = moments[momentIdx];
+    if (!m) return;
+    
+    // 渲染第一张朋友圈图片
+    let firstImageHtml = '';
+    if (m.images && m.images.length > 0) {
+        const firstImg = m.images[0];
+        if (firstImg.type === 'real') {
+            firstImageHtml = `<img src="${firstImg.data}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; flex-shrink:0;">`;
+        } else {
+            firstImageHtml = `<div style="width:40px; height:40px; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:8px; color:#888; border:1px dashed #ccc; flex-shrink:0;">[描述图]</div>`;
+        }
+    } else {
+        firstImageHtml = `<div style="width:40px; height:40px; background:#07c160; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:18px; color:white; flex-shrink:0;">🎡</div>`;
+    }
+
+    const cleanText = m.text.substring(0, 40) + (m.text.length > 40 ? '...' : '');
+
+    // 微信图文卡片 UI 样式
+    const cardHtml = `
+        <div style="background:#ffffff; border:1px solid #e5e5e5; border-radius:8px; padding:10px; width:220px; box-shadow:0 1px 3px rgba(0,0,0,0.05); font-family:system-ui, sans-serif; color:#191919; text-align:left;">
+            <div style="font-size:11px; color:#999; margin-bottom:6px; display:flex; align-items:center; gap:4px; border-bottom:1px solid #f0f0f0; padding-bottom:6px;">
+                🎡 朋友圈分享
+            </div>
+            <div style="display:flex; gap:10px; align-items:flex-start;">
+                ${firstImageHtml}
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:12px; font-weight:bold; color:#576b95; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.name} 的朋友圈</div>
+                    <div style="font-size:11px; color:#666; line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-all;">${cleanText || '分享图片'}</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (!chatHistories[friendName]) chatHistories[friendName] = [];
+    
+    // 存入聊天历史，标记为朋友圈卡片，并保存原朋友圈的作者、内容以及图片信息供 AI 获取
+    chatHistories[friendName].push({
+        type: 'self',
+        text: cardHtml,
+        isMomentForwardCard: true,
+        momentAuthor: m.name,
+        momentText: m.text,
+        momentImagesCount: m.images ? m.images.length : 0,
+        time: Date.now()
+    });
+
+    const friend = friends.find(f => f.name === friendName);
+    if (friend) {
+        friend.lastMsg = "[分享了朋友圈]";
+    }
+
+    saveData();
+    document.getElementById('moment-forward-modal').style.display = 'none';
+    closeMoments();
+    
+    // 打开对应好友的聊天页面
+    openChat(friendName);
+    
+    // 触发 AI 回复
+    setTimeout(() => {
+        getAiReply();
+    }, 800);
+}
 
         function renderChatList() {
     // 核心修改：如果 localStorage 是空的，就使用当前内存里的 friends（包含默认的AI助手）
@@ -3877,7 +3973,7 @@ for (const memberName of group.members) {
         const role = isMyOwnMsg ? 'assistant' : 'user';
         const prefixName = m.type === 'self' ? '用户' : (m.sender || '某人');
         
-        // 预处理聊天历史，将表情包、图片等非文本消息翻译为纯文本描述
+// 预处理聊天历史，将表情包、图片等非文本消息翻译为纯文本描述
 let contentText = m.text;
 if (m.isSticker) {
     contentText = `[发送了表情包: ${m.stickerDesc || '表情'}]`;
@@ -3885,6 +3981,10 @@ if (m.isSticker) {
     contentText = `[发送了图片]`;
 } else if (m.isDescribeCard) {
     contentText = `[发送了图片描述: ${m.text}]`;
+} else if (m.isMomentForwardCard) {
+    const isUserSelf = m.momentAuthor === myInfo.name;
+    const authorDesc = isUserSelf ? `群内用户（即 ${m.momentAuthor}）自己` : `群内成员“${m.momentAuthor}”`;
+    contentText = `[系统通知：有人在群里分享转发了一条朋友圈动态（注意：这只是普通的朋友圈图文内容分享，不是给你发送了视频链接或外部链接，请勿误会）。该朋友圈发布者是：${authorDesc}，朋友圈正文内容是：“${m.momentText || ''}”${m.momentImagesCount ? `，附带了 ${m.momentImagesCount} 张图片` : ''}。请围绕此朋友圈内容在群里进行交流互动。]`;
 } else if (m.isShoppingPay) {
     contentText = `[发送了代付请求卡片：代付商品是“${m.payItems}”，金额为 ￥${m.text} 元]`;
 } else if (m.isShoppingPayResponse) {
@@ -4466,6 +4566,7 @@ if (isGroupMode) {
             <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
                 value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
         </div>
+        <div class="list-item" onclick="triggerReaderFontUpload()"><div class="info">导入阅读字体 (.ttf)</div><div id="settings-font-display" style="color:#888">点击上传</div><span>></span></div>
         <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
         <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
         <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
@@ -6657,8 +6758,83 @@ function applyHeaderAndInputBarStyles(friendName) {
     </div>
 </div>
 
+<!-- 转发朋友圈好友选择弹窗 -->
+<div id="moment-forward-modal" class="glass-modal">
+    <div class="glass-card" style="width: 300px; max-height: 80%; padding: 20px; border-radius: 15px; overflow-y: auto;">
+        <h3 style="text-align: center; margin-bottom: 15px; color:#07c160; font-size:16px;">选择要转发的好友</h3>
+        <div id="moment-forward-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- 动态生成好友列表 -->
+        </div>
+        <div style="text-align: center; margin-top: 15px;">
+            <button class="wx-btn" style="width: 100%; background: #eee; color: #666; margin-bottom: 0; height:35px; border-radius:8px;" onclick="document.getElementById('moment-forward-modal').style.display = 'none'">取消</button>
+        </div>
+    </div>
+</div>
+
+
+
 <input type="file" id="user-persona-avatar-upload" style="display:none" accept="image/*">
-<!-- === User人设相关的新页面和弹窗结束 === -->
+<!-- 自定义阅读字体文件上传 -->
+<input type="file" id="reader-font-upload" style="display:none" accept=".ttf,.otf" onchange="handleReaderFontFile(this)">
+<!-- 阅读系统全屏覆盖容器 -->
+<div id="reading-overlay-container" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9000; background:white;">
+    <iframe id="reading-iframe" style="width:100%; height:100%; border:none;"></iframe>
+</div>
+
+<script>
+// 工具栏滑动页码指示器
+function updateToolBoxPageIndicator() {
+    const slider = document.getElementById('tool-box-slider');
+    const width = slider.clientWidth;
+    const pageIndex = Math.round(slider.scrollLeft / width);
+    document.getElementById('toolbox-dot-1').style.background = pageIndex === 0 ? '#07c160' : '#ccc';
+    document.getElementById('toolbox-dot-2').style.background = pageIndex === 1 ? '#07c160' : '#ccc';
+}
+
+// 唤醒阅读页面
+function openReadingSystem() {
+    // 隐藏菜单框
+    document.getElementById('tool-box').style.display = 'none';
+    
+    // 存入当前正在对话的伴读者昵称，方便阅读子页面同步获取伴读信息
+    localStorage.setItem('active_reading_companion', currentFriendName);
+    
+    const container = document.getElementById('reading-overlay-container');
+    const iframe = document.getElementById('reading-iframe');
+    
+    iframe.src = "阅读.html";
+    container.style.display = "block";
+}
+
+// 隐藏阅读页面
+function closeReadingSystem() {
+    document.getElementById('reading-overlay-container').style.display = "none";
+    document.getElementById('reading-iframe').src = "about:blank";
+    renderMessages(); // 刷新消息气泡以同步更新可能获得的段评/笔记状态
+}
+
+// 触发字体导入选择器
+function triggerReaderFontUpload() {
+    document.getElementById('reader-font-upload').click();
+}
+
+// 执行字体数据写入数据库（利用原本存在的 IndexedDB userPersonaAvatars 空间存储字体 Blob）
+function handleReaderFontFile(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const storeId = "custom_reader_ttf_font";
+        
+        saveAvatarBlob(storeId, file).then(() => {
+            alert(`字体文件 ${file.name} 导入成功！阅读系统将启用此字体。`);
+            const display = document.getElementById('settings-font-display');
+            if (display) display.innerText = "已导入";
+        }).catch(err => {
+            alert("字体保存失败，请检查数据库空间。");
+            console.error(err);
+        });
+    }
+}
+</script>
 <!-- ================= 新增顶栏美化全屏页面 ================= -->
 <div id="header-beautify-page" class="page" style="z-index: 5200; background: #f1f1f1; display: none; flex-direction: column;">
     <div class="header">

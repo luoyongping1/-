@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>阅读书签与伴读系统</title>
+    <!-- 引入JSZip库用于解析epub -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg-white: #ffffff;
+            --ios-gray: #f2f2f7;
+            --text-dark: #1c1c1e;
+            --text-muted: #8e8e93;
+            --primary-green: #34c759;
+            --primary-blue: #007aff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--ios-gray);
+            color: var(--text-dark);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 字体注入载体 */
+        @font-face {
+            font-family: 'BookCustomFont';
+            src: local('sans-serif');
+        }
+
+        .custom-font-enabled {
+            font-family: 'BookCustomFont', -apple-system, sans-serif !important;
+        }
+
+        /* 主视口管理器 */
+        .view-panel {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            box-sizing: border-box;
+            background-color: var(--ios-gray);
+            padding-bottom: 90px; /* 留出底部Docker栏的空间 */
+        }
+        .view-panel.active {
+            display: flex;
+        }
+
+        /* iOS 风格顶栏 */
+        .shelf-header {
+            height: 55px;
+            background: rgba(249, 249, 249, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-weight: 700;
+            font-size: 17px;
+            z-index: 100;
+            position: sticky;
+            top: 0;
+            letter-spacing: -0.4px;
+        }
+        .header-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.04);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .header-btn:active {
+            transform: scale(0.92);
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        /* 书架网格排版（高仿图片版式） */
+        .shelf-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px 16px;
+            align-content: start;
+        }
+
+        /* iOS液态玻璃风格卡片 */
+        .book-card {
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box;
+            height: 270px;
+        }
+        .book-card:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .book-cover-wrap {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #e5e5ea 0%, #d1d1d6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: inset 3px 0 6px rgba(0,0,0,0.08); /* 仿真书脊暗部 */
+        }
+        /* 确保导入的封面图能够优雅铺满书籍卡片 */
+        .book-cover-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .book-cover-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .book-cover-default {
+            font-size: 12px;
+            font-weight: 700;
+            color: #3a3a3c;
+            padding: 12px;
+            text-align: center;
+            line-height: 1.3;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.4);
+        }
+
+        /* 右下角磨砂半透明进度角标 */
+        .progress-tag {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 3px 7px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 5;
+        }
+
+        .book-info-wrap {
+            padding: 8px 8px 4px 8px;
+            text-align: left;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .book-card-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+        .book-card-author {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 底部排版状态栏 */
+        .book-card-footer {
+            height: 26px;
+            border-top: 0.5px solid rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            box-sizing: border-box;
+            background: #fafafa;
+        }
+        /* 胶囊页数徽章 */
+        .page-pill {
+            background: #e5e5ea;
+            color: #55555a;
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            transform: scale(0.95);
+            transform-origin: left center;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+        /* 极细进度条轨道 */
+        .progress-bar-track {
+            flex: 1;
+            height: 3px;
+            background: #e5e5ea;
+            border-radius: 2px;
+            margin: 0 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #1c1c1e;
+            border-radius: 2px;
+        }
+        .hourglass-icon {
+            font-size: 10px;
+            color: #8e8e93;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 删除书籍的小叉 (微透明高空质感) */
+        .delete-book-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: white;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .delete-book-btn:hover {
+            background: rgba(255, 59, 48, 0.8); /* 悬浮时红色提示 */
+        }
+
+        /* iOS 拟真玻璃 Dock 栏 */
+        .ios-docker {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 32px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 800;
+            padding: 0 16px;
+            box-sizing: border-box;
+        }
+        .docker-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dark);
+            opacity: 0.35; /* 未激活时线条淡淡显示 */
+            cursor: pointer;
+            width: 70px;
+            height: 50px;
+            transition: all 0.2s ease;
+        }
+        .docker-item.active {
+            opacity: 1; /* 激活时完全清晰 */
+        }
+        .docker-icon {
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .docker-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: -0.1px;
+        }
+
+        /* 阅读器主文本窗口 */
+        .reader-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px 24px;
+            box-sizing: border-box;
+            line-height: 1.8;
+            font-size: 18px;
+            background: #ffffff;
+        }
+        /* 左右分栏翻页模式 */
+        .reader-body.page-flip-mode {
+            overflow-y: hidden;
+            overflow-x: auto;
+            display: flex;
+            flex-direction: row;
+            scroll-snap-type: x mandatory;
+        }
+        .page-column {
+            flex: 0 0 100%;
+            height: 100%;
+            box-sizing: border-box;
+            scroll-snap-align: start;
+            padding-right: 15px;
+        }
+        .reader-body p {
+            margin-bottom: 1.5em;
+            text-align: justify;
+            text-indent: 2em;
+            position: relative;
+        }
+
+        /* 段评气泡 */
+        .para-comment-badge {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(52, 199, 89, 0.15);
+            color: var(--primary-green);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            cursor: pointer;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+
+        /* 划线弹出浮动菜单 */
+        #selection-menu {
+            display: none;
+            position: fixed;
+            background: rgba(28, 28, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 6px 12px;
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            gap: 15px;
+            align-items: center;
+        }
+        #selection-menu button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        #selection-menu button:active {
+            color: var(--primary-green);
+        }
+
+        /* 悬浮球 */
+        #companion-ball {
+            position: fixed;
+            bottom: 105px; right: 20px;
+            width: 55px; height: 55px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            z-index: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid white;
+            transition: transform 0.2s;
+        }
+        #companion-ball img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        /* 伴读闲聊面板 (iOS 卡片样式) */
+        #companion-chat-panel {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0;
+            width: 100%; height: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.1);
+            z-index: 850;
+            border-radius: 20px 20px 0 0;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 1px solid rgba(255,255,255,0.4);
+        }
+        .chat-panel-header {
+            height: 48px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            font-weight: 600;
+        }
+        .chat-panel-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f2f2f7;
+        }
+        .chat-bubble {
+            max-width: 80%;
+            padding: 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-all;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .chat-bubble.companion {
+            background: white;
+            align-self: flex-start;
+            border-top-left-radius: 4px;
+            color: var(--text-dark);
+        }
+        .chat-bubble.self {
+            background: var(--primary-green);
+            color: white;
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+        }
+        .chat-panel-input {
+            height: 55px;
+            border-top: 0.5px solid rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            background: white;
+        }
+        .chat-panel-input input {
+            flex: 1;
+            height: 38px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 19px;
+            padding: 0 15px;
+            outline: none;
+            background: #f2f2f7;
+            font-size: 14px;
+        }
+        .chat-panel-input button {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 18px;
+            margin-left: 8px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* 我的页面列表布局 */
+        .me-menu-list {
+            margin: 20px;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.08);
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .me-menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-bottom: 0.5px solid rgba(0,0,0,0.06);
+        }
+        .me-menu-item:last-child {
+            border-bottom: none;
+        }
+        .me-menu-item:active {
+            background-color: #f2f2f7;
+        }
+        .me-menu-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        /* 模态弹窗 iOS 玻璃化样式 */
+        .modal-mask {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.4);
+            z-index: 1200;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .modal-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--glass-border);
+            width: 85%;
+            border-radius: 20px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: var(--glass-shadow);
+        }
+
+        .btn-green {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn-gray {
+            background: #e5e5ea;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* 阅读历史 */
+        .history-list {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .history-item {
+            background: #ffffff;
+            padding: 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(0,0,0,0.04);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        /* 段评抽屉 */
+        #comment-drawer {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0;
+            width: 100%; height: 45%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 900;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.1);
+            flex-direction: column;
+        }
+
+        /* 阅读页面头部样式重定义 */
+        .reader-header {
+            height: 55px;
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 书架界面 -->
+    <div id="shelf-view" class="view-panel active">
+        <div class="shelf-header">
+            <!-- 左侧退出 -->
+            <div class="header-btn" onclick="window.parent.closeReadingSystem()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </div>
+            <span>阅读</span>
+            <!-- 右上角导入图书（极简黑色加号线条图标） -->
+            <div class="header-btn" onclick="triggerBookImport()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-dark)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </div>
+        </div>
+        <div id="shelf-content" class="shelf-content">
+            <!-- 动态注入图书卡片 -->
+        </div>
+        <input type="file" id="book-file-input" style="display:none;" accept=".txt,.epub,.mobi" onchange="importNewBook(this)">
+    </div>
+
+    <!-- 2. 阅读记录界面 -->
+    <div id="history-view" class="view-panel">
+        <div class="shelf-header">
+            <div class="header-btn" onclick="switchTab('shelf-view')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </div>
+            <span>阅读记录</span>
+            <div class="header-btn" id="history-delete-btn" onclick="clickHistoryDeleteBtn()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+            </div>
+        </div>
+        <div id="history-list" class="history-list">
+            <!-- 阅读打卡记录列表 -->
+        </div>
+    </div>
+
+    <!-- 3. 我的页面界面 -->
+    <div id="me-view" class="view-panel">
+        <div class="shelf-header">
+            <div class="header-btn" onclick="switchTab('shelf-view')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </div>
+            <span>我的</span>
+            <div></div>
+        </div>
+        <div style="flex:1; overflow-y:auto; background:#f2f2f7;">
+            <!-- 用户身份展示 -->
+            <div style="padding:30px 20px; background:white; display:flex; align-items:center; gap:15px; border-bottom:0.5px solid rgba(0,0,0,0.08);">
+                <div style="width:60px; height:60px; border-radius:50%; background:var(--ios-gray); display:flex; align-items:center; justify-content:center; font-size:24px;">📖</div>
+                <div>
+                    <div style="font-size:18px; font-weight:bold; color:var(--text-dark);">读书陪伴计划</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">让阅读变得不再孤独</div>
+                </div>
+            </div>
+
+            <!-- 功能栏目 -->
+            <div class="me-menu-list">
+                <div class="me-menu-item" onclick="exportReedenJSON()">
+                    <span class="me-menu-title">📤 导出 Reeden 模板</span>
+                    <span style="color:#c7c7cc;">〉</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部固定的 iOS Docker 栏（SVG 简约黑色线条版） -->
+    <div class="ios-docker">
+        <div id="dock-history" class="docker-item" onclick="switchTab('history-view')">
+            <div class="docker-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
+            <div class="docker-label">阅读记录</div>
+        </div>
+        <div id="dock-shelf" class="docker-item active" onclick="switchTab('shelf-view')">
+            <div class="docker-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+            </div>
+            <div class="docker-label">书架</div>
+        </div>
+        <div id="dock-me" class="docker-item" onclick="switchTab('me-view')">
+            <div class="docker-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <div class="docker-label">我的</div>
+        </div>
+    </div>
+
+    <!-- 4. 阅读器运行界面 (全屏覆盖) -->
+    <div id="reader-view" class="view-panel" style="padding-bottom:0; z-index:900; background:#ffffff;">
+        <div class="reader-header">
+            <span onclick="quitReader()" style="cursor:pointer; font-weight:bold; color:var(--primary-blue);">✕ 返回书架</span>
+            <span id="reader-book-title" style="font-weight:bold; max-width: 50%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">正在读...</span>
+            <span onclick="toggleReaderSettings()" style="cursor:pointer; color:var(--primary-blue);">⚙️ 设置</span>
+        </div>
+        
+        <!-- 阅读器主文本窗口 -->
+        <div id="reader-body" class="reader-body" onscroll="trackProgressScroll()" onmouseup="handleTextSelection(event)" ontouchend="handleTextSelection(event)">
+            <!-- 章节段落内容 -->
+        </div>
+
+        <!-- 阅读底栏控制 -->
+        <div style="height:55px; background:rgba(255,255,255,0.95); border-top:0.5px solid rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:space-between; padding:0 20px; z-index:10;">
+            <span onclick="changeChapter(-1)" style="cursor:pointer; font-weight:bold; color:var(--primary-blue);">上一章</span>
+            <span id="chapter-progress-text" style="font-size:12px; color:var(--text-muted);">载入中...</span>
+            <span onclick="changeChapter(1)" style="cursor:pointer; font-weight:bold; color:var(--primary-blue);">下一章</span>
+        </div>
+    </div>
+
+    <!-- 划线交互浮动菜单 -->
+    <div id="selection-menu">
+        <button onclick="openNoteModal()">📝 批注</button>
+        <button onclick="askParagraphCommentsPrompt()">💬 段评</button>
+    </div>
+
+    <!-- 伴读闲聊悬浮球系统 -->
+    <div id="companion-ball-wrapper" style="position: fixed; bottom: 105px; right: 20px; z-index: 10005;">
+        <!-- 对话气泡（自动逐个出现消失） -->
+        <div id="companion-bubble" style="display:none; position:absolute; bottom:75px; right:0; background:rgba(255,255,255,0.95); border:1px solid rgba(0,0,0,0.06); padding:10px 14px; border-radius:15px 15px 2px 15px; width:180px; font-size:13px; color:#333; line-height:1.4; box-shadow:0 4px 15px rgba(0,0,0,0.15); pointer-events:none; word-break:break-all;">
+            正在加载...
+        </div>
+
+        <!-- 悬浮球本体 -->
+        <div id="companion-ball" style="width: 55px; height: 55px; border-radius: 50%; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px solid white; transition: transform 0.2s;" onclick="toggleCompanionChat()">
+            <img id="companion-avatar" src="https://cdn-icons-png.flaticon.com/512/3670/3670044.png" alt="伴读者" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+
+        <!-- 悬浮微型输入对话框 -->
+        <div id="companion-chat-box" style="display:none; position:absolute; top:5px; right:75px; width:210px; height:46px; background:rgba(255,255,255,0.95); border:1px solid rgba(0,0,0,0.08); padding:5px; border-radius:23px; align-items:center; gap:5px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" onclick="event.stopPropagation()">
+            <input type="text" id="companion-chat-input" style="flex:1; border-radius:18px; border:none; padding:8px 12px; outline:none; font-size:12px; background:#f2f2f7; box-sizing: border-box;" placeholder="聊聊本章..." onkeydown="if(event.key==='Enter') sendCompanionMessage()">
+            <button style="background:var(--primary-green); color:white; border:none; width:48px; height:32px; border-radius:16px; font-size:11px; font-weight:bold; flex-shrink:0; cursor:pointer;" onclick="sendCompanionMessage()">发送</button>
+        </div>
+    </div>
+
+    <!-- 批注模态弹窗 -->
+    <div id="note-modal" class="modal-mask">
+        <div class="modal-card">
+            <h3 style="margin-top:0; color:var(--text-dark);" id="note-modal-title">添加读书笔记</h3>
+            <div style="font-style:italic; font-size:12px; color:var(--text-muted); margin-bottom:10px;" id="note-selected-text">"选中文字"</div>
+            <textarea id="note-input" style="width:100%; height:120px; border:1px solid rgba(0,0,0,0.1); border-radius:12px; padding:12px; outline:none; box-sizing:border-box; resize:none; background:#f2f2f7; font-size:14px;" placeholder="输入你的感悟与观点..."></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+                <button class="btn-gray" onclick="closeNoteModal()">取消</button>
+                <button class="btn-green" onclick="submitBookNote()">保存并讨论</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 伴读设置控制面板 -->
+    <div id="reader-settings-modal" class="modal-mask">
+        <div class="modal-card">
+            <h3 style="margin-top:0; text-align:center; color:var(--text-dark);">阅读偏好设置</h3>
+            <div style="margin-bottom:18px;">
+                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">字体大小</label>
+                <input type="range" id="setting-font-size" min="14" max="28" value="18" style="width:100%; accent-color:var(--primary-green);" oninput="updateFontSize(this.value)">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">阅读版式</label>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-gray" style="flex:1" onclick="setReadingLayout('scroll')">上下滚动</button>
+                    <button class="btn-gray" style="flex:1" onclick="setReadingLayout('flip')">左右分栏</button>
+                </div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">自定义TTF字体</label>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="custom-font-status" style="font-size:12px; color:var(--text-muted);">检测中...</span>
+                    <button class="btn-green" style="font-size:12px; padding:6px 12px;" onclick="applyCustomFont(true)">开启自定义</button>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:center;">
+                <button class="btn-green" onclick="toggleReaderSettings()">完成设置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 段评查看层 -->
+    <div id="comment-drawer">
+        <div class="chat-panel-header">
+            <span>段落点评</span>
+            <span onclick="closeCommentDrawer()" style="cursor:pointer; color:#999;">✕</span>
+        </div>
+        <div id="comment-drawer-list" class="chat-panel-messages">
+            <!-- 段评内容 -->
+        </div>
+    </div>
+
+    <!-- 选择生成段评类型的模态框 -->
+    <div id="comment-type-modal" class="modal-mask">
+        <div class="modal-card" style="text-align:center;">
+            <h3 style="margin-top:0; color:var(--text-dark);">生成段评伴读</h3>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">系统将调用API人设，为你这一章中的各段落添加实时看法吐槽。</p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-green" onclick="generateChapterComments('current')">📝 生成本章段评</button>
+                <button class="btn-green" style="background:#5c6bc0" onclick="generateChapterComments('next')">⏳ 静默生成下一章段评 (推荐)</button>
+                <button class="btn-gray" onclick="closeCommentTypeModal()">算了吧</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心全局状态 ---
+        let db = null;
+        let books = [];
+        let currentBook = null;
+        let currentChapterIndex = 0;
+        let selectText = "";
+        let selectedParagraphIdx = 0;
+        let readingStartTime = 0;
+
+        // 伴读者数据
+        let companionName = "";
+        let companionPersona = "";
+        let companionAvatar = "";
+
+        // 伴读聊天记录 (保存在临时内存)
+        let companionChatLogs = [];
+
+        // --- 数据库初始化 ---
+        const DB_NAME = 'WeChatAIPlusDB';
+        const DB_VERSION = 1;
+        const STORE_BOOKS = 'reeden_books_store';
+
+        function initDatabase() {
+            return new Promise((resolve) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    let database = e.target.result;
+                    if (!database.objectStoreNames.contains(STORE_BOOKS)) {
+                        database.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
+                    }
+                    if (!database.objectStoreNames.contains('userPersonaAvatars')) {
+                        database.createObjectStore('userPersonaAvatars', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_BOOKS)) {
+                        db.close();
+                        const req2 = indexedDB.open(DB_NAME, DB_VERSION + 1);
+                        req2.onupgradeneeded = (evt) => {
+                            evt.target.result.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
+                        };
+                        req2.onsuccess = (evt) => {
+                            db = evt.target.result;
+                            resolve();
+                        };
+                    } else {
+                        resolve();
+                    }
+                };
+            });
+        }
+
+        // --- IndexedDB 对图书存取操作封装 ---
+        function saveBookToDb(book) {
+            return new Promise((resolve) => {
+                const transaction = db.transaction([STORE_BOOKS], 'readwrite');
+                const store = transaction.objectStore(STORE_BOOKS);
+                store.put(book);
+                transaction.oncomplete = () => resolve();
+            });
+        }
+
+        function loadBooksFromDb() {
+            return new Promise((resolve) => {
+                const transaction = db.transaction([STORE_BOOKS], 'readonly');
+                const store = transaction.objectStore(STORE_BOOKS);
+                const req = store.getAll();
+                req.onsuccess = () => {
+                    books = req.result || [];
+                    resolve(books);
+                };
+            });
+        }
+
+        function getAvatarBlob(id) {
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['userPersonaAvatars'], 'readonly');
+                const store = transaction.objectStore('userPersonaAvatars');
+                const request = store.get(id);
+                request.onsuccess = () => resolve(request.result ? request.result.image : null);
+                request.onerror = () => resolve(null);
+            });
+        }
+
+        // --- 伴读信息挂载加载器 ---
+        function loadCompanionInfo() {
+            // 获取当前主界面正在对话的好友昵称
+            companionName = localStorage.getItem('active_reading_companion') || "AI 伴读";
+            const friendsList = JSON.parse(localStorage.getItem('qq_friends')) || [];
+            const activeFriend = friendsList.find(f => f.name === companionName);
+            
+            const panelNameEl = document.getElementById('companion-panel-name');
+            if (panelNameEl) {
+                panelNameEl.innerText = companionName;
+            }
+
+            if (activeFriend) {
+                companionPersona = activeFriend.persona || "性格开朗，喜欢看书";
+                // 默认获取好友本身上传的头像
+                companionAvatar = activeFriend.avatarUrl || "";
+                
+                // 如果这个好友绑定了“我在他面前的人设”(面具人设)
+                if (activeFriend.userPersonaId) {
+                    const userPersonas = JSON.parse(localStorage.getItem('qq_user_personas')) || [];
+                    const activePersona = userPersonas.find(u => u.id === activeFriend.userPersonaId);
+                    if (activePersona && activePersona.avatar) {
+                        companionAvatar = activePersona.avatar; // 头像替换为该面具的头像代号
+                    }
+                }
+            } else {
+                companionPersona = "一个忠实的读者，喜欢与你交流";
+                companionAvatar = "";
+            }
+
+            const ballImg = document.getElementById('companion-avatar');
+            if (companionAvatar) {
+                // 如果头像是保存在 IndexedDB 中的图片代号 (以 indexeddb- 开头)
+                if (companionAvatar.startsWith('indexeddb-')) {
+                    getAvatarBlob(companionAvatar).then(blob => {
+                        if (blob) {
+                            const url = URL.createObjectURL(blob);
+                            ballImg.src = url; // 转换为临时本地链接并显示
+                        } else {
+                            ballImg.src = "https://cdn-icons-png.flaticon.com/512/3670/3670044.png";
+                        }
+                    }).catch(err => {
+                        ballImg.src = "https://cdn-icons-png.flaticon.com/512/3670/3670044.png";
+                    });
+                } else {
+                    // 如果头像是直接的图片网络链接或 Base64 编码
+                    ballImg.src = companionAvatar;
+                }
+            } else {
+                // 没有头像则使用系统默认头像
+                ballImg.src = "https://cdn-icons-png.flaticon.com/512/3670/3670044.png";
+            }
+        }
+
+        // --- Docker 多页面选项卡切换 ---
+        function switchTab(viewId) {
+            // 切换页面面板
+            document.querySelectorAll('.view-panel').forEach(panel => {
+                if (panel.id !== 'reader-view') {
+                    panel.classList.remove('active');
+                }
+            });
+            document.getElementById(viewId).classList.add('active');
+
+            // 切换Docker状态
+            document.querySelectorAll('.docker-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            if (viewId === 'history-view') {
+                isHistoryEditMode = false;
+                resetHistoryDeleteBtnStyle();
+                document.getElementById('dock-history').classList.add('active');
+                openHistoryView();
+            } else if (viewId === 'shelf-view') {
+                document.getElementById('dock-shelf').classList.add('active');
+                loadBooksFromDb().then(renderShelf);
+            } else if (viewId === 'me-view') {
+                document.getElementById('dock-me').classList.add('active');
+            }
+        }
+
+        // --- 渲染图书卡片 (iOS高拟真版) ---
+        function renderShelf() {
+            const container = document.getElementById('shelf-content');
+            if (books.length === 0) {
+                container.innerHTML = `<div style="grid-column: span 3; text-align:center; color:var(--text-muted); padding:50px 0; font-size:13px;">您的书架空空如也，点击右上角导入图书吧！</div>`;
+                return;
+            }
+            container.innerHTML = books.map((book) => {
+                const progressNum = (book.readingState && book.readingState.progress) ? Math.round(book.readingState.progress * 100) : 0;
+                const totalPages = book.spineChapters ? book.spineChapters.length : 1;
+
+                // 判断是否导入过封面图，如果导入过则渲染 img 标签，否则显示默认的书名文字
+                let coverHtml = "";
+                if (book.coverUrl && book.coverUrl.trim() !== "") {
+                    coverHtml = `<img src="${book.coverUrl}" alt="书籍封面" class="book-cover-img">`;
+                } else {
+                    coverHtml = `<div class="book-cover-default">${book.title.substring(0, 15)}</div>`;
+                }
+
+                return `
+                <div class="book-card" onclick="openBook('${book.id}')">
+                    <!-- 左上角删除按钮 -->
+                    <span class="delete-book-btn" onclick="event.stopPropagation(); deleteBook('${book.id}')">✕</span>
+                    
+                    <!-- 封面展示区（仿真纸张边缘） -->
+                    <div class="book-cover-wrap">
+                        ${coverHtml}
+                        <!-- 右下角磨砂角标 -->
+                        <div class="progress-tag">${progressNum}%</div>
+                    </div>
+
+                    <!-- 书名与作者 -->
+                    <div class="book-info-wrap">
+                        <h4 class="book-card-title">${book.title}</h4>
+                        <div class="book-card-author">${book.author || "未知作者"}</div>
+                    </div>
+
+                    <!-- 底部页数状态栏 -->
+                    <div class="book-card-footer">
+                        <span class="page-pill">${totalPages} p.</span>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" style="width: ${progressNum}%"></div>
+                        </div>
+                        <span class="hourglass-icon">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 2h14M5 22h14M17 2v6.26a1 1 0 0 1-.29.71L12 14l-4.71-5.03a1 1 0 0 1-.29-.71V2M7 22v-6.26a1 1 0 0 1 .29-.71L12 10l4.71 5.03a1 1 0 0 1 .29.71V22"></path>
+                            </svg>
+                        </span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function triggerBookImport() {
+            document.getElementById('book-file-input').click();
+        }
+
+        // --- 文件读取与章节切分 ---
+        async function importNewBook(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+            
+            let chapters = [];
+            
+            // 智能清理文件名作为备用书脊名称
+            let rawName = file.name.replace(/\.[^/.]+$/, "");
+            let bookTitle = rawName;
+            let bookAuthor = "未知作者";
+
+            // 正则匹配乱码文件名（如 GUID 或哈希值）
+            const isRandomName = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/.test(rawName) || rawName.length > 25;
+
+            // 尝试从文件名拆分书名与作者 (如: 三体-刘慈欣.txt)
+            if (!isRandomName) {
+                const splitters = [" - ", "-", "_", "——", " "];
+                for (let sp of splitters) {
+                    if (rawName.includes(sp)) {
+                        const parts = rawName.split(sp);
+                        if (parts.length >= 2) {
+                            bookTitle = parts[0].trim();
+                            bookAuthor = parts[1].trim();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            try {
+                if (ext === '.txt') {
+                    const text = await readFileAsText(file);
+                    chapters = parseTxtChapters(text);
+
+                    // 如果文件名是乱码，我们去读取文本的前两行做书名和作者
+                    if (isRandomName) {
+                        const textLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(0, 5);
+                        if (textLines.length > 0) {
+                            bookTitle = textLines[0].replace(/《|》/g, ""); // 剥离书名号
+                        }
+                        if (textLines.length > 1) {
+                            bookAuthor = textLines[1].replace(/作者：|著/g, ""); // 剥离多余字样
+                        }
+                    }
+                } else if (ext === '.epub') {
+                    const epubData = await parseEpubFile(file);
+                    chapters = epubData.chapters;
+                    
+                    // 如果从 EPUB 内部读出了有效的书名，并且这个书名不是乱码，我们就采纳它
+                    const internalTitleIsRandom = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/.test(epubData.title);
+                    
+                    if (epubData.title && !internalTitleIsRandom) {
+                        bookTitle = epubData.title;
+                        bookAuthor = epubData.author;
+                    } else if (!isRandomName) {
+                        // 如果内部是乱码但外部文件名不是，退而求其次用外部拆分的名字
+                        const fileMeta = rawName.split(/ - |-|_|——| /);
+                        if (fileMeta.length >= 2) {
+                            bookTitle = fileMeta[0].trim();
+                            bookAuthor = fileMeta[1].trim();
+                        }
+                    } else {
+                        // 如果都是乱码，尝试用首章节标题或文本段落做备用名
+                        if (chapters.length > 0) {
+                            bookTitle = chapters[0].title;
+                        }
+                    }
+                } else if (ext === '.mobi') {
+                    const text = await parseMobiFile(file);
+                    chapters = parseTxtChapters(text);
+                    if (isRandomName) {
+                        const textLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(0, 5);
+                        if (textLines.length > 0) bookTitle = textLines[0].replace(/《|》/g, "");
+                        if (textLines.length > 1) bookAuthor = textLines[1].replace(/作者：|著/g, "");
+                    }
+                } else {
+                    alert("不支持的文件格式！");
+                    return;
+                }
+
+                if (chapters.length === 0) {
+                    throw new Error("无法成功解析书籍章节内容");
+                }
+
+                // 保存进数据库
+                const newBook = {
+                    id: 'book_' + Date.now(),
+                    title: bookTitle,
+                    author: bookAuthor,
+                    translator: "",
+                    publisher: "",
+                    publishTime: "",
+                    isbn: "",
+                    description: file.name + " 外部导入",
+                    coverUrl: "",
+                    rating: 5,
+                    tags: ["伴读架"],
+                    category: "读书会",
+                    readingState: {
+                        readStatus: "reading",
+                        progress: 0,
+                        readStartTime: new Date().toISOString(),
+                        lastReadTime: new Date().toISOString(),
+                        readRoundNo: 1
+                    },
+                    readRounds: [
+                        { roundNo: 1, readStartTime: new Date().toISOString(), readFinishTime: "" }
+                    ],
+                    notes: [],
+                    reviews: [],
+                    readingStatistics: {
+                        readingRecords: []
+                    },
+                    spineChapters: chapters 
+                };
+
+                // 拦截直接存盘，存入全局临时变量中
+                window.tempImportingBook = newBook;
+                
+                // 弹出询问是否上传封面的对话窗
+                document.getElementById('cover-choice-modal').style.display = 'flex';
+            } catch(e) {
+                alert("图书解析失败：" + e.message);
+                console.error(e);
+            } finally {
+                input.value = '';
+            }
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const buffer = e.target.result;
+                    const uint8 = new Uint8Array(buffer);
+                    try {
+                        // 尝试用 UTF-8 方式进行读取，若失败会进入 catch 捕获错误
+                        const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+                        resolve(utf8Decoder.decode(uint8));
+                    } catch (err) {
+                        // UTF-8 解析失败，判定为中文 GBK 编码，使用 GBK 解码
+                        const gbkDecoder = new TextDecoder('gbk');
+                        resolve(gbkDecoder.decode(uint8));
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function parseTxtChapters(text) {
+            const regex = /(第[一二三四五六七八九十百千万零\d]+[章节回集课])[^\n]*/g;
+            const parts = text.split(regex);
+            const matches = text.match(regex) || [];
+            const result = [];
+            
+            if (parts.length <= 1) {
+                result.push({ title: "正文", content: text });
+            } else {
+                if (parts[0].trim()) {
+                    result.push({ title: "序章", content: parts[0] });
+                }
+                for (let i = 0; i < matches.length; i++) {
+                    result.push({ title: matches[i], content: parts[i * 2 + 2] || "" });
+                }
+            }
+            return result;
+        }
+
+        async function parseEpubFile(file) {
+            const zip = await JSZip.loadAsync(file);
+            let opfPath = "";
+            for (let key in zip.files) {
+                if (key.endsWith(".opf")) {
+                    opfPath = key;
+                    break;
+                }
+            }
+            if (!opfPath) throw new Error("无效的 EPUB 格式电子书");
+
+            const opfText = await zip.files[opfPath].async("text");
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(opfText, "text/xml");
+            
+            // 从元数据标签中提取真实书名和作者
+            let title = "";
+            let author = "未知作者";
+            try {
+                const titleNode = xmlDoc.getElementsByTagName("dc:title")[0] || xmlDoc.getElementsByTagName("title")[0];
+                if (titleNode) title = titleNode.textContent.trim();
+                const creatorNode = xmlDoc.getElementsByTagName("dc:creator")[0] || xmlDoc.getElementsByTagName("creator")[0];
+                if (creatorNode) author = creatorNode.textContent.trim();
+            } catch (e) {
+                console.error("元数据提取失败：", e);
+            }
+
+            const manifest = {};
+            const manifestItems = xmlDoc.getElementsByTagName("manifest")[0].getElementsByTagName("item");
+            for (let item of manifestItems) {
+                manifest[item.getAttribute("id")] = item.getAttribute("href");
+            }
+            
+            const spineItems = xmlDoc.getElementsByTagName("spine")[0].getElementsByTagName("itemref");
+            const chapters = [];
+            const baseDir = opfPath.substring(0, opfPath.lastIndexOf("/") + 1);
+
+            for (let ref of spineItems) {
+                const idref = ref.getAttribute("idref");
+                const href = manifest[idref];
+                if (href) {
+                    const fullPath = baseDir + href;
+                    if (zip.files[fullPath]) {
+                        const htmlText = await zip.files[fullPath].async("text");
+                        const htmlDoc = parser.parseFromString(htmlText, "text/html");
+                        const body = htmlDoc.body ? htmlDoc.body.innerText : htmlText;
+                        const chapterTitle = htmlDoc.title || `第 ${chapters.length + 1} 章`;
+                        if (body.trim().length > 50) {
+                            chapters.push({ title: chapterTitle, content: body });
+                        }
+                    }
+                }
+            }
+            // 返回包含书名、作者和章节的包装对象
+            return { title: title, author: author, chapters: chapters };
+        }
+
+        async function parseMobiFile(file) {
+            const buffer = await file.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+            const decoder = new TextDecoder("utf-8");
+            let textChunks = [];
+            let current = [];
+
+            for (let i = 0; i < bytes.length; i++) {
+                let c = bytes[i];
+                if ((c >= 32 && c <= 126) || c === 10 || c === 13 || (c >= 0xC0 && c <= 0xFF) || (c >= 0x80 && c <= 0xBF)) {
+                    current.push(c);
+                } else {
+                    if (current.length > 80) {
+                        textChunks.push(decoder.decode(new Uint8Array(current)));
+                    }
+                    current = [];
+                }
+            }
+            if (current.length > 80) {
+                textChunks.push(decoder.decode(new Uint8Array(current)));
+            }
+            return textChunks.join("\n\n");
+        }
+
+        async function deleteBook(id) {
+            if (confirm("确定要删除这本图书吗？阅读笔记和历史也将丢失。")) {
+                const transaction = db.transaction([STORE_BOOKS], 'readwrite');
+                const store = transaction.objectStore(STORE_BOOKS);
+                store.delete(id);
+                transaction.oncomplete = () => {
+                    loadBooksFromDb().then(() => {
+                        renderShelf();
+                    });
+                };
+            }
+        }
+
+        // --- 阅读器载入运行 ---
+        function openBook(id) {
+            currentBook = books.find(b => b.id === id);
+            if (!currentBook) return;
+
+            const progress = currentBook.readingState ? currentBook.readingState.progress : 0;
+            currentChapterIndex = Math.min(
+                Math.floor(progress * currentBook.spineChapters.length),
+                currentBook.spineChapters.length - 1
+            );
+            if (currentChapterIndex < 0) currentChapterIndex = 0;
+
+            document.getElementById('reader-book-title').innerText = currentBook.title;
+            document.getElementById('reader-view').classList.add('active');
+
+            readingStartTime = Date.now();
+            checkCustomFontImported();
+            loadChapterContent();
+        }
+
+        function toggleReaderSettings() {
+            const modal = document.getElementById('reader-settings-modal');
+            modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
+        }
+
+        function updateFontSize(size) {
+            document.getElementById('reader-body').style.fontSize = size + 'px';
+            localStorage.setItem('reader_pref_font_size', size);
+        }
+
+        function setReadingLayout(type) {
+            const body = document.getElementById('reader-body');
+            if (type === 'flip') {
+                body.classList.add('page-flip-mode');
+            } else {
+                body.classList.remove('page-flip-mode');
+            }
+            localStorage.setItem('reader_pref_layout', type);
+        }
+
+        function checkCustomFontImported() {
+            getAvatarBlob("custom_reader_ttf_font").then(blob => {
+                const statusSpan = document.getElementById('custom-font-status');
+                if (blob) {
+                    statusSpan.innerText = "已导入自定义TTF";
+                    statusSpan.style.color = "var(--primary-green)";
+                } else {
+                    statusSpan.innerText = "未导入任何字体文件";
+                    statusSpan.style.color = "var(--text-muted)";
+                }
+            });
+        }
+
+        // 重新注入样式处理
+        function applyCustomFont(forceApply = false) {
+            getAvatarBlob("custom_reader_ttf_font").then(blob => {
+                if (blob) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        let style = document.getElementById('injected-book-font-style');
+                        if (!style) {
+                            style = document.createElement('style');
+                            style.id = 'injected-book-font-style';
+                            document.head.appendChild(style);
+                        }
+                        style.innerHTML = `
+                            @font-face {
+                                font-family: 'BookCustomFont';
+                                src: url('${e.target.result}');
+                            }
+                        `;
+                        document.getElementById('reader-body').classList.add('custom-font-enabled');
+                        if (forceApply) alert("自定义字体已成功应用！");
+                    };
+                    reader.readAsDataURL(blob);
+                } else if (forceApply) {
+                    alert("请在主应用的设置中导入 .ttf 字体文件。");
+                }
+            });
+        }
+
+        function loadChapterContent() {
+            const chapter = currentBook.spineChapters[currentChapterIndex];
+            const body = document.getElementById('reader-body');
+            
+            if (!chapter) {
+                body.innerHTML = "载入章节失败。";
+                return;
+            }
+
+            document.getElementById('chapter-progress-text').innerText = `章节: ${currentChapterIndex + 1} / ${currentBook.spineChapters.length}`;
+            
+            const paragraphs = chapter.content.split('\n').filter(p => p.trim());
+            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+            const existingComments = JSON.parse(localStorage.getItem(commentsKey)) || {};
+
+            body.innerHTML = paragraphs.map((text, idx) => {
+                const commentCount = existingComments[idx] ? existingComments[idx].length : 0;
+                const badge = commentCount > 0 ? `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawer(${idx})">💬 ${commentCount}</span>` : '';
+                return `<p class="read-para" data-para-idx="${idx}">${text}${badge}</p>`;
+            }).join('');
+
+            body.scrollTop = 0;
+        }
+
+        function changeChapter(direction) {
+            const nextIdx = currentChapterIndex + direction;
+            if (nextIdx >= 0 && nextIdx < currentBook.spineChapters.length) {
+                currentChapterIndex = nextIdx;
+                loadChapterContent();
+                updateBookProgressMemory();
+            } else {
+                alert("已经是第一章或最后一章了");
+            }
+        }
+
+        function updateBookProgressMemory() {
+            if (!currentBook) return;
+            const progress = currentChapterIndex / currentBook.spineChapters.length;
+            currentBook.readingState.progress = progress;
+            currentBook.readingState.lastReadTime = new Date().toISOString();
+            saveBookToDb(currentBook);
+        }
+
+        function trackProgressScroll() {
+            clearTimeout(window.scrollTrackTimer);
+            window.scrollTrackTimer = setTimeout(() => {
+                updateBookProgressMemory();
+            }, 500);
+        }
+
+        function quitReader() {
+            if (!currentBook) return;
+            
+            const seconds = Math.floor((Date.now() - readingStartTime) / 1000);
+            const today = new Date().toLocaleDateString();
+            const chapterText = currentBook.spineChapters[currentChapterIndex]?.content || "";
+            const wordCount = chapterText.length;
+
+            if (seconds > 5) {
+                if (!currentBook.readingStatistics.readingRecords) {
+                    currentBook.readingStatistics.readingRecords = [];
+                }
+                currentBook.readingStatistics.readingRecords.push({
+                    date: today,
+                    readSeconds: seconds,
+                    wordCount: wordCount
+                });
+            }
+
+            saveBookToDb(currentBook).then(() => {
+                document.getElementById('reader-view').classList.remove('active');
+                loadBooksFromDb().then(renderShelf);
+            });
+        }
+
+        // --- 文本选择和菜单 ---
+        function handleTextSelection(event) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            const menu = document.getElementById('selection-menu');
+
+            if (selectedText.length > 0) {
+                selectText = selectedText;
+                
+                let parentNode = selection.anchorNode.parentNode;
+                while (parentNode && parentNode.tagName !== 'P') {
+                    parentNode = parentNode.parentNode;
+                }
+                if (parentNode && parentNode.classList.contains('read-para')) {
+                    selectedParagraphIdx = parseInt(parentNode.getAttribute('data-para-idx'));
+                } else {
+                    selectedParagraphIdx = 0;
+                }
+
+                const x = event.clientX || (event.touches ? event.touches[0].clientX : 200);
+                const y = event.clientY || (event.touches ? event.touches[0].clientY : 200);
+                
+                menu.style.left = x + 'px';
+                menu.style.top = (y - 45) + 'px';
+                menu.style.display = 'flex';
+            } else {
+                menu.style.display = 'none';
+            }
+        }
+
+        // --- 写批注与回复交互 ---
+        function openNoteModal() {
+            document.getElementById('selection-menu').style.display = 'none';
+            document.getElementById('note-selected-text').innerText = `"${selectText}"`;
+            document.getElementById('note-input').value = '';
+            document.getElementById('note-modal').style.display = 'flex';
+        }
+
+        function closeNoteModal() {
+            document.getElementById('note-modal').style.display = 'none';
+        }
+
+        async function submitBookNote() {
+            const noteVal = document.getElementById('note-input').value.trim();
+            if (!noteVal) return;
+
+            const noteObj = {
+                sectionName: currentBook.spineChapters[currentChapterIndex].title,
+                sectionIndex: currentChapterIndex,
+                content: selectText,
+                comment: noteVal,
+                type: "underline",
+                color: "green",
+                timestamp: Date.now()
+            };
+
+            currentBook.notes.push(noteObj);
+            await saveBookToDb(currentBook);
+            closeNoteModal();
+            window.getSelection().removeAllRanges();
+
+            appendChatMessage("self", `针对文字《${selectText}》我发表了想法：“${noteVal}”，你觉得呢？`);
+            await fetchCompanionAiReply(`针对文章中的这段划线文字：“${selectText}”。我的批注想法是：“${noteVal}”。`);
+        }
+
+        // --- 伴读段评伴读生成核心模块 ---
+        function askParagraphCommentsPrompt() {
+            document.getElementById('selection-menu').style.display = 'none';
+            document.getElementById('comment-type-modal').style.display = 'flex';
+        }
+        function closeCommentTypeModal() {
+            document.getElementById('comment-type-modal').style.display = 'none';
+        }
+
+        async function generateChapterComments(targetType) {
+            closeCommentTypeModal();
+            const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
+            if (!aiConfig || !aiConfig.key) {
+                alert("请先在主应用 [我 - API与模型设置] 中配置并保存 Key 才能开启伴读功能！");
+                return;
+            }
+
+            let targetChapterIdx = currentChapterIndex;
+            if (targetType === 'next') {
+                targetChapterIdx = currentChapterIndex + 1;
+                if (targetChapterIdx >= currentBook.spineChapters.length) {
+                    alert("已经是最后一章，无下一章可生成！");
+                    return;
+                }
+                alert("正在为您静默生成下一章段评伴读点评...");
+            } else {
+                alert("正在生成本章段评中，请稍候...");
+            }
+
+            const chapter = currentBook.spineChapters[targetChapterIdx];
+            if (!chapter) return;
+
+            const paragraphs = chapter.content.split('\n').filter(p => p.trim()).slice(0, 15);
+            const textToAnalyze = paragraphs.map((text, index) => `[段落 ${index}]: ${text}`).join('\n');
+
+            const sysPrompt = `你现在是陪伴用户一起看书的伴读者，你叫[${companionName}]。
+你的人设性格是：${companionPersona}。
+
+## 任务：
+请针对下面的小说各段落内容进行逐段阅读，挑选几个有趣的段落提供吐槽、感想或观点评语。
+你的点评口吻必须贴合你的人设性格特征。
+输出的数据格式必须只能是标准的 JSON 格式，不能含有任何 Markdown 语法标记或多余的说明解释。
+
+## 返回数据 JSON 格式模版：
+[
+  {"paragraphIndex": 0, "comment": "天哪，怎么突然变成这样了，惊到我了！"},
+  {"paragraphIndex": 2, "comment": "我感觉主角这个计划肯定会泡汤，打赌不？"}
+]`;
+
+            try {
+                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${aiConfig.key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: aiConfig.model,
+                        messages: [
+                            { role: "system", content: sysPrompt },
+                            { role: "user", content: "小说章节片段：\n" + textToAnalyze }
+                        ]
+                    })
+                });
+
+                const data = await res.json();
+                let reply = data.choices[0].message.content.trim();
+                
+                reply = reply.replace(/```json|```/g, '').trim();
+
+                const commentsArray = JSON.parse(reply);
+                const commentsKey = `book_comments_${currentBook.id}_ch_${targetChapterIdx}`;
+                
+                const commentsMap = {};
+                commentsArray.forEach(item => {
+                    commentsMap[item.paragraphIndex] = [
+                        { name: companionName, text: item.comment, avatar: companionAvatar }
+                    ];
+                });
+
+                localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
+                
+                if (targetType === 'current') {
+                    loadChapterContent();
+                    alert("本章段评加载就绪，快去点击文章段落旁出现的绿色聊天气泡看看吧！");
+                } else {
+                    console.log("下一章静默段评生成成功！");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
+            }
+        }
+
+        // --- 渲染与查看段落评论抽屉 ---
+        function openCommentDrawer(paraIdx) {
+            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
+            const list = commentsMap[paraIdx] || [];
+
+            const container = document.getElementById('comment-drawer-list');
+            container.innerHTML = list.map(c => `
+                <div class="chat-bubble companion" style="background:#e5f9e7; align-self:stretch; max-width:100%; border-radius:12px;">
+                    <div style="font-weight:bold; font-size:11px; color:var(--primary-green); margin-bottom:4px;">${c.name} 的点评</div>
+                    <div>${c.text}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('comment-drawer').style.display = 'flex';
+        }
+        function closeCommentDrawer() {
+            document.getElementById('comment-drawer').style.display = 'none';
+        }
+
+        // --- 伴读悬浮微型输入栏开关控制 ---
+        function toggleCompanionChat() {
+            const chatBox = document.getElementById('companion-chat-box');
+            if (chatBox.style.display === 'none' || !chatBox.style.display) {
+                chatBox.style.display = 'flex';
+                document.getElementById('companion-chat-input').focus();
+            } else {
+                chatBox.style.display = 'none';
+            }
+        }
+
+        // 发送用户输入内容给 AI 伴读
+        async function sendCompanionMessage() {
+            const input = document.getElementById('companion-chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // 发送后立刻隐藏输入小窗
+            document.getElementById('companion-chat-box').style.display = 'none';
+            input.value = '';
+
+            // 在悬浮球上方升起提示气泡
+            const bubble = document.getElementById('companion-bubble');
+            bubble.style.display = 'block';
+            bubble.style.opacity = '1';
+            bubble.innerText = "对方正在思考中...";
+
+            await fetchCompanionAiReply(text);
+        }
+
+        // 核心动态气泡机：接收多行文本，依次淡入淡出显示
+        async function displayCompanionBubbles(lines) {
+            const bubble = document.getElementById('companion-bubble');
+            bubble.style.display = 'block';
+            bubble.style.transition = 'opacity 0.4s ease-in-out';
+            
+            for (let line of lines) {
+                // 清洗可能携带的系统格式标签
+                let cleanText = line.replace(/\[.*?\]/g, '').trim();
+                if (!cleanText) continue;
+
+                // 注入文字并淡入显示
+                bubble.innerText = cleanText;
+                bubble.style.opacity = '1';
+                
+                // 根据句子的长度计算阅读停留时长 (字数多就停得久一些，最少停 2.5 秒)
+                let readDelay = Math.max(2500, cleanText.length * 60 + 1000);
+                await new Promise(resolve => setTimeout(resolve, readDelay));
+                
+                // 淡出消失
+                bubble.style.opacity = '0';
+                await new Promise(resolve => setTimeout(resolve, 450)); // 等待淡出动画结束
+            }
+            bubble.style.display = 'none';
+        }
+
+        async function fetchCompanionAiReply(userPrompt) {
+            const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
+            if (!aiConfig || !aiConfig.key) {
+                appendChatMessage("companion", "您好，我正想和你聊天呢，快去主程序设置好 API Key 吧！");
+                return;
+            }
+
+            const activeChapter = currentBook ? currentBook.spineChapters[currentChapterIndex] : null;
+            const bookContext = activeChapter ? `目前正在陪伴用户一起读《${currentBook.title}》的 [${activeChapter.title}] 章节。` : '';
+
+            const sysPrompt = `你现在是微信聊天系统中的真人，你叫[${companionName}]。
+你的性格人设设定如下：
+${companionPersona}
+
+陪伴情境：
+${bookContext}
+你现在和用户在一起读书，在阅读过程中进行自然的对话讨论。
+你必须以符合你设定性格的短语直接进行对话，禁止带有任何类似于 AI 的客套服务腔调，禁止有任何多余的解释。`;
+
+            try {
+                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${aiConfig.key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: aiConfig.model,
+                        messages: [
+                            { role: "system", content: sysPrompt },
+                            { role: "user", content: userPrompt }
+                        ]
+                    })
+                });
+
+                const data = await res.json();
+                const reply = data.choices[0].message.content.trim();
+                const cleanReply = reply.replace(/\[.*?\]/g, '').trim();
+                
+                // 按换行符进行拆句分段，过滤掉空白字符行
+                const sentenceLines = cleanReply.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                
+                // 先隐藏提示框，然后调起排队气泡显示
+                document.getElementById('companion-bubble').style.display = 'none';
+                await displayCompanionBubbles(sentenceLines);
+
+            } catch(e) {
+                document.getElementById('companion-bubble').style.display = 'none';
+                await displayCompanionBubbles(["刚才有点分神了，你刚才说什么？"]);
+            }
+        }
+
+        // --- 阅读记录 / 打卡打卡打卡界面 ---
+        let isHistoryEditMode = false;
+
+        // 点击右上角垃圾桶图标的控制函数
+        function clickHistoryDeleteBtn() {
+            const deleteBtn = document.getElementById('history-delete-btn');
+            
+            if (!isHistoryEditMode) {
+                // 如果当前是普通模式，切换到编辑模式，改变按钮视觉（发红底）
+                isHistoryEditMode = true;
+                deleteBtn.style.background = 'rgba(255, 59, 48, 0.15)';
+                deleteBtn.style.border = '1px solid rgba(255, 59, 48, 0.3)';
+                openHistoryView();
+            } else {
+                // 如果已经是编辑模式，说明是第二次点击，用于确认删除
+                const checkboxes = document.querySelectorAll('.history-checkbox:checked');
+                if (checkboxes.length === 0) {
+                    // 没有勾选任何项，直接退出编辑模式
+                    isHistoryEditMode = false;
+                    resetHistoryDeleteBtnStyle();
+                    openHistoryView();
+                    return;
+                }
+
+                if (confirm(`确定要删除选中的 ${checkboxes.length} 条阅读记录吗？`)) {
+                    const deleteTargets = [];
+                    checkboxes.forEach(cb => {
+                        deleteTargets.push({
+                            bookId: cb.getAttribute('data-book-id'),
+                            date: cb.getAttribute('data-date'),
+                            seconds: parseInt(cb.getAttribute('data-seconds'))
+                        });
+                    });
+
+                    let promises = [];
+                    books.forEach(b => {
+                        let hasChanged = false;
+                        if (b.readingStatistics && b.readingStatistics.readingRecords) {
+                            const originalLength = b.readingStatistics.readingRecords.length;
+                            // 过滤保留未勾选的记录，剔除已勾选的
+                            b.readingStatistics.readingRecords = b.readingStatistics.readingRecords.filter(r => {
+                                const match = deleteTargets.find(t => t.bookId === b.id && t.date === r.date && t.seconds === r.readSeconds);
+                                return !match;
+                            });
+                            if (b.readingStatistics.readingRecords.length !== originalLength) {
+                                hasChanged = true;
+                            }
+                        }
+                        // 如果本书里面的阅读记录有变化，则写回数据库保存
+                        if (hasChanged) {
+                            promises.push(saveBookToDb(b));
+                        }
+                    });
+
+                    // 所有修改保存完毕后，重置状态并刷新列表
+                    Promise.all(promises).then(() => {
+                        isHistoryEditMode = false;
+                        resetHistoryDeleteBtnStyle();
+                        loadBooksFromDb().then(openHistoryView);
+                    });
+                } else {
+                    isHistoryEditMode = false;
+                    resetHistoryDeleteBtnStyle();
+                    openHistoryView();
+                }
+            }
+        }
+
+        // 重置右上角垃圾桶图标的初始样式
+        function resetHistoryDeleteBtnStyle() {
+            const btn = document.getElementById('history-delete-btn');
+            if (btn) {
+                btn.style.background = 'rgba(0, 0, 0, 0.04)';
+                btn.style.border = 'none';
+            }
+        }
+
+        // 重新构建的阅读记录渲染逻辑（支持多选框）
+        function openHistoryView() {
+            const container = document.getElementById('history-list');
+            let recordsHtml = [];
+            
+            books.forEach(b => {
+                const records = b.readingStatistics?.readingRecords || [];
+                records.forEach(r => {
+                    recordsHtml.push(`
+                        <div class="history-item" style="display: flex; align-items: center; gap: 12px;">
+                            ${isHistoryEditMode ? `<input type="checkbox" class="history-checkbox" data-book-id="${b.id}" data-date="${r.date}" data-seconds="${r.readSeconds}" style="width: 18px; height: 18px; accent-color: var(--primary-green);">` : ''}
+                            <div style="flex: 1;">
+                                <div style="font-weight:bold; color:var(--text-dark); font-size:15px;">《${b.title}》</div>
+                                <div style="font-size:12px; color:var(--text-muted); margin-top:6px; line-height:1.5;">
+                                    📅 学习日期：${r.date}<br>
+                                    ⏱️ 本次时长：${Math.round(r.readSeconds / 60)} 分钟<br>
+                                    📖 消化字数：${r.wordCount} 字
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                });
+            });
+
+            if (recordsHtml.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:var(--text-muted); margin-top:50px; font-size:13px;">暂无阅读打卡明细。退出书籍阅读即可生成打卡记录。</div>`;
+            } else {
+                container.innerHTML = recordsHtml.join('');
+            }
+        }
+
+        // --- 完美格式相容导出 Reeden 阅读数据 JSON 模板 ---
+        function exportReedenJSON() {
+            if (books.length === 0) {
+                alert("书架上还没有书籍可以导出！");
+                return;
+            }
+
+            const reedenDataArray = books.map(b => ({
+                title: b.title,
+                author: b.author || "未知作者",
+                translator: b.translator || "",
+                publisher: b.publisher || "",
+                publishTime: b.publishTime || "2026-01-01",
+                isbn: b.isbn || "9780000000000",
+                description: b.description || "来自微信小助手的外部书单导入",
+                coverUrl: b.coverUrl || "",
+                rating: b.rating || 5,
+                tags: b.tags || ["外部导入", "已读"],
+                category: b.category || "外部书单",
+                readingState: {
+                    readStatus: b.readingState?.readStatus || "reading",
+                    progress: b.readingState?.progress || 0,
+                    readStartTime: b.readingState?.readStartTime || new Date().toISOString(),
+                    lastReadTime: b.readingState?.lastReadTime || new Date().toISOString(),
+                    readRoundNo: b.readingState?.readRoundNo || 1
+                },
+                readRounds: b.readRounds || [
+                    {
+                        roundNo: 1,
+                        readStartTime: new Date().toISOString(),
+                        readFinishTime: ""
+                    }
+                ],
+                notes: b.notes.map(n => ({
+                    sectionName: n.sectionName,
+                    sectionIndex: n.sectionIndex,
+                    content: n.content,
+                    comment: n.comment,
+                    type: n.type || "underline",
+                    color: n.color || "blue",
+                    timestamp: n.timestamp || Date.now()
+                })),
+                reviews: b.reviews || [],
+                readingStatistics: {
+                    readingRecords: b.readingStatistics?.readingRecords || []
+                }
+            }));
+
+            const blob = new Blob([JSON.stringify(reedenDataArray, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Reeden阅读数据_${Date.now()}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            alert("Reeden 数据模板已完美打包导出成功！");
+        }
+
+        // --- 应用生命周期入口初始化 ---
+        window.onload = async () => {
+            await initDatabase();
+            loadCompanionInfo();
+            await loadBooksFromDb();
+            renderShelf();
+
+            // 载入保存的阅读设置
+            const prefSize = localStorage.getItem('reader_pref_font_size') || 18;
+            document.getElementById('setting-font-size').value = prefSize;
+            updateFontSize(prefSize);
+
+            const prefLayout = localStorage.getItem('reader_pref_layout') || 'scroll';
+            setReadingLayout(prefLayout);
+
+            // 载入自定义 TTF 字体
+            applyCustomFont();
+        };
+        // --- 封面导入与裁剪模块核心逻辑 ---
+        
+        // 1. 关闭/跳过封面上传，直接以默认状态存盘
+        function skipCoverUpload() {
+            document.getElementById('cover-choice-modal').style.display = 'none';
+            saveImportedBookAndFinish("");
+        }
+
+        // 2. 将最终拼装完成的图书写入 IndexedDB 数据库并渲染书架
+        async function saveImportedBookAndFinish(coverDataUrl) {
+            if (!window.tempImportingBook) return;
+            
+            // 写入封面地址 (可以是 Base64 也可以是 URL)
+            window.tempImportingBook.coverUrl = coverDataUrl;
+
+            try {
+                await saveBookToDb(window.tempImportingBook);
+                alert(`《${window.tempImportingBook.title}》已成功导入书架！`);
+                window.tempImportingBook = null;
+                await loadBooksFromDb();
+                renderShelf();
+            } catch(e) {
+                alert("图书存盘失败：" + e.message);
+            }
+        }
+
+        // 3. 触发本地手机相册选择封面
+        function triggerLocalCoverUpload() {
+            document.getElementById('cover-choice-modal').style.display = 'none';
+            document.getElementById('cover-file-input').click();
+        }
+
+        // 4. 手机相册选择完图片后的回调，载入原生的裁剪流中
+        function handleLocalCoverSelect(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // 开始封面裁剪流程，比例定义为 2:3 的高比例图书封面
+                    startCoverCropProcess(e.target.result, 2 / 3);
+                };
+                reader.readAsDataURL(file);
+            }
+            input.value = ''; // 重置文件选择器
+        }
+
+        // 5. 唤起网络封面图片链接输入窗
+        function triggerUrlCoverInput() {
+            document.getElementById('cover-choice-modal').style.display = 'none';
+            document.getElementById('cover-url-modal').style.display = 'flex';
+        }
+
+        function closeCoverUrlModal() {
+            document.getElementById('cover-url-modal').style.display = 'none';
+            document.getElementById('cover-url-field').value = '';
+        }
+
+        // 6. 确定提交网络封面图片链接
+        function submitUrlCover() {
+            const url = document.getElementById('cover-url-field').value.trim();
+            if (!url) return alert("链接内容不能为空！");
+            if (!url.startsWith('http') && !url.startsWith('https')) {
+                return alert("请输入以 http 或 https 开头的正确图片链接！");
+            }
+            closeCoverUrlModal();
+            saveImportedBookAndFinish(url);
+        }
+
+        // 7. 手势拖动裁剪引擎核心变量
+        let coverCropBoxY = 0;
+        let coverCropStartY = 0;
+        let coverCropStartBoxY = 0;
+        let coverMaxCropY = 0;
+        let coverCropBoxHeight = 0;
+        let coverImgWidth = 0;
+        let coverImgHeight = 0;
+        let coverImgTop = 0;
+
+        // 8. 启动手势拖动裁剪界面
+        function startCoverCropProcess(imgBase64, ratio) {
+            const modal = document.getElementById('cover-crop-modal');
+            const sourceImg = document.getElementById('cover-crop-source-img');
+            
+            sourceImg.src = imgBase64;
+            modal.style.display = 'flex';
+            
+            sourceImg.onload = function() {
+                const wrapper = document.getElementById('cover-crop-wrapper');
+                const wrapRect = wrapper.getBoundingClientRect();
+                
+                const imgW = sourceImg.naturalWidth;
+                const imgH = sourceImg.naturalHeight;
+                
+                const wRatio = wrapRect.width / imgW;
+                const hRatio = wrapRect.height / imgH;
+                const scale = Math.min(wRatio, hRatio);
+                
+                coverImgWidth = imgW * scale;
+                coverImgHeight = imgH * scale;
+                coverImgTop = (wrapRect.height - coverImgHeight) / 2;
+                
+                const cropBox = document.getElementById('cover-crop-box-element');
+                cropBox.style.width = coverImgWidth + 'px';
+                coverCropBoxHeight = coverImgWidth / ratio;
+                
+                // 限制裁剪高度不能超出图片真实高度
+                if (coverCropBoxHeight > coverImgHeight) {
+                    coverCropBoxHeight = coverImgHeight;
+                }
+                
+                cropBox.style.height = coverCropBoxHeight + 'px';
+                
+                coverCropBoxY = coverImgTop + (coverImgHeight - coverCropBoxHeight) / 2;
+                cropBox.style.top = coverCropBoxY + 'px';
+                cropBox.style.left = ((wrapRect.width - coverImgWidth) / 2) + 'px';
+                
+                coverMaxCropY = coverImgTop + coverImgHeight - coverCropBoxHeight;
+                
+                // 绑定拖拽触屏事件
+                cropBox.ontouchstart = function(e) {
+                    coverCropStartY = e.touches[0].clientY;
+                    coverCropStartBoxY = coverCropBoxY;
+                    e.preventDefault();
+                };
+                
+                cropBox.ontouchmove = function(e) {
+                    const dy = e.touches[0].clientY - coverCropStartY;
+                    let nextY = coverCropStartBoxY + dy;
+                    if (nextY < coverImgTop) nextY = coverImgTop;
+                    if (nextY > coverMaxCropY) nextY = coverMaxCropY;
+                    coverCropBoxY = nextY;
+                    cropBox.style.top = coverCropBoxY + 'px';
+                    e.preventDefault();
+                };
+            };
+        }
+
+        function cancelCoverCrop() {
+            document.getElementById('cover-crop-modal').style.display = 'none';
+        }
+
+        // 9. 确定裁剪图片，并进行图像比例重塑和压缩
+        function confirmCoverCrop() {
+            const sourceImg = document.getElementById('cover-crop-source-img');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const scale = sourceImg.naturalWidth / coverImgWidth;
+            const physicalCropY = (coverCropBoxY - coverImgTop) * scale;
+            const physicalCropHeight = coverCropBoxHeight * scale;
+            
+            // 设定画布的宽度为 400 像素，高为 600 像素的黄金图书封面标准
+            canvas.width = 400;
+            canvas.height = 600;
+            
+            ctx.drawImage(
+                sourceImg,
+                0, physicalCropY, sourceImg.naturalWidth, physicalCropHeight,
+                0, 0, canvas.width, canvas.height
+            );
+            
+            // 转换成 Base64 格式，画质设定为 0.7 压缩处理，彻底解决图片过大存不进数据库的问题
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            document.getElementById('cover-crop-modal').style.display = 'none';
+            saveImportedBookAndFinish(compressedBase64);
+        }
+    </script>
+    <!-- 封面导入方式选择弹窗（白色毛玻璃效果） -->
+    <div id="cover-choice-modal" class="modal-mask">
+        <div class="modal-card" style="text-align: center; max-width: 320px;">
+            <h3 style="margin-top: 0; color: var(--text-dark); font-size: 16px;">书籍封面设置</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">新书导入成功，是否需要为它设置一个精美的封面？</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-green" style="width: 100%;" onclick="triggerLocalCoverUpload()">🖼️ 从手机相册选择</button>
+                <button class="btn-green" style="width: 100%; background: #007aff;" onclick="triggerUrlCoverInput()">🔗 输入网络图片链接</button>
+                <button class="btn-gray" style="width: 100%;" onclick="skipCoverUpload()">✕ 使用默认封面</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 网络图片链接输入弹窗 -->
+    <div id="cover-url-modal" class="modal-mask">
+        <div class="modal-card" style="max-width: 320px;">
+            <h3 style="margin-top: 0; color: var(--text-dark); font-size: 16px; text-align: center;">输入网络封面链接</h3>
+            <input type="text" id="cover-url-field" style="width: 100%; height: 40px; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; padding: 0 12px; box-sizing: border-box; outline: none; font-size: 14px; background: #f2f2f7; margin-bottom: 15px;" placeholder="请粘贴以 http/https 开头的图片链接">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-gray" style="flex: 1;" onclick="closeCoverUrlModal()">取消</button>
+                <button class="btn-green" style="flex: 1;" onclick="submitUrlCover()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 封面图片手势拖动裁剪窗口 -->
+    <div id="cover-crop-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 2000; flex-direction: column; justify-content: space-between; align-items: center; padding: 20px 0; box-sizing: border-box;">
+        <div style="color: white; font-size: 16px; font-weight: bold;">拖动裁剪区域</div>
+        <div id="cover-crop-wrapper" style="position: relative; width: 90vw; height: 70vh; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+            <img id="cover-crop-source-img" style="max-width: 100%; max-height: 100%; pointer-events: none; user-select: none;">
+            <div id="cover-crop-box-element" style="position: absolute; border: 2px solid #34c759; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); box-sizing: border-box; cursor: move; touch-action: none;"></div>
+        </div>
+        <div style="display: flex; gap: 20px; width: 90%;">
+            <button class="btn-gray" style="flex: 1; height: 44px;" onclick="cancelCoverCrop()">取消</button>
+            <button class="btn-green" style="flex: 1; height: 44px;" onclick="confirmCoverCrop()">确定裁剪并导入</button>
+        </div>
+    </div>
+
+    <!-- 隐藏的封面选择通道 -->
+    <input type="file" id="cover-file-input" style="display: none;" accept="image/*" onchange="handleLocalCoverSelect(this)">
+</body>
+</html>
