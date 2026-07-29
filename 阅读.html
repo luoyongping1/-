@@ -1840,34 +1840,58 @@
         }
 
         // --- 文本选择和菜单 ---
-        function handleTextSelection(event) {
-            const selection = window.getSelection();
-            const selectedText = selection.toString().trim();
-            const menu = document.getElementById('selection-menu');
+function handleTextSelection(event) {
+    setTimeout(() => {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        const menu = document.getElementById('selection-menu');
 
-            if (selectedText.length > 0) {
-                selectText = selectedText;
-                
-                let parentNode = selection.anchorNode.parentNode;
-                while (parentNode && parentNode.tagName !== 'P') {
-                    parentNode = parentNode.parentNode;
-                }
-                if (parentNode && parentNode.classList.contains('read-para')) {
-                    selectedParagraphIdx = parseInt(parentNode.getAttribute('data-para-idx'));
-                } else {
-                    selectedParagraphIdx = 0;
-                }
-
-                const x = event.clientX || (event.touches ? event.touches[0].clientX : 200);
-                const y = event.clientY || (event.touches ? event.touches[0].clientY : 200);
-                
-                menu.style.left = x + 'px';
-                menu.style.top = (y - 45) + 'px';
-                menu.style.display = 'flex';
-            } else {
-                menu.style.display = 'none';
+        if (selectedText.length > 0) {
+            selectText = selectedText;
+            
+            let parentNode = selection.anchorNode ? selection.anchorNode.parentNode : null;
+            while (parentNode && parentNode.tagName !== 'P') {
+                parentNode = parentNode.parentNode;
             }
+            if (parentNode && parentNode.classList.contains('read-para')) {
+                selectedParagraphIdx = parseInt(parentNode.getAttribute('data-para-idx'));
+            } else {
+                selectedParagraphIdx = 0;
+            }
+
+            // 标记刚刚进行了划词选择，防止点击事件干扰
+            window.justSelected = true;
+            setTimeout(() => {
+                window.justSelected = false;
+            }, 300);
+
+            // 使用选择区域的真实坐标精确定位菜单，兼容手机端和电脑端
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            menu.style.display = 'flex';
+            
+            // 计算居中位置，并防止菜单超出屏幕左右边界
+            const menuWidth = menu.offsetWidth;
+            const menuHeight = menu.offsetHeight;
+            let leftPos = rect.left + rect.width / 2 - menuWidth / 2;
+            let topPos = rect.top - menuHeight - 10;
+
+            if (leftPos < 10) leftPos = 10;
+            if (leftPos + menuWidth > window.innerWidth - 10) {
+                leftPos = window.innerWidth - menuWidth - 10;
+            }
+            if (topPos < 10) {
+                topPos = rect.bottom + 10; // 如果顶部没有足够空间，就显示在选区下方
+            }
+
+            menu.style.left = leftPos + 'px';
+            menu.style.top = topPos + 'px';
+        } else {
+            menu.style.display = 'none';
         }
+    }, 50);
+}
 
         // --- 写批注与回复交互 ---
         function openNoteModal() {
