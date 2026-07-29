@@ -755,7 +755,13 @@
 
         <!-- 悬浮球本体 -->
         <div id="companion-ball" style="width: 55px; height: 55px; border-radius: 50%; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px solid white; transition: transform 0.2s;" onclick="toggleCompanionChat()">
-            <img id="companion-avatar" src="https://cdn-icons-png.flaticon.com/512/3670/3670044.png" alt="伴读者" style="width: 100%; height: 100%; object-fit: cover;">
+            <!-- 图片头像容器 -->
+            <img id="companion-avatar" src="" alt="伴读者" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+            
+            <!-- 文字头像容器（好友无头像时自动启用，iOS渐变美化风格） -->
+            <div id="companion-text-avatar" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); color: white; font-weight: bold; font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                伴
+            </div>
         </div>
 
         <!-- 悬浮微型输入对话框 -->
@@ -918,27 +924,43 @@
 
         // --- 伴读信息挂载加载器 ---
         function loadCompanionInfo() {
-            // 获取当前主界面正在对话的好友昵称
-            companionName = localStorage.getItem('active_reading_companion') || "AI 伴读";
-            const friendsList = JSON.parse(localStorage.getItem('qq_friends')) || [];
-            const activeFriend = friendsList.find(f => f.name === companionName);
-            
+            let activeFriend = null;
+            let companionName = "AI 伴读";
+
+            // 【黑科技】：优先且直接读取父窗口(qq.html)内存中正在单聊的 currentFriendName 和好友数组，避开缓存延迟
+            try {
+                if (window.parent && window.parent.currentFriendName) {
+                    companionName = window.parent.currentFriendName;
+                    const parentFriends = window.parent.friends || [];
+                    activeFriend = parentFriends.find(f => f.name === companionName);
+                }
+            } catch(e) {
+                console.log("跨窗口读取被安全策略拦截，启用 localStorage 备用读取机制");
+            }
+
+            // 备用机制：从缓存数据库中恢复
+            if (!activeFriend) {
+                companionName = localStorage.getItem('active_reading_companion') || "AI 伴读";
+                const friendsList = JSON.parse(localStorage.getItem('qq_friends')) || [];
+                activeFriend = friendsList.find(f => f.name === companionName);
+            }
+
             const panelNameEl = document.getElementById('companion-panel-name');
             if (panelNameEl) {
                 panelNameEl.innerText = companionName;
             }
 
+            // 确定伴读角色的人设与头像
             if (activeFriend) {
                 companionPersona = activeFriend.persona || "性格开朗，喜欢看书";
-                // 默认获取好友本身上传的头像
                 companionAvatar = activeFriend.avatarUrl || "";
                 
-                // 如果这个好友绑定了“我在他面前的人设”(面具人设)
+                // 如果该角色在主应用设置了“面具”（我在他面前的人设面具）
                 if (activeFriend.userPersonaId) {
                     const userPersonas = JSON.parse(localStorage.getItem('qq_user_personas')) || [];
                     const activePersona = userPersonas.find(u => u.id === activeFriend.userPersonaId);
                     if (activePersona && activePersona.avatar) {
-                        companionAvatar = activePersona.avatar; // 头像替换为该面具的头像代号
+                        companionAvatar = activePersona.avatar; 
                     }
                 }
             } else {
@@ -947,26 +969,52 @@
             }
 
             const ballImg = document.getElementById('companion-avatar');
-            if (companionAvatar) {
-                // 如果头像是保存在 IndexedDB 中的图片代号 (以 indexeddb- 开头)
+            const textAvatar = document.getElementById('companion-text-avatar');
+
+            // 定义随机渐变底板颜色，用于首字母文字头像，使其更精美
+            const gradients = [
+                "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", // 粉红
+                "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", // 天蓝
+                "linear-gradient(135deg, #76b852 0%, #8DC26F 100%)", // 软绿
+                "linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%)", // 魅紫
+                "linear-gradient(135deg, #f857a6 0%, #ff5858 100%)"  // 珊瑚橘
+            ];
+            // 根据名字计算固定的颜色索引
+            const nameCode = companionName.charCodeAt(0) || 0;
+            const gradientBg = gradients[nameCode % gradients.length];
+
+            if (companionAvatar && companionAvatar.trim() !== "") {
+                // 如果头像路径是 IndexedDB 的图片代号
                 if (companionAvatar.startsWith('indexeddb-')) {
                     getAvatarBlob(companionAvatar).then(blob => {
                         if (blob) {
                             const url = URL.createObjectURL(blob);
-                            ballImg.src = url; // 转换为临时本地链接并显示
+                            ballImg.src = url;
+                            ballImg.style.display = "block";
+                            textAvatar.style.display = "none";
                         } else {
-                            ballImg.src = "https://cdn-icons-png.flaticon.com/512/3670/3670044.png";
+                            showLetterAvatar();
                         }
                     }).catch(err => {
-                        ballImg.src = "https://cdn-icons-png.flaticon.com/512/3670/3670044.png";
+                        showLetterAvatar();
                     });
                 } else {
-                    // 如果头像是直接的图片网络链接或 Base64 编码
+                    // 普通 Base64 或链接直接呈现
                     ballImg.src = companionAvatar;
+                    ballImg.style.display = "block";
+                    textAvatar.style.display = "none";
                 }
             } else {
-                // 没有头像则使用系统默认头像
-                ballImg.src = "https://cdn-icons-png.flaticon.com/512/3670/3670044.png";
+                // 如果好友未配置头像，直接降级展示炫彩文字头像
+                showLetterAvatar();
+            }
+
+            // 内部辅助函数：用来画炫彩文字头像
+            function showLetterAvatar() {
+                ballImg.style.display = "none";
+                textAvatar.style.display = "flex";
+                textAvatar.style.background = gradientBg;
+                textAvatar.innerText = companionName.substring(0, 1); // 提取名字第一个字作为头像
             }
         }
 
