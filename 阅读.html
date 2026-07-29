@@ -934,7 +934,7 @@
         <div class="modal-card">
             <h3 style="margin-top:0; color:var(--text-dark);" id="note-modal-title">添加读书笔记</h3>
             <div style="font-style:italic; font-size:12px; color:var(--text-muted); margin-bottom:10px;" id="note-selected-text">"选中文字"</div>
-            <textarea id="note-input" style="width:100%; height:120px; border:1px solid rgba(0,0,0,0.1); border-radius:12px; padding:12px; outline:none; box-sizing:border-box; resize:none; background:#f2f2f7; font-size:14px;" placeholder="输入你的感悟与观点..."></textarea>
+            <textarea id="note-input" style="width:100%; height:240px; border:1px solid rgba(0,0,0,0.1); border-radius:12px; padding:12px; outline:none; box-sizing:border-box; resize:none; background:#f2f2f7; font-size:16px; line-height:1.5;" placeholder="输入你的感悟与观点..."></textarea>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
                 <button class="btn-gray" onclick="closeNoteModal()">取消</button>
                 <button class="btn-green" onclick="submitBookNote()">保存并讨论</button>
@@ -988,7 +988,7 @@
             <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">系统将调用API人设，为你这一章中的各段落添加实时看法吐槽。</p>
             <div style="display:flex; flex-direction:column; gap:10px;">
                 <button class="btn-green" onclick="generateChapterComments('current')">📝 生成本章段评</button>
-                <button class="btn-green" style="background:#5c6bc0" onclick="generateChapterComments('next')">⏳ 静默生成下一章段评 (推荐)</button>
+                <button class="btn-green" style="background:#5c6bc0" onclick="generateChapterComments('both')">⏳ 生成本章及下章段评 (推荐)</button>
                 <button class="btn-gray" onclick="closeCommentTypeModal()">算了吧</button>
             </div>
         </div>
@@ -1632,12 +1632,20 @@
             currentBook = books.find(b => b.id === id);
             if (!currentBook) return;
 
-            const progress = currentBook.readingState ? currentBook.readingState.progress : 0;
-            currentChapterIndex = Math.min(
-                Math.floor(progress * currentBook.spineChapters.length),
-                currentBook.spineChapters.length - 1
-            );
+            // 优先恢复保存的章节索引，否则用进度计算兜底
+            if (currentBook.readingState && currentBook.readingState.chapterIndex !== undefined) {
+                currentChapterIndex = currentBook.readingState.chapterIndex;
+            } else {
+                const progress = currentBook.readingState ? currentBook.readingState.progress : 0;
+                currentChapterIndex = Math.min(
+                    Math.floor(progress * currentBook.spineChapters.length),
+                    currentBook.spineChapters.length - 1
+                );
+            }
             if (currentChapterIndex < 0) currentChapterIndex = 0;
+
+            // 记录一条开关标记，表示这次进入需要自动还原滚动位置
+            window.restoreParaIndexNeeded = true;
 
             document.getElementById('reader-book-title').innerText = currentBook.title;
             
@@ -1744,7 +1752,18 @@
                 return `<p class="read-para" data-para-idx="${idx}">${text}${badge}</p>`;
             }).join('');
 
-            body.scrollTop = 0;
+            // 检查并恢复上次看到的具体段落位置
+            if (window.restoreParaIndexNeeded && currentBook.readingState && currentBook.readingState.paraIndex !== undefined) {
+                const targetPara = body.querySelector(`[data-para-idx="${currentBook.readingState.paraIndex}"]`);
+                if (targetPara) {
+                    setTimeout(() => {
+                        targetPara.scrollIntoView({ block: 'start' });
+                    }, 100);
+                }
+                window.restoreParaIndexNeeded = false; // 恢复后清除标记
+            } else {
+                body.scrollTop = 0;
+            }
         }
 
         function changeChapter(direction) {
@@ -1762,6 +1781,7 @@
             if (!currentBook) return;
             const progress = currentChapterIndex / currentBook.spineChapters.length;
             currentBook.readingState.progress = progress;
+            currentBook.readingState.chapterIndex = currentChapterIndex; // 保存章节索引
             currentBook.readingState.lastReadTime = new Date().toISOString();
             saveBookToDb(currentBook);
         }
@@ -1769,6 +1789,27 @@
         function trackProgressScroll() {
             clearTimeout(window.scrollTrackTimer);
             window.scrollTrackTimer = setTimeout(() => {
+                if (!currentBook) return;
+                
+                const body = document.getElementById('reader-body');
+                const paras = body.getElementsByClassName('read-para');
+                let currentParaIndex = 0;
+
+                // 寻找在阅读视口中最靠前的那一段话，存为当前阅读进度
+                for (let i = 0; i < paras.length; i++) {
+                    const rect = paras[i].getBoundingClientRect();
+                    const bodyRect = body.getBoundingClientRect();
+                    if (rect.top >= bodyRect.top) {
+                        currentParaIndex = parseInt(paras[i].getAttribute('data-para-idx')) || 0;
+                        break;
+                    }
+                }
+
+                if (!currentBook.readingState) {
+                    currentBook.readingState = {};
+                }
+                currentBook.readingState.paraIndex = currentParaIndex; // 记忆看过的具体段落
+
                 updateBookProgressMemory();
             }, 500);
         }
@@ -1840,6 +1881,15 @@
             document.getElementById('note-modal').style.display = 'none';
         }
 
+        // 新建聊天记录追加器，用于存放并处理聊天流程，防系统崩溃报错
+        function appendChatMessage(sender, text) {
+            if (!window.companionChatLogs) {
+                window.companionChatLogs = [];
+            }
+            window.companionChatLogs.push({ sender: sender, text: text, timestamp: Date.now() });
+            console.log(`[${sender === 'self' ? '我' : '伴读'}] ${text}`);
+        }
+
         async function submitBookNote() {
             const noteVal = document.getElementById('note-input').value.trim();
             if (!noteVal) return;
@@ -1872,28 +1922,18 @@
             document.getElementById('comment-type-modal').style.display = 'none';
         }
 
-        async function generateChapterComments(targetType) {
-            closeCommentTypeModal();
+        // 新增的单章段评获取辅助处理引擎
+        async function generateSingleChapterComments(chapterIdx, showFeedback) {
             const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
             if (!aiConfig || !aiConfig.key) {
-                alert("请先在主应用 [我 - API与模型设置] 中配置并保存 Key 才能开启伴读功能！");
-                return;
-            }
-
-            let targetChapterIdx = currentChapterIndex;
-            if (targetType === 'next') {
-                targetChapterIdx = currentChapterIndex + 1;
-                if (targetChapterIdx >= currentBook.spineChapters.length) {
-                    alert("已经是最后一章，无下一章可生成！");
-                    return;
+                if (showFeedback) {
+                    alert("请先在主应用 [我 - API与模型设置] 中配置并保存 Key 才能开启伴读功能！");
                 }
-                alert("正在为您静默生成下一章段评伴读点评...");
-            } else {
-                alert("正在生成本章段评中，请稍候...");
+                return false;
             }
 
-            const chapter = currentBook.spineChapters[targetChapterIdx];
-            if (!chapter) return;
+            const chapter = currentBook.spineChapters[chapterIdx];
+            if (!chapter) return false;
 
             const paragraphs = chapter.content.split('\n').filter(p => p.trim()).slice(0, 15);
             const textToAnalyze = paragraphs.map((text, index) => `[段落 ${index}]: ${text}`).join('\n');
@@ -1934,7 +1974,7 @@
                 reply = reply.replace(/```json|```/g, '').trim();
 
                 const commentsArray = JSON.parse(reply);
-                const commentsKey = `book_comments_${currentBook.id}_ch_${targetChapterIdx}`;
+                const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
                 
                 const commentsMap = {};
                 commentsArray.forEach(item => {
@@ -1944,16 +1984,47 @@
                 });
 
                 localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
-                
-                if (targetType === 'current') {
-                    loadChapterContent();
-                    alert("本章段评加载就绪，快去点击文章段落旁出现的绿色聊天气泡看看吧！");
-                } else {
-                    console.log("下一章静默段评生成成功！");
-                }
+                return true;
             } catch(e) {
                 console.error(e);
-                alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
+                if (showFeedback) {
+                    alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
+                }
+                return false;
+            }
+        }
+
+        // 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成
+        async function generateChapterComments(targetType) {
+            closeCommentTypeModal();
+            
+            if (targetType === 'current') {
+                alert("正在生成本章段评中，请稍候...");
+                const success = await generateSingleChapterComments(currentChapterIndex, true);
+                if (success) {
+                    loadChapterContent();
+                    alert("本章段评加载就绪，快去点击文章段落旁出现的绿色聊天气泡看看吧！");
+                }
+            } else if (targetType === 'both') {
+                alert("正在生成本章段评中，请稍候...");
+                // 1. 生成并挂载本章段评
+                const successCurrent = await generateSingleChapterComments(currentChapterIndex, true);
+                if (successCurrent) {
+                    loadChapterContent();
+                    alert("本章段评已生成！正在后台为您静默生成下一章，您可以继续阅读本章内容。");
+                    
+                    // 2. 静默在后台自动拉取下一章的段评数据
+                    const nextChapterIdx = currentChapterIndex + 1;
+                    if (nextChapterIdx < currentBook.spineChapters.length) {
+                        generateSingleChapterComments(nextChapterIdx, false).then(successNext => {
+                            if (successNext) {
+                                console.log("下一章静默段评已在后台自动预生成！");
+                            } else {
+                                console.log("下一章静默段评生成失败（后台自动忽略）");
+                            }
+                        });
+                    }
+                }
             }
         }
 
