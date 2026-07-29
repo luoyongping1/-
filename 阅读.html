@@ -385,23 +385,38 @@
             color: var(--primary-green);
         }
 
-        /* 悬浮球 */
-        #companion-ball {
+        /* 悬浮球 - 支持拖动 */
+        #companion-ball-wrapper {
             position: fixed;
-            bottom: 105px; right: 20px;
-            width: 55px; height: 55px;
+            bottom: 105px; 
+            right: 20px;
+            z-index: 10005;
+            /* 移除原有的固定宽高 */
+        }
+
+        #companion-ball {
+            width: 55px; 
+            height: 55px;
             border-radius: 50%;
             background: #fff;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            z-index: 700;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            cursor: pointer;
+            cursor: grab;
             border: 2px solid white;
             transition: transform 0.2s;
+            /* 拖动时禁用过渡 */
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
+
+        #companion-ball:active {
+            cursor: grabbing;
+        }
+
         /* 伴读气泡淡入淡出动画及基础过渡 */
         #companion-bubble {
             transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
@@ -755,14 +770,14 @@
     </div>
 
     <!-- 伴读闲聊悬浮球系统 -->
-    <div id="companion-ball-wrapper" style="position: fixed; bottom: 105px; right: 20px; z-index: 10005;">
+    <div id="companion-ball-wrapper">
         <!-- 对话气泡（自动逐个出现消失） -->
         <div id="companion-bubble" style="display:none; position:absolute; bottom:75px; right:0; background:rgba(255,255,255,0.95); border:1px solid rgba(0,0,0,0.06); padding:10px 14px; border-radius:15px 15px 2px 15px; width:180px; font-size:13px; color:#333; line-height:1.4; box-shadow:0 4px 15px rgba(0,0,0,0.15); pointer-events:none; word-break:break-all;">
             正在加载...
         </div>
 
         <!-- 悬浮球本体 -->
-        <div id="companion-ball" style="width: 55px; height: 55px; border-radius: 50%; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px solid white; transition: transform 0.2s;" onclick="toggleCompanionChat()">
+        <div id="companion-ball" style="width: 55px; height: 55px; border-radius: 50%; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: grab; border: 2px solid white; transition: transform 0.2s; touch-action: none;" onclick="toggleCompanionChat()">
             <!-- 图片头像容器 -->
             <img id="companion-avatar" src="" alt="伴读者" style="width: 100%; height: 100%; object-fit: cover; display: none;">
             
@@ -861,6 +876,15 @@
 
         // 伴读聊天记录 (保存在临时内存)
         let companionChatLogs = [];
+
+        // --- 悬浮球拖动状态 ---
+        let ballIsDragging = false;
+        let ballStartX = 0;
+        let ballStartY = 0;
+        let ballCurrentX = 0;
+        let ballCurrentY = 0;
+        let ballOffsetX = 0;
+        let ballOffsetY = 0;
 
         // --- 数据库初始化 ---
         const DB_NAME = 'WeChatAIPlusDB';
@@ -1007,6 +1031,115 @@
                 textAvatar.style.display = "flex";
                 textAvatar.style.background = gradientBg;
                 textAvatar.innerText = companionName.substring(0, 1);
+            }
+        }
+
+        // --- 悬浮球拖动控制核心逻辑 ---
+        function initBallDragListener() {
+            const ball = document.getElementById('companion-ball');
+            const wrapper = document.getElementById('companion-ball-wrapper');
+
+            // 鼠标事件
+            ball.addEventListener('mousedown', (e) => {
+                startBallDrag(e.clientX, e.clientY, wrapper);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (ballIsDragging) {
+                    updateBallPosition(e.clientX, e.clientY, wrapper);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                stopBallDrag(wrapper);
+            });
+
+            // 触摸事件
+            ball.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) {
+                    startBallDrag(e.touches[0].clientX, e.touches[0].clientY, wrapper);
+                }
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (ballIsDragging && e.touches.length > 0) {
+                    updateBallPosition(e.touches[0].clientX, e.touches[0].clientY, wrapper);
+                }
+            });
+
+            document.addEventListener('touchend', () => {
+                stopBallDrag(wrapper);
+            });
+
+            // 阻止默认拖动行为
+            ball.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+            });
+        }
+
+        function startBallDrag(clientX, clientY, wrapper) {
+            ballIsDragging = true;
+            ballStartX = clientX;
+            ballStartY = clientY;
+            
+            // 获取当前wrapper的位置
+            const rect = wrapper.getBoundingClientRect();
+            ballOffsetX = rect.left;
+            ballOffsetY = rect.top;
+            
+            document.getElementById('companion-ball').style.cursor = 'grabbing';
+            document.getElementById('companion-ball').style.transition = 'none';
+        }
+
+        function updateBallPosition(clientX, clientY, wrapper) {
+            const deltaX = clientX - ballStartX;
+            const deltaY = clientY - ballStartY;
+            
+            // 计算新位置
+            let newX = ballOffsetX + deltaX;
+            let newY = ballOffsetY + deltaY;
+            
+            // 边界检测 - 确保悬浮球不会超出屏幕
+            const minX = 0;
+            const maxX = window.innerWidth - 55; // 55是球的宽度
+            const minY = 0;
+            const maxY = window.innerHeight - 55; // 55是球的高度
+            
+            newX = Math.max(minX, Math.min(newX, maxX));
+            newY = Math.max(minY, Math.min(newY, maxY));
+            
+            // 更新wrapper位置
+            wrapper.style.position = 'fixed';
+            wrapper.style.left = newX + 'px';
+            wrapper.style.top = newY + 'px';
+            wrapper.style.right = 'auto';
+            wrapper.style.bottom = 'auto';
+        }
+
+        function stopBallDrag(wrapper) {
+            ballIsDragging = false;
+            const ball = document.getElementById('companion-ball');
+            ball.style.cursor = 'grab';
+            ball.style.transition = 'transform 0.2s';
+            
+            // 保存位置到localStorage
+            const rect = wrapper.getBoundingClientRect();
+            localStorage.setItem('companion-ball-x', rect.left);
+            localStorage.setItem('companion-ball-y', rect.top);
+        }
+
+        // 从localStorage恢复之前的位置
+        function restoreBallPosition() {
+            const wrapper = document.getElementById('companion-ball-wrapper');
+            const savedX = localStorage.getItem('companion-ball-x');
+            const savedY = localStorage.getItem('companion-ball-y');
+            
+            if (savedX && savedY) {
+                wrapper.style.position = 'fixed';
+                wrapper.style.left = savedX + 'px';
+                wrapper.style.top = savedY + 'px';
+                wrapper.style.right = 'auto';
+                wrapper.style.bottom = 'auto';
             }
         }
 
@@ -1577,8 +1710,8 @@
             closeNoteModal();
             window.getSelection().removeAllRanges();
 
-            appendChatMessage("self", `针对文字《${selectText}》我发表了想法：“${noteVal}”，你觉得呢？`);
-            await fetchCompanionAiReply(`针对文章中的这段划线文字：“${selectText}”。我的批注想法 is：“${noteVal}”。`);
+            appendChatMessage("self", `针对文字《${selectText}》我发表了想法："${noteVal}"，你觉得呢？`);
+            await fetchCompanionAiReply(`针对文章中的这段划线文字："${selectText}"。我的批注想法 is："${noteVal}"。`);
         }
 
         // --- 伴读段评伴读生成核心模块 ---
@@ -1800,7 +1933,7 @@ ${bookContext}
                 // 按行切割成气泡队列
                 const sentenceLines = cleanReply.split('\n').map(l => l.trim()).filter(l => l.length > 0);
                 
-                // 暂时把“输入中”气泡置为隐藏，然后开始排队展示真正的回复
+                // 暂时把"输入中"气泡置为隐藏，然后开始排队展示真正的回复
                 document.getElementById('companion-bubble').classList.add('bubble-hidden');
                 await new Promise(r => setTimeout(r, 100));
                 
@@ -2015,6 +2148,12 @@ ${bookContext}
 
             // 载入自定义 TTF 字体
             applyCustomFont();
+
+            // 初始化悬浮球拖动监听
+            initBallDragListener();
+
+            // 恢复上次关闭时的悬浮球位置
+            restoreBallPosition();
         };
 
         // --- 封面导入与裁剪模块核心逻辑 ---
