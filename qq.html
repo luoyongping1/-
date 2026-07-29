@@ -1657,9 +1657,9 @@ let currentFireFriend = null; // 当前正在查看的小火人所属好友
 
 let tempUserPersonaFile = null; // 用于存储用户选择的 User Persona 头像文件 Blob
 
-// --- IndexedDB 相关代码 ---
+// --- IndexedDB 核心修正代码 ---
 const DB_NAME = 'WeChatAIPlusDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // 升级版本至 2，与阅读子页面无冲突共享
 const AVATAR_STORE_NAME = 'userPersonaAvatars';
 let userPersonaAvatarDB;
 let chatBgDB;
@@ -1670,8 +1670,13 @@ function openUserPersonaAvatarDB() {
 
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
+            // 确保 qq 端的面具头像表存在
             if (!db.objectStoreNames.contains(AVATAR_STORE_NAME)) {
                 db.createObjectStore(AVATAR_STORE_NAME, { keyPath: 'id' });
+            }
+            // 确保阅读器端的图书表存在，防止子页面加载时报错重写数据库
+            if (!db.objectStoreNames.contains('reeden_books_store')) {
+                db.createObjectStore('reeden_books_store', { keyPath: 'id' });
             }
         };
 
@@ -4718,28 +4723,47 @@ function toggleTimeAwareness(val) {
         }
 
     window.onload = async () => { 
-// 请求系统通知权限
-if ("Notification" in window) {
-    Notification.requestPermission();
-}
+    // 请求系统通知权限
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
 
-try {
-    await openUserPersonaAvatarDB(); 
-} catch (e) {
-    console.warn("数据库初始化被跳过:", e);
-}
+    try {
+        await openUserPersonaAvatarDB(); 
+    } catch (e) {
+        console.warn("数据库初始化被跳过:", e);
+    }
 
-// 新增：打开并初始化大容量背景图数据库
-try {
-    await openChatBgDB();
-} catch (e) {
-    console.warn("背景数据库初始化失败:", e);
-}
+    // 新增：打开并初始化大容量背景图数据库
+    try {
+        await openChatBgDB();
+    } catch (e) {
+        console.warn("背景数据库初始化失败:", e);
+    }
 
-renderChatList(); 
-renderContactList(); 
-renderMePage(); 
-    
+    // 新增监听：当阅读器子页面（Iframe）载入时，向其传送当前对话好友的名字、头像及人设
+    window.addEventListener('message', function(event) {
+        const data = event.data;
+        if (data && data.type === 'GET_COMPANION_INFO') {
+            const companionName = localStorage.getItem('active_reading_companion') || currentFriendName;
+            const friend = friends.find(f => f.name === companionName) || { name: 'AI 伴读', persona: '喜欢看书', avatarUrl: '' };
+            
+            // 安全发送到 iframe
+            if (event.source) {
+                event.source.postMessage({
+                    type: 'SEND_COMPANION_INFO',
+                    name: friend.name,
+                    persona: friend.persona,
+                    avatarUrl: friend.avatarUrl
+                }, '*');
+            }
+        }
+    });
+
+    renderChatList(); 
+    renderContactList(); 
+    renderMePage(); 
+        
     const momentsBg = localStorage.getItem('moments_bg_url');
     if (momentsBg) { 
         const bgEl = document.getElementById('moments-bg-display'); 
