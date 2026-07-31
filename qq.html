@@ -4112,8 +4112,11 @@ group.members.forEach(name => {
 });
 reply = reply.replace(/^\[?用户\]?[:：\s]*/gim, "");
 
-// 限制只发前三行气泡
-let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, 3);
+// 限制只发设定的句数气泡（如果未设定或为0，则默认最多发3句）
+let replyLimitNum = friend.replyLimit !== undefined ? parseInt(friend.replyLimit) : 0;
+let finalLimit = replyLimitNum > 0 ? replyLimitNum : 3;
+
+let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, finalLimit);
 // --- 修复结束 ---
 
                     for (let line of lines) {
@@ -4600,6 +4603,10 @@ if (isGroupMode) {
     document.getElementById('settings-avatar').innerHTML = f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial;
     document.getElementById('settings-name').innerText = f.name;
     
+    // 计算当前的句数限制显示文字
+    const currentLimitVal = f.replyLimit !== undefined ? parseInt(f.replyLimit) : 0;
+    const limitDisplayText = currentLimitVal === 0 ? '不限制' : currentLimitVal + '句';
+
     listGroup.innerHTML = `
         <div class="list-group">
             <div class="list-item">
@@ -4613,6 +4620,8 @@ if (isGroupMode) {
         
         <div class="list-group">
             <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" class="settings-value">${f.name}</div></div>
+            <!-- 插入回复句数限制栏目 -->
+            <div class="list-item" onclick="openReplyLimitModal()"><div class="info">回复句数限制</div><div id="settings-reply-limit-display" class="settings-value" style="color: #191919;">${limitDisplayText}</div></div>
             <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" class="settings-value">${f.group || '我的好友'}</div></div>
             <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" class="settings-value">${f.voiceId || '未设置'}</div></div>
             <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" class="settings-value">${f.allowStickers ? '允许' : '不允许'}</div></div>
@@ -7138,6 +7147,31 @@ function handleReaderFontFile(input) {
 </div>
 
 <script>
+// ===== 回复句数限制逻辑 =====
+function openReplyLimitModal() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    const currentLimit = friend.replyLimit !== undefined ? friend.replyLimit : 0;
+    
+    // 弹出系统输入框，允许输入数字
+    const valStr = prompt("请输入你想限制的回复句数（比如输入 3。输入 0 或留空表示不限制）：", currentLimit === 0 ? "" : currentLimit);
+    
+    // 如果用户点击了“取消”，则不作任何改变直接退出
+    if (valStr === null) return;
+    
+    const val = parseInt(valStr) || 0;
+    friend.replyLimit = val;
+    saveData();
+    
+    // 更新设置页面上所有对应的文本显示（解决多处显示及ID重复问题）
+    const displays = document.querySelectorAll('[id="settings-reply-limit-display"]');
+    displays.forEach(display => {
+        display.innerText = val === 0 ? '不限制' : val + '句';
+    });
+    
+    alert("设置成功！已将回复句数限制为: " + (val === 0 ? "不限制" : val + "句"));
+}
+
 // ===== MCP工具相关代码 =====
 
 let mcpTools = [];
@@ -7412,7 +7446,10 @@ function confirmAutoMsgFreq() {
     closeAutoMsgFreqModal();
 }
 
-// ===== MCP工具相关代码结束 =====
+<!-- ===== MCP工具相关代码结束 ===== -->
 </script>
+
+
+
 </body>
 </html>
