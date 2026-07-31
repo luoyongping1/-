@@ -312,6 +312,8 @@
             letter-spacing: -0.1px;
         }
 
+
+
         /* 悬浮球 - 支持拖动 */
         #companion-ball-wrapper {
             position: fixed;
@@ -742,46 +744,46 @@
         }
 
         /* 段评和笔记双子星容器 */
-        .para-badge-wrap {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 6px;
-            vertical-align: middle;
-            transform: translateY(-1px);
-        }
+.para-badge-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 6px;
+    vertical-align: middle;
+    transform: translateY(-1px);
+}
 
-        /* 段评气泡与批注笔通用精致样式 */
-        .para-comment-badge, .para-note-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            border-radius: 6px;
-            background: rgba(0, 0, 0, 0.05);
-            color: currentColor;
-            opacity: 0.5;
-            cursor: pointer;
-            border: none;
-            flex-shrink: 0;
-            transition: all 0.2s ease;
-        }
+/* 段评气泡与批注笔通用精致样式 */
+.para-comment-badge, .para-note-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.05);
+    color: currentColor;
+    opacity: 0.5;
+    cursor: pointer;
+    border: none;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
 
-        .para-comment-badge:hover, .para-note-badge:hover {
-            background: rgba(0, 0, 0, 0.1);
-            opacity: 0.85;
-        }
+.para-comment-badge:hover, .para-note-badge:hover {
+    background: rgba(0, 0, 0, 0.1);
+    opacity: 0.85;
+}
 
-        /* 夜间主题下的背景色彩适配 */
-        #reader-view.theme-night .para-comment-badge,
-        #reader-view.theme-night .para-note-badge {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        #reader-view.theme-night .para-comment-badge:hover,
-        #reader-view.theme-night .para-note-badge:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
+/* 夜间主题下的背景色彩适配 */
+#reader-view.theme-night .para-comment-badge,
+#reader-view.theme-night .para-note-badge {
+    background: rgba(255, 255, 255, 0.08);
+}
+#reader-view.theme-night .para-comment-badge:hover,
+#reader-view.theme-night .para-note-badge:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
 
         /* 划线弹出浮动菜单（z-index 提高，防遮挡） */
         #selection-menu {
@@ -1092,10 +1094,9 @@
 
         // --- 数据库初始化 ---
         const DB_NAME = 'WeChatAIPlusDB';
-        const DB_VERSION = 3; // 升级版本到 3，确保在同一个数据库中安全互存并添加段评独立存储
+        const DB_VERSION = 2; // 升级版本到 2，确保在同一个数据库中安全互存
         const STORE_BOOKS = 'reeden_books_store';
         const STORE_AVATARS = 'userPersonaAvatars';
-        const STORE_COMMENTS = 'reeden_comments_store'; // 新增的段评存储仓库
 
         function initDatabase() {
             return new Promise((resolve, reject) => {
@@ -1107,9 +1108,6 @@
                     }
                     if (!database.objectStoreNames.contains(STORE_AVATARS)) {
                         database.createObjectStore(STORE_AVATARS, { keyPath: 'id' });
-                    }
-                    if (!database.objectStoreNames.contains(STORE_COMMENTS)) {
-                        database.createObjectStore(STORE_COMMENTS, { keyPath: 'id' });
                     }
                 };
                 request.onsuccess = (e) => {
@@ -1152,37 +1150,6 @@
                 const request = store.get(id);
                 request.onsuccess = () => resolve(request.result ? request.result.image : null);
                 request.onerror = () => resolve(null);
-            });
-        }
-
-        // --- 段评存取 IndexedDB 方法封装 ---
-        function saveCommentsToDb(bookId, chapterIdx, commentsMap) {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_COMMENTS], 'readwrite');
-                const store = transaction.objectStore(STORE_COMMENTS);
-                const id = `comments_${bookId}_ch_${chapterIdx}`;
-                store.put({ id: id, data: commentsMap });
-                transaction.oncomplete = () => resolve();
-                transaction.onerror = (e) => reject(e);
-            });
-        }
-
-        function loadCommentsFromDb(bookId, chapterIdx) {
-            return new Promise((resolve) => {
-                if (!db) {
-                    resolve({});
-                    return;
-                }
-                const transaction = db.transaction([STORE_COMMENTS], 'readonly');
-                const store = transaction.objectStore(STORE_COMMENTS);
-                const id = `comments_${bookId}_ch_${chapterIdx}`;
-                const req = store.get(id);
-                req.onsuccess = () => {
-                    resolve(req.result ? req.result.data : {});
-                };
-                req.onerror = () => {
-                    resolve({});
-                };
             });
         }
 
@@ -1828,7 +1795,7 @@
             });
         }
 
-        async function loadChapterContent() {
+        function loadChapterContent() {
             const chapter = currentBook.spineChapters[currentChapterIndex];
             const body = document.getElementById('reader-body');
             
@@ -1847,15 +1814,14 @@
             }
 
             const paragraphs = chapter.content.split('\n').filter(p => p.trim());
-            
-            // 从 IndexedDB 读取已缓存的本章段评数据
-            const existingComments = await loadCommentsFromDb(currentBook.id, currentChapterIndex);
+            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+            const existingComments = JSON.parse(localStorage.getItem(commentsKey)) || {};
 
-            body.innerHTML = paragraphs.map((text, idx) => {
-                const commentBadge = `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawerForPara(${idx})" title="查看段评"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`;
-                const noteBadge = `<span class="para-note-badge" onclick="event.stopPropagation(); openNoteModalForPara(${idx})" title="添加批注"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>`;
-                return `<p class="read-para" data-para-idx="${idx}">${text}<span class="para-badge-wrap">${commentBadge}${noteBadge}</span></p>`;
-            }).join('');
+body.innerHTML = paragraphs.map((text, idx) => {
+    const commentBadge = `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawerForPara(${idx})" title="查看段评"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`;
+    const noteBadge = `<span class="para-note-badge" onclick="event.stopPropagation(); openNoteModalForPara(${idx})" title="添加批注"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>`;
+    return `<p class="read-para" data-para-idx="${idx}">${text}<span class="para-badge-wrap">${commentBadge}${noteBadge}</span></p>`;
+}).join('');
 
             // 检查并恢复上次看到的具体段落位置
             if (window.restoreParaIndexNeeded && currentBook.readingState && currentBook.readingState.paraIndex !== undefined) {
@@ -1945,58 +1911,58 @@
         }
 
         // --- 文本选择和菜单 ---
-        function handleTextSelection(event) {
+function handleTextSelection(event) {
+    setTimeout(() => {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        const menu = document.getElementById('selection-menu');
+
+        if (selectedText.length > 0) {
+            selectText = selectedText;
+            
+            let parentNode = selection.anchorNode ? selection.anchorNode.parentNode : null;
+            while (parentNode && parentNode.tagName !== 'P') {
+                parentNode = parentNode.parentNode;
+            }
+            if (parentNode && parentNode.classList.contains('read-para')) {
+                selectedParagraphIdx = parseInt(parentNode.getAttribute('data-para-idx'));
+            } else {
+                selectedParagraphIdx = 0;
+            }
+
+            // 标记刚刚进行了划词选择，防止点击事件干扰
+            window.justSelected = true;
             setTimeout(() => {
-                const selection = window.getSelection();
-                const selectedText = selection.toString().trim();
-                const menu = document.getElementById('selection-menu');
+                window.justSelected = false;
+            }, 300);
 
-                if (selectedText.length > 0) {
-                    selectText = selectedText;
-                    
-                    let parentNode = selection.anchorNode ? selection.anchorNode.parentNode : null;
-                    while (parentNode && parentNode.tagName !== 'P') {
-                        parentNode = parentNode.parentNode;
-                    }
-                    if (parentNode && parentNode.classList.contains('read-para')) {
-                        selectedParagraphIdx = parseInt(parentNode.getAttribute('data-para-idx'));
-                    } else {
-                        selectedParagraphIdx = 0;
-                    }
+            // 使用选择区域的真实坐标精确定位菜单，兼容手机端和电脑端
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            
+            menu.style.display = 'flex';
+            
+            // 计算居中位置，并防止菜单超出屏幕左右边界
+            const menuWidth = menu.offsetWidth;
+            const menuHeight = menu.offsetHeight;
+            let leftPos = rect.left + rect.width / 2 - menuWidth / 2;
+            let topPos = rect.top - menuHeight - 10;
 
-                    // 标记刚刚进行了划词选择，防止点击事件干扰
-                    window.justSelected = true;
-                    setTimeout(() => {
-                        window.justSelected = false;
-                    }, 300);
+            if (leftPos < 10) leftPos = 10;
+            if (leftPos + menuWidth > window.innerWidth - 10) {
+                leftPos = window.innerWidth - menuWidth - 10;
+            }
+            if (topPos < 10) {
+                topPos = rect.bottom + 10; // 如果顶部没有足够空间，就显示在选区下方
+            }
 
-                    // 使用选择区域的真实坐标精确定位菜单，兼容手机端 and 电脑端
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    
-                    menu.style.display = 'flex';
-                    
-                    // 计算居中位置，并防止菜单超出屏幕左右边界
-                    const menuWidth = menu.offsetWidth;
-                    const menuHeight = menu.offsetHeight;
-                    let leftPos = rect.left + rect.width / 2 - menuWidth / 2;
-                    let topPos = rect.top - menuHeight - 10;
-
-                    if (leftPos < 10) leftPos = 10;
-                    if (leftPos + menuWidth > window.innerWidth - 10) {
-                        leftPos = window.innerWidth - menuWidth - 10;
-                    }
-                    if (topPos < 10) {
-                        topPos = rect.bottom + 10; // 如果顶部没有足够空间，就显示在选区下方
-                    }
-
-                    menu.style.left = leftPos + 'px';
-                    menu.style.top = topPos + 'px';
-                } else {
-                    menu.style.display = 'none';
-                }
-            }, 50);
+            menu.style.left = leftPos + 'px';
+            menu.style.top = topPos + 'px';
+        } else {
+            menu.style.display = 'none';
         }
+    }, 50);
+}
 
         // --- 写批注与回复交互 ---
         function openNoteModal() {
@@ -2010,20 +1976,20 @@
             document.getElementById('note-modal').style.display = 'none';
         }
 
-        // 新增：从段落末尾的笔icon打开批注框
-        function openNoteModalForPara(paraIdx) {
-            const body = document.getElementById('reader-body');
-            const para = body.querySelector(`[data-para-idx="${paraIdx}"]`);
-            
-            if (!para) return;
+// 新增：从段落末尾的笔icon打开批注框
+function openNoteModalForPara(paraIdx) {
+    const body = document.getElementById('reader-body');
+    const para = body.querySelector(`[data-para-idx="${paraIdx}"]`);
+    
+    if (!para) return;
 
-            selectText = para.childNodes[0].textContent.trim();
-            selectedParagraphIdx = paraIdx;
-            
-            document.getElementById('note-selected-text').innerText = `"${selectText.substring(0, 50)}${selectText.length > 50 ? '...' : ''}"`;
-            document.getElementById('note-input').value = '';
-            document.getElementById('note-modal').style.display = 'flex';
-        }
+    selectText = para.childNodes[0].textContent.trim();
+    selectedParagraphIdx = paraIdx;
+    
+    document.getElementById('note-selected-text').innerText = `"${selectText.substring(0, 50)}${selectText.length > 50 ? '...' : ''}"`;
+    document.getElementById('note-input').value = '';
+    document.getElementById('note-modal').style.display = 'flex';
+}
 
         // 新建聊天记录追加器，用于存放并处理聊天流程，防系统崩溃报错
         function appendChatMessage(sender, text) {
@@ -2067,7 +2033,7 @@
             document.getElementById('comment-type-modal').style.display = 'none';
         }
 
-        // 修改后的单章段评获取辅助处理引擎（已重构为存入 IndexedDB 避免 localstorage 配额溢出报错）
+        // 新增的单章段评获取辅助处理引擎
         async function generateSingleChapterComments(chapterIdx, showFeedback) {
             const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
             if (!aiConfig || !aiConfig.key) {
@@ -2119,6 +2085,7 @@
                 reply = reply.replace(/```json|```/g, '').trim();
 
                 const commentsArray = JSON.parse(reply);
+                const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
                 
                 const commentsMap = {};
                 commentsArray.forEach(item => {
@@ -2127,8 +2094,7 @@
                     ];
                 });
 
-                // 核心修复点：将段评数据异步写进 IndexedDB，避免 localstorage 超出 5MB 配额而报错
-                await saveCommentsToDb(currentBook.id, chapterIdx, commentsMap);
+                localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
                 return true;
             } catch(e) {
                 console.error(e);
@@ -2139,24 +2105,26 @@
             }
         }
 
-        // 修改后的段评主方法：重构为静默异步生成，不再阻碍用户当前视口操作
+        // 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成
         async function generateChapterComments(targetType) {
             closeCommentTypeModal();
             
             if (targetType === 'current') {
+                alert("正在生成本章段评中，请稍候...");
                 const success = await generateSingleChapterComments(currentChapterIndex, true);
                 if (success) {
-                    await loadChapterContent();
-                    alert(`《${currentBook.title}》本章段评生成完毕！快去点击文章段落旁出现的绿色聊天气泡看看吧！`);
+                    loadChapterContent();
+                    alert("本章段评加载就绪，快去点击文章段落旁出现的绿色聊天气泡看看吧！");
                 }
             } else if (targetType === 'both') {
-                // 1. 静默生成并挂载本章段评
+                alert("正在生成本章段评中，请稍候...");
+                // 1. 生成并挂载本章段评
                 const successCurrent = await generateSingleChapterComments(currentChapterIndex, true);
                 if (successCurrent) {
-                    await loadChapterContent();
-                    alert(`《${currentBook.title}》本章段评已生成完毕！正在为您在后台静默生成下一章，您可以继续阅读本章内容。`);
+                    loadChapterContent();
+                    alert("本章段评已生成！正在后台为您静默生成下一章，您可以继续阅读本章内容。");
                     
-                    // 2. 静默在后台自动拉取下一章的段评数据，不再发出弹窗阻碍阅读
+                    // 2. 静默在后台自动拉取下一章的段评数据
                     const nextChapterIdx = currentChapterIndex + 1;
                     if (nextChapterIdx < currentBook.spineChapters.length) {
                         generateSingleChapterComments(nextChapterIdx, false).then(successNext => {
@@ -2172,9 +2140,9 @@
         }
 
         // --- 渲染与查看段落评论抽屉 ---
-        async function openCommentDrawer(paraIdx) {
-            // 核心修复点：改用 IndexedDB 异步读取
-            const commentsMap = await loadCommentsFromDb(currentBook.id, currentChapterIndex);
+        function openCommentDrawer(paraIdx) {
+            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
             const list = commentsMap[paraIdx] || [];
 
             const container = document.getElementById('comment-drawer-list');
@@ -2189,9 +2157,9 @@
         }
 
         // 新增：从段落末尾的气泡icon打开段评抽屉
-        async function openCommentDrawerForPara(paraIdx) {
-            // 核心修复点：改用 IndexedDB 异步读取
-            const commentsMap = await loadCommentsFromDb(currentBook.id, currentChapterIndex);
+        function openCommentDrawerForPara(paraIdx) {
+            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
             const list = commentsMap[paraIdx] || [];
 
             const container = document.getElementById('comment-drawer-list');
@@ -2752,7 +2720,6 @@ ${bookContext}
             document.getElementById('cover-crop-modal').style.display = 'none';
             saveImportedBookAndFinish(compressedBase64);
         }
-        
         // 核心交互：点击小说主体区域时切换菜单栏的显示与隐藏
         function handleReaderClick(event) {
             // 如果用户正在划词选择文字，或者点击了绿色的段评图标，就不要响应菜单切换
