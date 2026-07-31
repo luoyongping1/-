@@ -3358,9 +3358,7 @@ function sendChosenSticker(url) {
     document.getElementById('sticker-match-box').style.display = 'none';
     document.getElementById('msg-input').value = '';
     
-    // 触发回复
-    if (isGroupMode) getGroupAiReply();
-    else getAiReply();
+    // 已删除了自动触发回复的逻辑代码
 }
 
 function checkStickerMatch(val) {
