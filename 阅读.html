@@ -1092,34 +1092,38 @@
         let ballOffsetX = 0;
         let ballOffsetY = 0;
 
-        // --- 数据库初始化 ---
-        const DB_NAME = 'WeChatAIPlusDB';
-        const DB_VERSION = 2; // 升级版本到 2，确保在同一个数据库中安全互存
-        const STORE_BOOKS = 'reeden_books_store';
-        const STORE_AVATARS = 'userPersonaAvatars';
+// --- 数据库初始化 ---
+const DB_NAME = 'WeChatAIPlusDB';
+const DB_VERSION = 3; // 升级版本到 3，确保新增段评存储空间
+const STORE_BOOKS = 'reeden_books_store';
+const STORE_AVATARS = 'userPersonaAvatars';
+const STORE_COMMENTS = 'reeden_comments_store'; // 新增的段评存储库名
 
-        function initDatabase() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onupgradeneeded = (e) => {
-                    let database = e.target.result;
-                    if (!database.objectStoreNames.contains(STORE_BOOKS)) {
-                        database.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
-                    }
-                    if (!database.objectStoreNames.contains(STORE_AVATARS)) {
-                        database.createObjectStore(STORE_AVATARS, { keyPath: 'id' });
-                    }
-                };
-                request.onsuccess = (e) => {
-                    db = e.target.result;
-                    resolve();
-                };
-                request.onerror = (e) => {
-                    console.error("阅读器数据库加载失败: ", e);
-                    reject(e);
-                };
-            });
-        }
+function initDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+            let database = e.target.result;
+            if (!database.objectStoreNames.contains(STORE_BOOKS)) {
+                database.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
+            }
+            if (!database.objectStoreNames.contains(STORE_AVATARS)) {
+                database.createObjectStore(STORE_AVATARS, { keyPath: 'id' });
+            }
+            if (!database.objectStoreNames.contains(STORE_COMMENTS)) {
+                database.createObjectStore(STORE_COMMENTS, { keyPath: 'id' }); // 创建段评专属数据库空间
+            }
+        };
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            resolve();
+        };
+        request.onerror = (e) => {
+            console.error("阅读器数据库加载失败: ", e);
+            reject(e);
+        };
+    });
+}
 
         // --- IndexedDB 对图书存取操作封装 ---
         function saveBookToDb(book) {
@@ -1131,17 +1135,38 @@
             });
         }
 
-        function loadBooksFromDb() {
-            return new Promise((resolve) => {
-                const transaction = db.transaction([STORE_BOOKS], 'readonly');
-                const store = transaction.objectStore(STORE_BOOKS);
-                const req = store.getAll();
-                req.onsuccess = () => {
-                    books = req.result || [];
-                    resolve(books);
-                };
-            });
-        }
+function loadBooksFromDb() {
+    return new Promise((resolve) => {
+        const transaction = db.transaction([STORE_BOOKS], 'readonly');
+        const store = transaction.objectStore(STORE_BOOKS);
+        const req = store.getAll();
+        req.onsuccess = () => {
+            books = req.result || [];
+            resolve(books);
+        };
+    });
+}
+
+// 以下是新增的段评数据库保存函数
+function saveCommentsToDb(id, commentsMap) {
+    return new Promise((resolve) => {
+        const transaction = db.transaction([STORE_COMMENTS], 'readwrite');
+        const store = transaction.objectStore(STORE_COMMENTS);
+        store.put({ id: id, data: commentsMap });
+        transaction.oncomplete = () => resolve();
+    });
+}
+
+// 以下是新增的段评数据库读取函数
+function getCommentsFromDb(id) {
+    return new Promise((resolve) => {
+        const transaction = db.transaction([STORE_COMMENTS], 'readonly');
+        const store = transaction.objectStore(STORE_COMMENTS);
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result ? request.result.data : null);
+        request.onerror = () => resolve(null);
+    });
+}
 
         function getAvatarBlob(id) {
             return new Promise((resolve) => {
@@ -1814,8 +1839,6 @@
             }
 
             const paragraphs = chapter.content.split('\n').filter(p => p.trim());
-            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
-            const existingComments = JSON.parse(localStorage.getItem(commentsKey)) || {};
 
 body.innerHTML = paragraphs.map((text, idx) => {
     const commentBadge = `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawerForPara(${idx})" title="查看段评"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`;
@@ -2084,77 +2107,96 @@ function openNoteModalForPara(paraIdx) {
                 
                 reply = reply.replace(/```json|```/g, '').trim();
 
-                const commentsArray = JSON.parse(reply);
-                const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
-                
-                const commentsMap = {};
-                commentsArray.forEach(item => {
-                    commentsMap[item.paragraphIndex] = [
-                        { name: companionName, text: item.comment, avatar: companionAvatar }
-                    ];
-                });
+        const commentsArray = JSON.parse(reply);
+        const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
+        
+        const commentsMap = {};
+        commentsArray.forEach(item => {
+            commentsMap[item.paragraphIndex] = [
+                { name: companionName, text: item.comment, avatar: companionAvatar }
+            ];
+        });
 
-                localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
-                return true;
-            } catch(e) {
-                console.error(e);
-                if (showFeedback) {
-                    alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
-                }
-                return false;
-            }
+        await saveCommentsToDb(commentsKey, commentsMap); // 改用 IndexedDB 异步保存段评
+        return true;
+    } catch(e) {
+        console.error(e);
+        if (showFeedback) {
+            alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
         }
+        return false;
+    }
+}
 
-        // 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成
-        async function generateChapterComments(targetType) {
-            closeCommentTypeModal();
-            
-            if (targetType === 'current') {
-                alert("正在生成本章段评中，请稍候...");
-                const success = await generateSingleChapterComments(currentChapterIndex, true);
-                if (success) {
-                    loadChapterContent();
-                    alert("本章段评加载就绪，快去点击文章段落旁出现的绿色聊天气泡看看吧！");
-                }
-            } else if (targetType === 'both') {
-                alert("正在生成本章段评中，请稍候...");
-                // 1. 生成并挂载本章段评
-                const successCurrent = await generateSingleChapterComments(currentChapterIndex, true);
-                if (successCurrent) {
-                    loadChapterContent();
-                    alert("本章段评已生成！正在后台为您静默生成下一章，您可以继续阅读本章内容。");
-                    
-                    // 2. 静默在后台自动拉取下一章的段评数据
-                    const nextChapterIdx = currentChapterIndex + 1;
-                    if (nextChapterIdx < currentBook.spineChapters.length) {
-                        generateSingleChapterComments(nextChapterIdx, false).then(successNext => {
-                            if (successNext) {
-                                console.log("下一章静默段评已在后台自动预生成！");
-                            } else {
-                                console.log("下一章静默段评生成失败（后台自动忽略）");
-                            }
-                        });
+// 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成（已移除开始时的弹窗，改为静默生成）
+async function generateChapterComments(targetType) {
+    closeCommentTypeModal();
+    
+    if (targetType === 'current') {
+        // 移除了“正在生成中...”的弹窗提示，实现静默生成
+        const success = await generateSingleChapterComments(currentChapterIndex, true);
+        if (success) {
+            loadChapterContent();
+            alert("本章段评生成完成！快去点击文章段落旁出现的绿色聊天气泡看看吧！");
+        }
+    } else if (targetType === 'both') {
+        // 移除了“正在生成中...”的弹窗提示，实现静默生成
+        const successCurrent = await generateSingleChapterComments(currentChapterIndex, true);
+        if (successCurrent) {
+            loadChapterContent();
+            // 静默在后台自动拉取下一章的段评数据
+            const nextChapterIdx = currentChapterIndex + 1;
+            if (nextChapterIdx < currentBook.spineChapters.length) {
+                generateSingleChapterComments(nextChapterIdx, false).then(successNext => {
+                    if (successNext) {
+                        console.log("下一章静默段评已在后台自动预生成！");
+                    } else {
+                        console.log("下一章静默段评生成失败（后台自动忽略）");
                     }
-                }
+                });
             }
+            alert("本章段评生成完成！下一章段评也已在后台自动生成。");
         }
+    }
+}
 
-        // --- 渲染与查看段落评论抽屉 ---
-        function openCommentDrawer(paraIdx) {
-            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
-            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
-            const list = commentsMap[paraIdx] || [];
+// --- 渲染与查看段落评论抽屉 ---
+async function openCommentDrawer(paraIdx) {
+    const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+    const commentsMap = await getCommentsFromDb(commentsKey) || {}; // 改用 await 从 IndexedDB 异步读取段评
+    const list = commentsMap[paraIdx] || [];
 
-            const container = document.getElementById('comment-drawer-list');
-            container.innerHTML = list.map(c => `
-                <div class="chat-bubble companion" style="background:#e5f9e7; align-self:stretch; max-width:100%; border-radius:12px;">
-                    <div style="font-weight:bold; font-size:11px; color:var(--primary-green); margin-bottom:4px;">${c.name} 的点评</div>
-                    <div>${c.text}</div>
-                </div>
-            `).join('');
+    const container = document.getElementById('comment-drawer-list');
+    container.innerHTML = list.map(c => `
+        <div class="chat-bubble companion" style="background:#e5f9e7; align-self:stretch; max-width:100%; border-radius:12px;">
+            <div style="font-weight:bold; font-size:11px; color:var(--primary-green); margin-bottom:4px;">${c.name} 的点评</div>
+            <div>${c.text}</div>
+        </div>
+    `).join('');
 
-            document.getElementById('comment-drawer').style.display = 'flex';
-        }
+    document.getElementById('comment-drawer').style.display = 'flex';
+}
+
+// 新增：从段落末尾的气泡icon打开段评抽屉
+async function openCommentDrawerForPara(paraIdx) {
+    const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+    const commentsMap = await getCommentsFromDb(commentsKey) || {}; // 改用 await 从 IndexedDB 异步读取段评
+    const list = commentsMap[paraIdx] || [];
+
+    const container = document.getElementById('comment-drawer-list');
+    if (list.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:var(--text-muted); margin-top:30px; font-size:13px;">暂无段评，点击右上角生成按钮为本段落生成点评</div>`;
+    } else {
+        container.innerHTML = list.map(c => `
+            <div class="chat-bubble companion" style="background:#e5f9e7; align-self:stretch; max-width:100%; border-radius:12px;">
+                <div style="font-weight:bold; font-size:11px; color:var(--primary-green); margin-bottom:4px;">${c.name} 的点评</div>
+                <div>${c.text}</div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('comment-drawer').style.display = 'flex';
+}
 
         // 新增：从段落末尾的气泡icon打开段评抽屉
         function openCommentDrawerForPara(paraIdx) {
