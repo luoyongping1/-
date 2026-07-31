@@ -247,8 +247,10 @@ input:checked + .slider:before {
 }
 
         .list-group { background: white; margin-top: 10px; }
-        .list-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid var(--border-color); cursor: pointer; }
+        .list-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 0.5px solid var(--border-color); cursor: pointer; gap: 12px; }
         .list-item:active { background: #f2f2f2; }
+        .list-item .info { flex-shrink: 0; }
+        .settings-value { color: #999; font-size: 15px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; flex: 1; }
         .avatar { width: 45px; height: 45px; border-radius: 6px; margin-right: 12px; background: #5c6bc0; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0; overflow: hidden; }
 .msg .avatar { margin: 0 !important; } /* 这一行是新增的，专门负责消除聊天气泡旁的头像间距 */
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -266,6 +268,9 @@ input:checked + .slider:before {
         .chat-search-placeholder { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); gap: 6px; }
         .chat-search-box input:focus + .chat-search-placeholder,
         .chat-search-box input:not(:placeholder-shown) + .chat-search-placeholder { justify-content: flex-start !important; left: 10px !important; }
+
+        .wx-status-bar { display: flex; align-items: center; padding: 0 16px; height: 42px; background-color: #f5f5f5; border-bottom: 0.5px solid #e5e5e5; cursor: pointer; transition: background 0.2s; }
+        .wx-status-bar:active { background-color: #e5e5e5; }
 
         .wechat-chat-item { display: flex; align-items: center; padding: 12px 16px; background: white; position: relative; border-bottom: 0.5px solid #f0f0f0; }
         .wechat-chat-item:active { background: #f2f2f2; }
@@ -995,6 +1000,25 @@ input:checked + .slider:before {
                     </div>
                 </div>
             </div>
+            <!-- 状态签名栏 -->
+            <div class="wx-status-bar" onclick="alert('进入状态设置')">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; flex-shrink: 0;">
+                    <polyline points="21 8 21 16 12 21 3 16 3 8 12 3 21 8"></polyline>
+                    <polyline points="12 21 12 11 3 8"></polyline>
+                    <polyline points="12 11 21 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="11"></line>
+                </svg>
+                <span style="font-size: 13.5px; color: #666; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">枯木不语，逢我而春</span>
+            </div>
+            <!-- Windows微信登录提示栏 -->
+            <div class="wx-status-bar" onclick="alert('管理已登录设备')">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#666" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; flex-shrink: 0;">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <span style="font-size: 13.5px; color: #666; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">Windows 微信已登录</span>
+            </div>
             <div id="chat-session-list"></div>
         </div>
     </div>
@@ -1133,7 +1157,11 @@ input:checked + .slider:before {
     <!-- 5. 聊天窗口 -->
     <div id="chat-page" class="page">
         <div class="header">
-            <span onclick="closeChat()">〈 返回</span>
+            <span onclick="closeChat()" style="display: flex; align-items: center; cursor: pointer; height: 24px; padding-right: 15px;">
+                <svg viewBox="0 0 24 24" width="12" height="24" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 4L7 12L16 20"></path>
+                </svg>
+            </span>
             <div style="text-align: center; line-height: 1.2;">
                 <div id="chat-title"></div>
                 <div id="chat-typing" class="typing-status">正在输入中...</div>
@@ -1343,7 +1371,7 @@ input:checked + .slider:before {
 
     <!-- 6. 聊天设置 -->
     <div id="settings-page" class="page">
-    <div class="header"><span onclick="closeSettings()">〈 返回</span><span>聊天信息</span><span></span></div>
+    <div class="header"><span onclick="closeSettings()" style="display: flex; align-items: center; cursor: pointer; height: 24px; padding-right: 15px;"><svg viewBox="0 0 24 24" width="12" height="24" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4L7 12L16 20"></path></svg></span><span>聊天信息</span><span></span></div>
         <div class="content">
             <div class="list-group" style="padding: 20px; display: flex; gap: 15px;">
                 <div style="text-align:center;">
@@ -4528,33 +4556,44 @@ closeChat = function() {
         function openSettings() {
     const listGroup = document.querySelector('#settings-page .list-group:nth-child(2)');
     
+    // 清除原有白色背景和阴影，通过在内部嵌套独立的 list-group 来实现间隔
+    listGroup.style.background = 'transparent';
+    listGroup.style.marginTop = '0';
+    listGroup.style.boxShadow = 'none';
+    
 if (isGroupMode) {
     const g = groupChats.find(x => x.id === currentFriendName);
     document.getElementById('settings-avatar').innerHTML = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
     document.getElementById('settings-name').innerText = g.name;
     
     listGroup.innerHTML = `
-        <div class="list-item" onclick="renameGroup()">
-            <div class="info">群聊名称</div><div style="color:#888">${g.name}</div><span>></span>
+        <div class="list-group">
+            <div class="list-item" onclick="renameGroup()">
+                <div class="info">群聊名称</div><div style="color:#888">${g.name}</div>
+            </div>
+            <div class="list-item" onclick="addMoreMembersToGroup()">
+                <div class="info">添加群成员</div>
+            </div>
         </div>
-        <div class="list-item" onclick="addMoreMembersToGroup()">
-            <div class="info">添加群成员</div><span>></span>
+        <div class="list-group">
+            <div class="list-item">
+                <div class="info">允许群角色发送表情包</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="list-item">
+                <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
-        <div class="list-item">
-            <div class="info">允许群角色发送表情包</div>
-            <label class="wx-switch">
-                <input type="checkbox" id="group-sticker-toggle" ${g.allowStickers ? 'checked' : ''} onchange="toggleGroupStickers(this.checked)">
-                <span class="slider"></span>
-            </label>
+        <div class="list-group">
+            <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div></div>
         </div>
-        <div class="list-item">
-            <div class="info">聊天记忆互通 (角色同步此群记忆)</div>
-            <label class="wx-switch">
-                <input type="checkbox" id="memory-sync-toggle" ${g.memorySync ? 'checked' : ''} onchange="toggleMemorySync(this.checked)">
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
     `;
 } else {
     const f = friends.find(f => f.name === currentFriendName);
@@ -4562,38 +4601,54 @@ if (isGroupMode) {
     document.getElementById('settings-name').innerText = f.name;
     
     listGroup.innerHTML = `
-        <div class="list-item">
-            <div class="info">时间感知</div>
-            <label class="wx-switch">
-                <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
-                <span class="slider"></span>
-            </label>
+        <div class="list-group">
+            <div class="list-item">
+                <div class="info">时间感知</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
-        <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" style="color:#888">${f.name}</div><span>></span></div>
-        <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" style="color:#888">${f.group || '我的好友'}</div><span>></span></div>
-        <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" style="color:#888">${f.voiceId || '未设置'}</div><span>></span></div>
-        <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" style="color:#888">${f.allowStickers ? '允许' : '不允许'}</div><span>></span></div>
-        <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div><span>></span></div>
-        <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" style="color:#888">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div><span>></span></div>
-        <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div><span>></span></div>
-        <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div><span>></span></div>
-        <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div><span>></span></div>
-<div class="list-item" onclick="openHeaderBeautify()"><div class="info">顶栏美化</div><span>></span></div>
-<div class="list-item" onclick="openInputBarBeautify()"><div class="info">底栏美化</div><span>></span></div>
-        <div class="list-item">
-            <div class="info">主动发消息频率 (分钟, 0为关闭)</div>
-            <input type="number" id="auto-msg-freq" style="border:none; text-align:right; width:60px; font-size:14px; color:#07c160;" 
-                value="${f.autoMsgFreq || 0}" onchange="saveAutoMsgFreq(this.value)">
+        
+        <div class="list-group">
+            <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" class="settings-value">${f.name}</div></div>
+            <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" class="settings-value">${f.group || '我的好友'}</div></div>
+            <div class="list-item" onclick="editVoiceId()"><div class="info">音色 ID (MiniMax)</div><div id="settings-voice-display" class="settings-value">${f.voiceId || '未设置'}</div></div>
+            <div class="list-item" onclick="openStickerPermissionModal()"><div class="info">是否允许角色使用表情包</div><div id="settings-sticker-display" class="settings-value">${f.allowStickers ? '允许' : '不允许'}</div></div>
+            <div class="list-item" onclick="openUserPersonaSelect()"><div class="info">我在角色面前的人设</div><div id="settings-user-persona-display" class="settings-value">${f.userPersonaId ? (userPersonas.find(u => u.id === f.userPersonaId)?.name || '未设置') : '未选择'}</div></div>
         </div>
-        <div class="list-item" onclick="triggerReaderFontUpload()"><div class="info">导入阅读字体 (.ttf)</div><div id="settings-font-display" style="color:#888">点击上传</div><span>></span></div>
-        <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div><span>></span></div>
-        <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div><span>></span></div>
-        <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div><span>></span></div>
-        <div class="list-item" onclick="openMcpTools()"><div class="info">MCP工具</div><span>></span></div>
+        
+        <div class="list-group">
+            <div class="list-item" onclick="openPersonaEditor()"><div class="info">AI 人设 (Prompt)</div></div>
+            <div class="list-item" onclick="openWorldBookSelector()"><div class="info">挂载世界书</div></div>
+            <div class="list-item" onclick="openMomentsConfig()"><div class="info">朋友圈设置</div></div>
+            <div class="list-item" onclick="openMemoryPage()"><div class="info">记忆总结</div></div>
+        </div>
+        
+        <div class="list-group">
+            <div class="list-item" onclick="openBubbleEditor()"><div class="info">气泡 CSS 美化</div></div>
+            <div class="list-item" onclick="openHeaderBeautify()"><div class="info">顶栏美化</div></div>
+            <div class="list-item" onclick="openInputBarBeautify()"><div class="info">底栏美化</div></div>
+            <div class="list-item" onclick="changeChatBackground()"><div class="info">聊天背景</div></div>
+        </div>
+        
+        <div class="list-group">
+            <div class="list-item" onclick="openAutoMsgFreqModal()">
+                <div class="info">主动发消息频率</div>
+                <div id="settings-auto-freq-display" class="settings-value">${formatFreqDisplay(f.autoMsgFreq)}</div>
+            </div>
+            <div class="list-item" onclick="triggerReaderFontUpload()"><div class="info">导入阅读字体 (.ttf)</div><div id="settings-font-display" style="color:#888">点击上传</div></div>
+            <div class="list-item" onclick="openMcpTools()"><div class="info">MCP工具</div></div>
+        </div>
+        
+        <div class="list-group">
+            <div class="list-item" onclick="clearChatHistory()"><div class="info">清空聊天记录</div></div>
+        </div>
     `;
 }
-    // 新增：根据是否是群聊，修改底部删除按钮的文字
-    const deleteBtn = document.querySelector('#settings-page .list-group:last-child .list-item');
+    // 新增：根据是否是群聊，修改底部删除按钮的文字 (这里精准限定了 content 直属子元素，避免获取到嵌套子组而报错)
+    const deleteBtn = document.querySelector('#settings-page .content > .list-group:last-child .list-item');
     if (isGroupMode) {
         deleteBtn.innerText = "解散并删除群聊";
     } else {
@@ -6203,7 +6258,7 @@ function applyHeaderAndInputBarStyles(friendName) {
                 const url = (val instanceof Blob) ? URL.createObjectURL(val) : val;
                 backBtn.innerHTML = `<img src="${url}" style="height: 24px; vertical-align: middle;">`;
             } else {
-                backBtn.innerHTML = '〈 返回';
+                backBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="24" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M16 4L7 12L16 20"></path></svg>`;
             }
         }
     });
@@ -6809,7 +6864,47 @@ function applyHeaderAndInputBarStyles(friendName) {
     </div>
 </div>
 
+<!-- 主动发消息频率选择模态框 -->
+<div id="auto-msg-freq-modal" class="glass-modal" style="display: none; align-items: flex-end; z-index: 9900;">
+    <div style="background: #ffffff; width: 100%; border-radius: 16px 16px 0 0; padding: 20px; box-sizing: border-box; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); transform: translateY(0); transition: transform 0.3s;">
+        <!-- 头部操作栏 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span style="color: #fa5151; cursor: pointer; font-size: 16px;" onclick="closeAutoMsgFreqModal()">取消</span>
+            <span style="font-weight: bold; font-size: 16px; color: #191919;">主动消息频率</span>
+            <span style="color: #07c160; cursor: pointer; font-size: 16px; font-weight: bold;" onclick="confirmAutoMsgFreq()">确定</span>
+        </div>
 
+        <!-- 快捷预设滑动栏 -->
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #999; margin-bottom: 8px; text-align: left;">快捷滑动选择时间：</div>
+            <div style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; -webkit-overflow-scrolling: touch;">
+                <button type="button" onclick="setQuickFreqVal(0, 15)" style="background: #f2f2f2; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #333; cursor: pointer; white-space: nowrap; font-weight: 500; flex-shrink: 0;">15分钟</button>
+                <button type="button" onclick="setQuickFreqVal(0, 30)" style="background: #f2f2f2; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #333; cursor: pointer; white-space: nowrap; font-weight: 500; flex-shrink: 0;">30分钟</button>
+                <button type="button" onclick="setQuickFreqVal(1, 0)" style="background: #f2f2f2; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #333; cursor: pointer; white-space: nowrap; font-weight: 500; flex-shrink: 0;">1小时</button>
+                <button type="button" onclick="setQuickFreqVal(2, 0)" style="background: #f2f2f2; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #333; cursor: pointer; white-space: nowrap; font-weight: 500; flex-shrink: 0;">2小时</button>
+                <button type="button" onclick="setQuickFreqVal(4, 0)" style="background: #f2f2f2; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #333; cursor: pointer; white-space: nowrap; font-weight: 500; flex-shrink: 0;">4小时</button>
+                <button type="button" onclick="setQuickFreqVal(12, 0)" style="background: #f2f2f2; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #333; cursor: pointer; white-space: nowrap; font-weight: 500; flex-shrink: 0;">12小时</button>
+            </div>
+        </div>
+
+        <!-- iOS风格输入框区域 -->
+        <div style="background: #f7f7f7; border-radius: 12px; padding: 15px; box-sizing: border-box;">
+            <div style="font-size: 12px; color: #999; margin-bottom: 12px; text-align: left;">自定义时间跨度：</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="number" id="freq-picker-hours" min="0" max="23" value="0" style="width: 65px; height: 38px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 17px; outline: none; background: white; -webkit-appearance: none; margin: 0;">
+                    <span style="font-size: 14px; color: #555;">小时</span>
+                </div>
+                <span style="font-size: 18px; color: #b2b2b2; font-weight: bold; margin: 0 4px;">:</span>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <input type="number" id="freq-picker-minutes" min="0" max="59" value="0" style="width: 65px; height: 38px; border: 1px solid #ddd; border-radius: 8px; text-align: center; font-size: 17px; outline: none; background: white; -webkit-appearance: none; margin: 0;">
+                    <span style="font-size: 14px; color: #555;">分钟</span>
+                </div>
+            </div>
+            <p style="font-size: 11px; color: #b2b2b2; text-align: center; margin-top: 12px; margin-bottom: 0;">（注：如果小时和分钟都设为0，则关闭主动发消息功能）</p>
+        </div>
+    </div>
+</div>
 
 <input type="file" id="user-persona-avatar-upload" style="display:none" accept="image/*">
 <!-- 自定义阅读字体文件上传 -->
@@ -7260,6 +7355,61 @@ function sendMcpResultToChat() {
     closeMcpModal();
     closeSettings();
     alert("结果已填入输入框，确认后点发送");
+}
+
+// ===== 主动消息频率选择框逻辑 =====
+function formatFreqDisplay(totalMinutes) {
+    if (!totalMinutes || totalMinutes <= 0) return "已关闭";
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    let text = "";
+    if (h > 0) text += h + "小时";
+    if (m > 0) text += m + "分钟";
+    return text;
+}
+
+function openAutoMsgFreqModal() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    
+    const totalMinutes = friend.autoMsgFreq || 0;
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    
+    document.getElementById('freq-picker-hours').value = h;
+    document.getElementById('freq-picker-minutes').value = m;
+    document.getElementById('auto-msg-freq-modal').style.display = 'flex';
+}
+
+function closeAutoMsgFreqModal() {
+    document.getElementById('auto-msg-freq-modal').style.display = 'none';
+}
+
+function setQuickFreqVal(h, m) {
+    document.getElementById('freq-picker-hours').value = h;
+    document.getElementById('freq-picker-minutes').value = m;
+}
+
+function confirmAutoMsgFreq() {
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) return;
+    
+    const h = parseInt(document.getElementById('freq-picker-hours').value) || 0;
+    const m = parseInt(document.getElementById('freq-picker-minutes').value) || 0;
+    const totalMinutes = (h * 60) + m;
+    
+    friend.autoMsgFreq = totalMinutes;
+    friend.lastAutoMsgTime = Date.now(); // 重置计时的起点
+    
+    saveData();
+    
+    // 更新设置主页面上显示的文本
+    const display = document.getElementById('settings-auto-freq-display');
+    if (display) {
+        display.innerText = formatFreqDisplay(totalMinutes);
+    }
+    
+    closeAutoMsgFreqModal();
 }
 
 // ===== MCP工具相关代码结束 =====
