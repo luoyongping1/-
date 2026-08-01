@@ -4964,22 +4964,38 @@ function sendSystemNotification(title, body) {
         });
     }
 }
-        function openBubbleEditor() {
+function openBubbleEditor() {
     const friend = friends.find(f => f.name === currentFriendName);
-    document.getElementById('bubble-css-input').value = friend.bubbleCss || "";
-    document.getElementById('bubble-editor-page').classList.add('active');
+    getChatBg('bubblecss_' + currentFriendName).then(val => {
+        document.getElementById('bubble-css-input').value = val || (friend ? friend.bubbleCss : "") || "";
+        document.getElementById('bubble-editor-page').classList.add('active');
+    }).catch(() => {
+        document.getElementById('bubble-css-input').value = (friend ? friend.bubbleCss : "") || "";
+        document.getElementById('bubble-editor-page').classList.add('active');
+    });
 }
 function closeBubbleEditor() {
     document.getElementById('bubble-editor-page').classList.remove('active');
 }
 function saveBubbleCss() {
     const friend = friends.find(f => f.name === currentFriendName);
-    friend.bubbleCss = document.getElementById('bubble-css-input').value;
+    const cssVal = document.getElementById('bubble-css-input').value;
+    if (friend) {
+        friend.bubbleCss = cssVal; 
+    }
     saveData();
-    applyFriendBubbleStyle(); // 立即应用
-    alert("气泡样式已保存");
-    closeBubbleEditor();
-    renderMessages();
+    saveChatBg('bubblecss_' + currentFriendName, cssVal).then(() => {
+        applyFriendBubbleStyle(); 
+        alert("气泡样式已保存");
+        closeBubbleEditor();
+        renderMessages();
+    }).catch(err => {
+        console.error("保存气泡样式到数据库失败", err);
+        applyFriendBubbleStyle();
+        alert("气泡样式已保存");
+        closeBubbleEditor();
+        renderMessages();
+    });
 }
 
 // 应用当前好友的专属气泡样式
@@ -4992,16 +5008,30 @@ function applyFriendBubbleStyle() {
         document.head.appendChild(styleTag);
     }
     
-    // 逻辑：如果存在自定义气泡代码，只去掉边框（即去掉三角尾巴），但不隐藏元素（保留贴纸）
-    if (friend && friend.bubbleCss && friend.bubbleCss.trim() !== "") {
-        styleTag.innerHTML = friend.bubbleCss + `
-            .msg.friend .bubble::before { border: none !important; }
-            .msg.self .bubble::after { border: none !important; }
-        `;
-    } else {
-        // 如果没有自定义代码，则清空样式，恢复默认
-        styleTag.innerHTML = "";
-    }
+    getChatBg('bubblecss_' + currentFriendName).then(val => {
+        if (val && val.trim() !== "") {
+            styleTag.innerHTML = val + `
+                .msg.friend .bubble::before { border: none !important; }
+                .msg.self .bubble::after { border: none !important; }
+            `;
+        } else if (friend && friend.bubbleCss && friend.bubbleCss.trim() !== "") {
+            styleTag.innerHTML = friend.bubbleCss + `
+                .msg.friend .bubble::before { border: none !important; }
+                .msg.self .bubble::after { border: none !important; }
+            `;
+        } else {
+            styleTag.innerHTML = "";
+        }
+    }).catch(() => {
+        if (friend && friend.bubbleCss && friend.bubbleCss.trim() !== "") {
+            styleTag.innerHTML = friend.bubbleCss + `
+                .msg.friend .bubble::before { border: none !important; }
+                .msg.self .bubble::after { border: none !important; }
+            `;
+        } else {
+            styleTag.innerHTML = "";
+        }
+    });
 }
 
 // 在打开聊天窗时应用样式
