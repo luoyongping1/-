@@ -2247,9 +2247,9 @@ if (m.isShoppingPay) {
                     useBubble = false;
                 }
 
-                if (!isSelf && m.isVoice && !isTheater) {
-                    htmlArr.push(`
-                        <div class="msg friend">
+if (!isSelf && m.isVoice && !isTheater) {
+    htmlArr.push(`
+        <div class="msg friend ${groupClass}">
                             <div class="avatar" style="width:35px;height:35px;font-size:12px;background:#ccc">${avHtml}</div>
                             <div class="voice-wrap">
 <div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}', this)">
@@ -2265,17 +2265,16 @@ if (m.isShoppingPay) {
                                 <div id="trans-${realIndex}" class="translated-content">${m.text}</div>
                             </div>
                         </div>`);
-                            } else if (m.isSticker) {
-// 表情包单独处理：不显示在气泡中，直接作为独立元素
+} else if (m.isSticker) {
 htmlArr.push(`
-    <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+    <div class="msg ${m.type} ${groupClass} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
         <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
         <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
         <div style="margin-${isSelf?'right':'left'}:12px;">
             <img src="${m.text}" style="max-width:150px; border-radius:8px;" decoding="async">
         </div>
     </div>`);
-            } else {
+} else {
 htmlArr.push(`
     <div class="msg ${m.type} ${groupClass} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
         <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
