@@ -2078,21 +2078,44 @@ function openNoteModalForPara(paraIdx) {
             const chapter = currentBook.spineChapters[chapterIdx];
             if (!chapter) return false;
 
-            const paragraphs = chapter.content.split('\n').filter(p => p.trim()).slice(0, 15);
+            // 核心修改 1：取消 .slice(0, 15)，提取这一章的全部段落，确保每段都能生成段评
+            const paragraphs = chapter.content.split('\n').filter(p => p.trim());
             const textToAnalyze = paragraphs.map((text, index) => `[段落 ${index}]: ${text}`).join('\n');
 
-            const sysPrompt = `你现在是陪伴用户一起看书的伴读者，你叫[${companionName}]。
-你的人设性格是：${companionPersona}。
+            // 核心修改 2：深度优化提示词，模拟网络小说章评/段评（如番茄、起点风格），并要求每段不少于 5 条段评
+            const sysPrompt = `你现在是一个小说社区的后台评论生成器。你的任务是针对提供的小说章节中的【每一个段落内容】进行逐段阅读，生成极其真实、生动有趣的读者吐槽和段评（模拟类似起点、番茄小说中的章评段评，参考效果：有共鸣、有吐槽、有玩梗）。
 
-## 任务：
-请针对下面的小说各段落内容进行逐段阅读，挑选几个有趣的段落提供吐槽、感想或观点评语。
-你的点评口吻必须贴合你的人设性格特征。
-输出的数据格式必须只能是标准的 JSON 格式，不能含有任何 Markdown 语法标记或多余的说明解释。
+## 任务规则：
+1. 必须为提供的【每一段文字（即所有的段落索引 paragraphIndex）】都生成评论，不要遗漏任何一段。
+2. 每一个段落索引必须生成【不少于 5 个不同的读者评论】（即每个 paragraphIndex 对应 5 条不同昵称和内容的评论）。
+3. 评论口吻要极度拟真，模拟真实网友：有搞笑的、有吐槽的、有玩梗的、有根据剧情进行分析预测的、有感性抒情的、有分享自己生活类似经历的。
+4. 评论者的昵称（name）要多样化且有趣（例如："现大宝"、"下雨天会很想你"、"落雨XM"、"咸鱼不吃海鲜"、"在下不良人天煞孤星"等）。
+5. 其中每个段落的 5 个评论中，必须包含一位名叫 [${companionName}] 的伴读者发表的点评，他的点评口吻必须贴合性格特征：${companionPersona}。其余 4 个评论为普通网友发帖。
+6. 每条评论句式要简短精炼（通常在一句话内，不超过 25 个字），以防总输出字数超出模型限制。
+7. 返回的数据格式必须只能是标准的 JSON 格式，不能含有任何 Markdown 语法标记或多余的解释。
 
-## 返回数据 JSON 格式模版：
+## 返回数据 JSON 格式模板：
 [
-  {"paragraphIndex": 0, "comment": "天哪，怎么突然变成这样了，惊到我了！"},
-  {"paragraphIndex": 2, "comment": "我感觉主角这个计划肯定会泡汤，打赌不？"}
+  {
+    "paragraphIndex": 0,
+    "comments": [
+      {"name": "${companionName}", "text": "贴合伴读者性格的点评..."},
+      {"name": "网友昵称A", "text": "生动有趣的普通段评吐槽..."},
+      {"name": "网友昵称B", "text": "玩梗或者抒发共鸣的短评..."},
+      {"name": "网友昵称C", "text": "剧情分析预测短评..."},
+      {"name": "网友昵称D", "text": "幽默风趣的吐槽短评..."}
+    ]
+  },
+  {
+    "paragraphIndex": 1,
+    "comments": [
+      {"name": "${companionName}", "text": "..."},
+      {"name": "网友昵称X", "text": "..."},
+      {"name": "网友昵称Y", "text": "..."},
+      {"name": "网友昵称Z", "text": "..."},
+      {"name": "网友昵称W", "text": "..."}
+    ]
+  }
 ]`;
 
             try {
@@ -2123,40 +2146,45 @@ function openNoteModalForPara(paraIdx) {
                     throw new Error("AI 返回的内容中没有包含合法的 JSON 格式的数组。");
                 }
                 
-        const cleanJson = reply.substring(jsonStart, jsonEnd + 1);
-        const commentsArray = JSON.parse(cleanJson);
-        const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
-        
-        const commentsMap = {};
-        commentsArray.forEach(item => {
-            commentsMap[item.paragraphIndex] = [
-                { name: companionName, text: item.comment, avatar: companionAvatar }
-            ];
-        });
+                const cleanJson = reply.substring(jsonStart, jsonEnd + 1);
+                const commentsArray = JSON.parse(cleanJson);
+                const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
+                
+                // 核心修改 3：解析多段评数组格式并映射存入 commentsMap 中
+                const commentsMap = {};
+                commentsArray.forEach(item => {
+                    if (item.comments && Array.isArray(item.comments)) {
+                        commentsMap[item.paragraphIndex] = item.comments.map(c => ({
+                            name: c.name || "书友",
+                            text: c.text || "",
+                            avatar: ""
+                        }));
+                    }
+                });
 
-        // 【核心修复】：将段评直接保存到书籍对象中，写入容量极大的 IndexedDB 本地数据库
-        if (!currentBook.comments) {
-            currentBook.comments = {};
-        }
-        currentBook.comments[chapterIdx] = commentsMap;
-        await saveBookToDb(currentBook);
+                // 【核心修复】：将段评直接保存到书籍对象中，写入容量极大的 IndexedDB 本地数据库
+                if (!currentBook.comments) {
+                    currentBook.comments = {};
+                }
+                currentBook.comments[chapterIdx] = commentsMap;
+                await saveBookToDb(currentBook);
 
-        // 兼容备份到 localStorage，如果满了则直接忽略，防止程序崩溃报错
-        try {
-            localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
-        } catch (err) {
-            console.warn("localStorage 空间已满，已跳过本地缓存备份，数据已安全写入 IndexedDB 数据库:", err);
+                // 兼容备份到 localStorage，如果满了则直接忽略，防止程序崩溃报错
+                try {
+                    localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
+                } catch (err) {
+                    console.warn("localStorage 空间已满，已跳过本地缓存备份，数据已安全写入 IndexedDB 数据库:", err);
+                }
+                
+                return true;
+            } catch(e) {
+                console.error("段评模块：请求或解析 JSON 失败：", e);
+                if (showFeedback) {
+                    alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
+                }
+                return false;
+            }
         }
-        
-        return true;
-    } catch(e) {
-        console.error("段评模块：请求或解析 JSON 失败：", e);
-        if (showFeedback) {
-            alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
-        }
-        return false;
-    }
-}
 
 
         // 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成
