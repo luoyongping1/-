@@ -3652,12 +3652,19 @@ await getAiReply(true);
             if (u) {
                 if (avatarTarget === 'me') {
                     myInfo.avatar = u;
-                    renderMePage();
+                    renderMePage(); // 刷新我的页面
+                    renderMessages(); // 刷新聊天气泡
                 } else {
-                    friends.find(f => f.name === currentFriendName).avatarUrl = u;
-                    openSettings();
+                    const friend = friends.find(f => f.name === currentFriendName);
+                    if (friend) {
+                        friend.avatarUrl = u;
+                        openSettings(); // 刷新设置面板内的头像
+                        renderMessages(); // 核心修复：立即刷新聊天气泡的头像
+                        renderChatList(); // 核心修复：立即刷新消息列表的头像
+                        renderContactList(); // 核心修复：立即刷新通讯录的头像
+                    }
                 }
-                saveData();
+                saveData(); // 保存修改
             }
             closeAvatarChoiceModal();
         }
@@ -3685,12 +3692,15 @@ function compressImage(base64Str, maxWidth, callback) {
 document.getElementById('my-avatar-upload').onchange = function() {
     if (this.files[0]) {
         const reader = new FileReader();
+        const inputElement = this; // 缓存 input 节点以便后续清空值
         reader.onload = function(e) {
             compressImage(e.target.result, 300, function(compressedData) {
                 myInfo.avatar = compressedData;
-                localStorage.setItem('my_info', JSON.stringify(myInfo));
-                renderMePage();
+                saveData(); // 调用全局保存，同步云端
+                renderMePage(); // 刷新“我”页面头像
+                renderMessages(); // 立即刷新聊天气泡，使自己的新头像立即生效
                 alert("我的头像保存成功（已自动压缩）");
+                inputElement.value = ''; // 核心修复：清空文件选择器，允许重复上传同一张图
             });
         };
         reader.readAsDataURL(this.files[0]);
@@ -3700,15 +3710,20 @@ document.getElementById('my-avatar-upload').onchange = function() {
 document.getElementById('avatar-upload').onchange = function() {
     if (this.files[0]) {
         const reader = new FileReader();
+        const inputElement = this; // 缓存 input 节点以方便清空
         reader.onload = function(e) {
             compressImage(e.target.result, 300, function(compressedData) {
                 const friend = friends.find(f => f.name === currentFriendName);
                 if (friend) {
                     friend.avatarUrl = compressedData;
-                    localStorage.setItem('qq_friends', JSON.stringify(friends));
-                    openSettings();
+                    saveData(); // 保存头像数据并同步云端
+                    openSettings(); // 刷新设置面板内的头像
+                    renderMessages(); // 核心修复：立即刷新聊天气泡的头像
+                    renderChatList(); // 核心修复：立即刷新消息列表中该好友的头像
+                    renderContactList(); // 核心修复：立即刷新通讯录列表里该好友的头像
                     alert("好友头像保存成功（已自动压缩）");
                 }
+                inputElement.value = ''; // 核心修复：清空选择，防止连续选择相同图片时失效
             });
         };
         reader.readAsDataURL(this.files[0]);
