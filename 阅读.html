@@ -953,7 +953,13 @@
             </div>
             <!-- 章节文字与护眼主题切换 -->
             <div class="theme-selector-row">
-                <span id="chapter-progress-text" style="font-size:12px; color:var(--text-muted);">载入中...</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- 目录按钮：点击时阻止事件冒泡防止关闭菜单，并打开目录抽屉 -->
+                    <span onclick="event.stopPropagation(); openCatalogDrawer();" style="cursor:pointer; font-size:12px; font-weight:bold; color:var(--primary-blue); background:rgba(0,122,255,0.08); padding:4px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;">
+                        📂 目录
+                    </span>
+                    <span id="chapter-progress-text" style="font-size:12px; color:var(--text-muted);">载入中...</span>
+                </div>
                 <div class="theme-dots-wrap" onclick="event.stopPropagation();">
                     <div class="theme-dot-btn active" style="background: #f4f0e6;" onclick="setReaderTheme('theme-paper', this)"></div>
                     <div class="theme-dot-btn" style="background: #e3eed7;" onclick="setReaderTheme('theme-green', this)"></div>
@@ -2451,6 +2457,42 @@ function openCommentDrawerForPara(paraIdx) {
             document.getElementById('comment-drawer').style.display = 'none';
         }
 
+        // 新增：打开目录抽屉
+        function openCatalogDrawer() {
+            const drawer = document.getElementById('catalog-drawer');
+            const listContainer = document.getElementById('catalog-list');
+            if (!currentBook || !currentBook.spineChapters) return;
+
+            // 渲染目录列表，高亮显示当前正在阅读的章节
+            listContainer.innerHTML = currentBook.spineChapters.map((ch, idx) => {
+                const isCurrent = idx === currentChapterIndex;
+                return `
+                    <div style="padding: 14px 20px; border-bottom: 0.5px solid #f2f2f7; font-size: 14px; color: ${isCurrent ? 'var(--primary-blue)' : '#1c1c1e'}; font-weight: ${isCurrent ? 'bold' : 'normal'}; background: ${isCurrent ? '#e6f7ff' : 'transparent'}; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="selectCatalogChapter(${idx})">
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${ch.title}</span>
+                        ${isCurrent ? '<span style="color: var(--primary-blue); font-size: 12px; margin-left: 10px; flex-shrink: 0;">正在阅读</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+
+            drawer.style.display = 'flex';
+        }
+
+        // 新增：关闭目录抽屉
+        function closeCatalogDrawer() {
+            document.getElementById('catalog-drawer').style.display = 'none';
+        }
+
+        // 新增：选中目录中的章节并跳转
+        function selectCatalogChapter(idx) {
+            currentChapterIndex = idx;
+            loadChapterContent();
+            updateBookProgressMemory();
+            closeCatalogDrawer();
+            
+            // 自动关闭阅读器控制栏，进入沉浸阅读
+            document.getElementById('reader-view').classList.remove('menu-active');
+        }
+
         // 新增：打开段评生成选项框
         function openGenerateCommentModal() {
             document.getElementById('comment-type-modal').style.display = 'flex';
@@ -3147,6 +3189,17 @@ window.onload = async () => {
         <div style="display: flex; gap: 20px; width: 90%;">
             <button class="btn-gray" style="flex: 1; height: 44px;" onclick="cancelCoverCrop()">取消</button>
             <button class="btn-green" style="flex: 1; height: 44px;" onclick="confirmCoverCrop()">确定裁剪并导入</button>
+        </div>
+    </div>
+
+    <!-- 章节目录抽屉层 -->
+    <div id="catalog-drawer" style="display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 60%; background: #ffffff; z-index: 1050; border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,0.15); flex-direction: column; overflow: hidden;">
+        <div style="display: flex; align-items: center; justify-content: space-between; height: 50px; padding: 0 20px; border-bottom: 0.5px solid rgba(0,0,0,0.08); background: white; flex-shrink: 0;">
+            <span style="font-weight: 600; font-size: 15px; color: var(--text-dark);">章节目录</span>
+            <button onclick="closeCatalogDrawer()" style="width:32px; height:32px; border-radius:50%; background:rgba(0,0,0,0.04); border:none; cursor:pointer; color:#999; font-size:18px; display:flex; align-items:center; justify-content:center;">✕</button>
+        </div>
+        <div id="catalog-list" style="flex: 1; overflow-y: auto; padding: 10px 0; background: #ffffff; display: flex; flex-direction: column;">
+            <!-- 动态生成章节目录列表 -->
         </div>
     </div>
 
