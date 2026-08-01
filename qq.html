@@ -1983,12 +1983,9 @@ const response = await fetch(apiUrl, {
 
 
 
-    function renderMessages(isLoadMore = false) {
-// 增加这一行：每次画消息前，先从存储里同步最新的聊天历史
-    chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
-
-    // 1. 获取基本信息（区分群或个人）
-    let chatTitle = "";
+function renderMessages(isLoadMore = false) {
+// 1. 获取基本信息（区分群或个人）
+let chatTitle = "";
     // ... 后面不需要改 ...
     let chatBg = "none";
     
