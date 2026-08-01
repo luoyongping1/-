@@ -2068,13 +2068,20 @@ if (isSelf) {
 
 if (personaAvatar) {
     if (personaAvatar.startsWith('indexeddb-')) {
-        // 使用类名和 data 属性，等界面画完统一填图
         avHtml = `<img class="db-img-loader" data-dbid="${personaAvatar}" decoding="async">`;
     } else {
         avHtml = `<img src="${personaAvatar}" decoding="async">`;
     }
 } else {
-    avHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : '我';
+    if (myInfo.avatar) {
+        if (myInfo.avatar.startsWith('indexeddb-')) {
+            avHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
+        } else {
+            avHtml = `<img src="${myInfo.avatar}" decoding="async">`;
+        }
+    } else {
+        avHtml = '我';
+    }
 }
     // --- 修改结束 ---
 } else {
@@ -2082,14 +2089,22 @@ if (personaAvatar) {
             if (isGroupMode) {
                 const senderObj = friends.find(f => f.name === m.sender);
                 if (senderObj && senderObj.avatarUrl) {
-                    avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
+                    if (senderObj.avatarUrl.startsWith('indexeddb-')) {
+                        avHtml = `<img class="db-img-loader" data-dbid="${senderObj.avatarUrl}" decoding="async">`;
+                    } else {
+                        avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
+                    }
                 } else {
                     avHtml = `<div>${m.initial || '匿'}</div>`;
                 }
             } else {
                 const friend = friends.find(f => f.name === currentFriendName);
                 if (friend.avatarUrl) {
-                    avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                    if (friend.avatarUrl.startsWith('indexeddb-')) {
+                        avHtml = `<img class="db-img-loader" data-dbid="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                    } else {
+                        avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                    }
                 } else {
                     avHtml = `<div onclick="showHeartbeat(${realIndex})">${friend.initial}</div>`;
                 }
@@ -3237,35 +3252,55 @@ function selectForwardMomentTarget(friendName, momentIdx) {
     }, 800);
 }
 
-        function renderChatList() {
-    // 核心修改：如果 localStorage 是空的，就使用当前内存里的 friends（包含默认的AI助手）
-    const storedFriends = localStorage.getItem('qq_friends');
-    if (storedFriends) {
-        friends = JSON.parse(storedFriends);
-    }
-    
+function renderChatList() {
     const list = document.getElementById('chat-session-list');
     const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
-    list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => `
+    list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => {
+        let avHtml = "";
+        if (f.avatarUrl) {
+            if (f.avatarUrl.startsWith('indexeddb-')) {
+                avHtml = `<img class="db-img-loader" data-dbid="${f.avatarUrl}" decoding="async">`;
+            } else {
+                avHtml = `<img src="${f.avatarUrl}" decoding="async">`;
+            }
+        } else {
+            avHtml = f.initial;
+        }
+        return `
         <div class="wechat-chat-item" onclick="openChat('${f.name}')">
-            <div class="chat-avatar">${f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial}</div>
+            <div class="chat-avatar">${avHtml}</div>
             <div class="chat-body">
                 <div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">刚刚</div></div>
                 <div class="chat-preview">${f.lastMsg}</div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
+    loadAllDatabaseImages(); // 渲染后加载数据库头像
 }
-        function renderContactList() {
-            const list = document.getElementById('contact-list');
-            list.innerHTML = groups.map(gName => {
-                const isC = collapsedGroups.includes(gName);
-                const fs = friends.filter(f => (f.group || '我的好友') === gName).map(f => `
-                    <div class="list-item" onclick="openChat('${f.name}')">
-                        <div class="avatar">${f.avatarUrl?`<img src="${f.avatarUrl}" decoding="async">`:f.initial}</div><div class="info">${f.name}</div>
-                    </div>`).join('');
-                return `<div class="group-header" onclick="toggleGroup('${gName}')"><span class="group-arrow ${isC?'collapsed':''}">▼</span>${gName}</div>${isC?'':fs}`;
-            }).join('');
-        }
+function renderContactList() {
+    const list = document.getElementById('contact-list');
+    list.innerHTML = groups.map(gName => {
+        const isC = collapsedGroups.includes(gName);
+        const fs = friends.filter(f => (f.group || '我的好友') === gName).map(f => {
+            let avHtml = "";
+            if (f.avatarUrl) {
+                if (f.avatarUrl.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${f.avatarUrl}" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${f.avatarUrl}" decoding="async">`;
+                }
+            } else {
+                avHtml = f.initial;
+            }
+            return `
+            <div class="list-item" onclick="openChat('${f.name}')">
+                <div class="avatar">${avHtml}</div><div class="info">${f.name}</div>
+            </div>`;
+        }).join('');
+        return `<div class="group-header" onclick="toggleGroup('${gName}')"><span class="group-arrow ${isC?'collapsed':''}">▼</span>${gName}</div>${isC?'':fs}`;
+    }).join('');
+    loadAllDatabaseImages(); // 渲染后加载数据库头像
+}
         function toggleGroup(n) { if(collapsedGroups.includes(n)) collapsedGroups = collapsedGroups.filter(x => x !== n); else collapsedGroups.push(n); saveData(); renderContactList(); }
         function openAddMenu() { document.getElementById('add-menu-modal').style.display = 'flex'; }
         function addFriend() { const n=prompt("昵称:"); if(n){ friends.push({name:n, initial:n[0], lastMsg:'', persona:'普通人', freq:0, lastMoment:Date.now(), avatarUrl:'', mountedBooks:[], group:'我的好友', memoryFreq:20, lastSummaryIdx:0, longMemory:''}); saveData(); renderContactList(); document.getElementById('add-menu-modal').style.display='none'; }}
@@ -3695,11 +3730,26 @@ document.getElementById('my-avatar-upload').onchange = function() {
         const inputElement = this; // 缓存 input 节点以便后续清空值
         reader.onload = function(e) {
             compressImage(e.target.result, 300, function(compressedData) {
-                myInfo.avatar = compressedData;
-                saveData(); // 调用全局保存，同步云端
-                renderMePage(); // 刷新“我”页面头像
-                renderMessages(); // 立即刷新聊天气泡，使自己的新头像立即生效
-                alert("我的头像保存成功（已自动压缩）");
+                const uniqueId = `indexeddb-my-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const blob = dataURLtoBlob(compressedData);
+                saveAvatarBlob(uniqueId, blob).then(() => {
+                    // 若有旧的数据库头像，先将其清理掉释放数据库内存
+                    if (myInfo.avatar && myInfo.avatar.startsWith('indexeddb-')) {
+                        deleteAvatarBlob(myInfo.avatar).catch(err => console.warn(err));
+                    }
+                    myInfo.avatar = uniqueId;
+                    saveData(); // 调用全局保存，同步云端
+                    renderMePage(); // 刷新“我”页面头像
+                    renderMessages(); // 立即刷新聊天气泡，使自己的新头像立即生效
+                    alert("我的头像保存成功（已安全存入本地数据库）");
+                }).catch(err => {
+                    console.error("保存头像到数据库失败:", err);
+                    myInfo.avatar = compressedData; // 备用方案：存入 Base64 字符串
+                    saveData();
+                    renderMePage();
+                    renderMessages();
+                    alert("我的头像保存成功（已使用备用本地存储）");
+                });
                 inputElement.value = ''; // 核心修复：清空文件选择器，允许重复上传同一张图
             });
         };
@@ -3715,13 +3765,30 @@ document.getElementById('avatar-upload').onchange = function() {
             compressImage(e.target.result, 300, function(compressedData) {
                 const friend = friends.find(f => f.name === currentFriendName);
                 if (friend) {
-                    friend.avatarUrl = compressedData;
-                    saveData(); // 保存头像数据并同步云端
-                    openSettings(); // 刷新设置面板内的头像
-                    renderMessages(); // 核心修复：立即刷新聊天气泡的头像
-                    renderChatList(); // 核心修复：立即刷新消息列表中该好友的头像
-                    renderContactList(); // 核心修复：立即刷新通讯录列表里该好友的头像
-                    alert("好友头像保存成功（已自动压缩）");
+                    const uniqueId = `indexeddb-friend-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                    const blob = dataURLtoBlob(compressedData);
+                    saveAvatarBlob(uniqueId, blob).then(() => {
+                        // 若有旧的数据库头像，先将其清理掉释放数据库内存
+                        if (friend.avatarUrl && friend.avatarUrl.startsWith('indexeddb-')) {
+                            deleteAvatarBlob(friend.avatarUrl).catch(err => console.warn(err));
+                        }
+                        friend.avatarUrl = uniqueId;
+                        saveData(); // 保存头像数据并同步云端
+                        openSettings(); // 刷新设置面板内的头像
+                        renderMessages(); // 核心修复：立即刷新聊天气泡的头像
+                        renderChatList(); // 核心修复：立即刷新消息列表中该好友的头像
+                        renderContactList(); // 核心修复：立即刷新通讯录列表里该好友的头像
+                        alert("好友头像保存成功（已安全存入本地数据库）");
+                    }).catch(err => {
+                        console.error("保存头像到数据库失败:", err);
+                        friend.avatarUrl = compressedData; // 备用方案：存入 Base64 字符串
+                        saveData();
+                        openSettings();
+                        renderMessages();
+                        renderChatList();
+                        renderContactList();
+                        alert("好友头像保存成功（已使用备用本地存储）");
+                    });
                 }
                 inputElement.value = ''; // 核心修复：清空选择，防止连续选择相同图片时失效
             });
@@ -4185,7 +4252,7 @@ if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
             }
         }
         
-        function renderMePage() {
+function renderMePage() {
     // 设置名字和微信号
     document.getElementById('my-name-display').innerText = myInfo.name;
     document.getElementById('my-wxid-display').innerText = '微信号：' + myInfo.wxid;
@@ -4193,12 +4260,15 @@ if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
     // 设置头像显示
     const avatarContainer = document.getElementById('my-avatar-display');
     if (myInfo.avatar) {
-        // 如果有头像，就显示图片
-        avatarContainer.innerHTML = '<img src="' + myInfo.avatar + '" style="width:100%; height:100%; object-fit:cover;">';
+        if (myInfo.avatar.startsWith('indexeddb-')) {
+            avatarContainer.innerHTML = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" style="width:100%; height:100%; object-fit:cover;">`;
+        } else {
+            avatarContainer.innerHTML = '<img src="' + myInfo.avatar + '" style="width:100%; height:100%; object-fit:cover;">';
+        }
     } else {
-        // 如果没有头像，就显示“ME”两个字
         avatarContainer.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:white;">ME</div>';
     }
+    loadAllDatabaseImages(); // 渲染后加载数据库图片
 }
         // --- 约会功能逻辑 ---
 
@@ -4569,7 +4639,7 @@ closeChat = function() {
     setTimeout(renderMessages, 50); 
 }
         function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; container.removeAttribute('data-loaded-bg-friend'); setTimeout(renderChatList, 10); }
-        function openSettings() {
+function openSettings() {
     const listGroup = document.querySelector('#settings-page .list-group:nth-child(2)');
     
     // 清除原有白色背景和阴影，通过在内部嵌套独立的 list-group 来实现间隔
@@ -4613,7 +4683,18 @@ if (isGroupMode) {
     `;
 } else {
     const f = friends.find(f => f.name === currentFriendName);
-    document.getElementById('settings-avatar').innerHTML = f.avatarUrl ? `<img src="${f.avatarUrl}" decoding="async">` : f.initial;
+    
+    let avHtml = "";
+    if (f.avatarUrl) {
+        if (f.avatarUrl.startsWith('indexeddb-')) {
+            avHtml = `<img class="db-img-loader" data-dbid="${f.avatarUrl}" decoding="async">`;
+        } else {
+            avHtml = `<img src="${f.avatarUrl}" decoding="async">`;
+        }
+    } else {
+        avHtml = f.initial;
+    }
+    document.getElementById('settings-avatar').innerHTML = avHtml;
     document.getElementById('settings-name').innerText = f.name;
     
     // 计算当前的句数限制显示文字
@@ -4677,6 +4758,7 @@ if (isGroupMode) {
     }
 
     document.getElementById('settings-page').classList.add('active');
+    loadAllDatabaseImages(); // 打开设置时自动加载数据库头像
 }
 
 // 新增：保存开关状态的函数
@@ -5682,8 +5764,22 @@ renderUserPersonaList = async function() {
 
 // 修改选择框函数结尾
 const oldOpenUserPersonaSelect = openUserPersonaSelect;
-openUserPersonaSelect = async function() {
+openOpenUserPersonaSelect = async function() {
     await oldOpenUserPersonaSelect();
+    loadAllDatabaseImages();
+};
+
+// 修改会话列表画完后执行填图
+const oldRenderChatList = renderChatList;
+renderChatList = function() {
+    oldRenderChatList();
+    loadAllDatabaseImages();
+};
+
+// 修改通讯录列表画完后执行填图
+const oldRenderContactList = renderContactList;
+renderContactList = function() {
+    oldRenderContactList();
     loadAllDatabaseImages();
 };
 function editVoiceId() {
