@@ -1983,109 +1983,108 @@ const response = await fetch(apiUrl, {
 
 
 
-    function renderMessages(isLoadMore = false) {
-// 增加这一行：每次画消息前，先从存储里同步最新的聊天历史
+function renderMessages(isLoadMore = false) {
+    // 每次画消息前，先从存储里同步最新的聊天历史
     chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
 
     // 1. 获取基本信息（区分群或个人）
     let chatTitle = "";
-    // ... 后面不需要改 ...
     let chatBg = "none";
     
     if (isGroupMode) {
         const group = groupChats.find(g => g.id === currentFriendName);
         if (!group) return;
         chatTitle = group.name;
-} else {
-    const friend = friends.find(f => f.name === currentFriendName);
-    if (!friend) return;
-    chatTitle = friend.name;
-}
-
-const container = document.getElementById('message-container');
-const loadedFriend = container.getAttribute('data-loaded-bg-friend');
-
-// 只有在切换了聊天对象（换了人）时，才重新读取并加载背景，防止刷消息时清空背景闪烁
-if (loadedFriend !== currentFriendName) {
-    container.style.backgroundImage = 'none';
-    container.setAttribute('data-loaded-bg-friend', currentFriendName);
-
-    if (!isGroupMode) {
-        getChatBg(currentFriendName).then(value => {
-            if (value) {
-                if (value instanceof Blob) {
-                    const url = URL.createObjectURL(value);
-                    container.style.backgroundImage = `url("${url}")`;
-                } else {
-                    container.style.backgroundImage = `url("${value}")`;
-                }
-            }
-        }).catch(err => {
-            console.warn("背景加载失败:", err);
-        });
+    } else {
+        const friend = friends.find(f => f.name === currentFriendName);
+        if (!friend) return;
+        chatTitle = friend.name;
     }
-}
 
-const history = chatHistories[currentFriendName] || [];
+    const container = document.getElementById('message-container');
+    const loadedFriend = container.getAttribute('data-loaded-bg-friend');
 
-// 初始化当前好友的消息显示条数，默认显示 20 条
-if (!window.chatDisplayCount) window.chatDisplayCount = {};
-if (!window.chatDisplayCount[currentFriendName]) window.chatDisplayCount[currentFriendName] = 20;
+    // 只有在切换了聊天对象（换了人）时，才重新读取并加载背景，防止刷消息时清空背景闪烁
+    if (loadedFriend !== currentFriendName) {
+        container.style.backgroundImage = 'none';
+        container.setAttribute('data-loaded-bg-friend', currentFriendName);
 
-let currentCount = window.chatDisplayCount[currentFriendName];
-const displayHistory = history.slice(-currentCount);
-let htmlArr = [];
+        if (!isGroupMode) {
+            getChatBg(currentFriendName).then(value => {
+                if (value) {
+                    if (value instanceof Blob) {
+                        const url = URL.createObjectURL(value);
+                        container.style.backgroundImage = `url("${url}")`;
+                    } else {
+                        container.style.backgroundImage = `url("${value}")`;
+                    }
+                }
+            }).catch(err => {
+                console.warn("背景加载失败:", err);
+            });
+        }
+    }
 
-// 如果历史记录总数大于当前显示的条数，在最上面添加一个“加载更多”的按钮
-if (history.length > currentCount) {
-    htmlArr.push(`<div style="text-align: center; margin: 10px 0;">
-        <span onclick="loadMoreMessages()" style="cursor: pointer; color: #576b95; font-size: 13px; background: rgba(0,0,0,0.05); padding: 5px 12px; border-radius: 12px;">加载更早的聊天记录</span>
-    </div>`);
-}
+    const history = chatHistories[currentFriendName] || [];
+
+    // 初始化当前好友的消息显示条数，默认显示 20 条
+    if (!window.chatDisplayCount) window.chatDisplayCount = {};
+    if (!window.chatDisplayCount[currentFriendName]) window.chatDisplayCount[currentFriendName] = 20;
+
+    let currentCount = window.chatDisplayCount[currentFriendName];
+    const displayHistory = history.slice(-currentCount);
+    let htmlArr = [];
+
+    // 如果历史记录总数大于当前显示的条数，在最上面添加一个“加载更多”的按钮
+    if (history.length > currentCount) {
+        htmlArr.push(`<div style="text-align: center; margin: 10px 0;">
+            <span onclick="loadMoreMessages()" style="cursor: pointer; color: #576b95; font-size: 13px; background: rgba(0,0,0,0.05); padding: 5px 12px; border-radius: 12px;">加载更早的聊天记录</span>
+        </div>`);
+    }
     
+    // 核心修复的循环体
     for(let i = 0; i < displayHistory.length; i++){
         const m = displayHistory[i];
-const realIndex = history.length - displayHistory.length + i;
-const isSelf = m.type === 'self';
+        const realIndex = history.length - displayHistory.length + i;
+        const isSelf = m.type === 'self';
 
-// 系统通知（修罗场开启/退出等）
-if (m.isSystemNotice) {
-    htmlArr.push(`<div style="text-align:center; margin:10px 0;"><span style="background:#dadada; color:#666; font-size:12px; padding:4px 12px; border-radius:4px;">${m.text}</span></div>`);
-    continue;
-}
+        // 系统通知（修罗场开启/退出等）
+        if (m.isSystemNotice) {
+            htmlArr.push(`<div style="text-align:center; margin:10px 0;"><span style="background:#dadada; color:#666; font-size:12px; padding:4px 12px; border-radius:4px;">${m.text}</span></div>`);
+            continue;
+        }
         
         let avHtml = "";
-if (isSelf) {
-    // --- 核心修改：检测面具头像 ---
-    const friend = friends.find(f => f.name === currentFriendName);
-    let personaAvatar = "";
-    if (friend && friend.userPersonaId) {
-        const uPersona = userPersonas.find(u => u.id === friend.userPersonaId);
-        if (uPersona && uPersona.avatar) {
-            personaAvatar = uPersona.avatar;
-        }
-    }
+        if (isSelf) {
+            // 检测面具头像
+            const friend = friends.find(f => f.name === currentFriendName);
+            let personaAvatar = "";
+            if (friend && friend.userPersonaId) {
+                const uPersona = userPersonas.find(u => u.id === friend.userPersonaId);
+                if (uPersona && uPersona.avatar) {
+                    personaAvatar = uPersona.avatar;
+                }
+            }
 
-if (personaAvatar) {
-    if (personaAvatar.startsWith('indexeddb-')) {
-        avHtml = `<img class="db-img-loader" data-dbid="${personaAvatar}" decoding="async">`;
-    } else {
-        avHtml = `<img src="${personaAvatar}" decoding="async">`;
-    }
-} else {
-    if (myInfo.avatar) {
-        if (myInfo.avatar.startsWith('indexeddb-')) {
-            avHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
+            if (personaAvatar) {
+                if (personaAvatar.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${personaAvatar}" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${personaAvatar}" decoding="async">`;
+                }
+            } else {
+                if (myInfo.avatar) {
+                    if (myInfo.avatar.startsWith('indexeddb-')) {
+                        avHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
+                    } else {
+                        avHtml = `<img src="${myInfo.avatar}" decoding="async">`;
+                    }
+                } else {
+                    avHtml = '我';
+                }
+            }
         } else {
-            avHtml = `<img src="${myInfo.avatar}" decoding="async">`;
-        }
-    } else {
-        avHtml = '我';
-    }
-}
-    // --- 修改结束 ---
-} else {
-            // 关键修改：如果是群聊，从消息本身获取发送者头像，否则从好友列表找
+            // 如果是群聊，从消息本身获取发送者头像，否则从好友列表找
             if (isGroupMode) {
                 const senderObj = friends.find(f => f.name === m.sender);
                 if (senderObj && senderObj.avatarUrl) {
@@ -2110,7 +2109,192 @@ if (personaAvatar) {
                 }
             }
         }
-        // ... (后面渲染气泡的代码保持不变，我就不重复贴了，只需要改上面获取 avHtml 的逻辑)
+
+        let contentHtml = m.text;
+        let isTheater = m.isTheater || /<html|<!DOCTYPE|<body/i.test(m.text) || (m.text.trim().startsWith('<') && m.text.includes('>'));
+        let useBubble = true; 
+
+        if (m.isShoppingPay) {
+            contentHtml = `
+                <div class="shopping-pay-card">
+                    <div class="sp-header"><span>找你代付</span><i class="fa fa-shopping-bag"></i></div>
+                    <div class="sp-body">
+                        <div class="sp-icon">🛒</div>
+                        <div class="sp-info">
+                            <div class="sp-title">代付订单请求</div>
+                            <div class="sp-desc">${m.payItems}</div>
+                            <div class="sp-price">￥${m.text}</div>
+                        </div>
+                    </div>
+                    <div class="sp-footer">
+                        ${m.payStatus === 'paid' ? '<span class="sp-btn-paid" style="color: #07c160;">✓ 角色已完成支付</span>' : (m.payStatus === 'refused' ? '<span style="color: #fa5151;">✕ 角色已拒绝支付</span>' : '等待对方支付...')}
+                    </div>
+                </div>`;
+            useBubble = false;
+        } else if (m.isShoppingPayResponse) {
+            let statusText = m.payStatus === 'paid' ? '代付成功' : '代付已拒绝';
+            let statusColor = m.payStatus === 'paid' ? '#07c160' : '#fa5151';
+            let statusFooter = m.payStatus === 'paid' ? '✓ 已完成代付支付' : '✕ 已拒绝代付请求';
+            let iconText = m.payStatus === 'paid' ? '✓' : '✕';
+            contentHtml = `
+                <div class="shopping-pay-card" style="background: ${m.payStatus === 'paid' ? '#1a1a1a' : '#2b2b2b'};">
+                    <div class="sp-header"><span style="color: ${statusColor}">${statusText}</span><i class="fa fa-shopping-bag"></i></div>
+                    <div class="sp-body">
+                        <div class="sp-icon" style="background: #333; color: ${statusColor}; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center;">${iconText}</div>
+                        <div class="sp-info">
+                            <div class="sp-title" style="color: ${statusColor}">${m.payStatus === 'paid' ? '已帮对方完成代付' : '已拒绝代付请求'}</div>
+                            <div class="sp-desc">${m.payItems}</div>
+                            <div class="sp-price">￥${m.text}</div>
+                        </div>
+                    </div>
+                    <div class="sp-footer" style="color: ${statusColor}; border-top: 1px solid #333;">
+                        ${statusFooter}
+                    </div>
+                </div>`;
+            useBubble = false;
+        } else if (m.isCard) {
+            contentHtml = `<div class="recharge-card"><div class="card-header">帮我充值</div><div class="card-body">￥${m.text.split('￥')[1]}</div><div class="card-footer">点击查看详情</div></div>`;
+            useBubble = false;
+        } else if (m.isTransfer) {
+            let statusClass = "";
+            let footerText = "微信转账";
+            let iconText = "¥";
+            let clickAction = "";
+            
+            if (m.status === 'received') {
+                statusClass = "received";
+                footerText = "已收钱";
+                iconText = "✓";
+            } else if (m.status === 'refunded') {
+                statusClass = "refunded";
+                footerText = "已退还";
+                iconText = "↩";
+            } else if (m.type === 'friend' && (!m.status || m.status === 'unclaimed')) {
+                footerText = "点击领取";
+                clickAction = `onclick="receiveAiTransfer(${realIndex})" style="cursor:pointer;"`;
+            }
+
+            contentHtml = `
+                <div class="transfer-bubble ${statusClass}" ${clickAction}>
+                    <div class="transfer-top">
+                        <div class="transfer-icon-circle">${iconText}</div>
+                        <div class="transfer-info">
+                            <div class="transfer-amount-text">￥${parseFloat(m.text).toFixed(2)}</div>
+                            <div class="transfer-note">${m.transferNote}</div>
+                        </div>
+                    </div>
+                    <div class="transfer-footer">${footerText}</div>
+                </div>`;
+            useBubble = false;
+        } else if (m.isRedPacket) {
+            contentHtml = `
+                <div class="redpacket-bubble ${m.rpOpened ? 'opened' : ''}" ${!m.rpOpened && m.type === 'friend' ? `onclick="openRedPacket(${realIndex})"` : ''}>
+                    <div class="rp-top">
+                        <div class="rp-icon">🧧</div>
+                        <div class="rp-info">
+                            <div class="rp-note">${m.rpNote || '恭喜发财'}</div>
+                            <div class="rp-amount">￥${parseFloat(m.text).toFixed(2)}${m.rpTarget ? ' · 指定给'+m.rpTarget : ''}</div>
+                        </div>
+                    </div>
+                    <div class="rp-footer">${m.rpOpened ? '红包已被领取' : '微信红包'}</div>
+                </div>`;
+            useBubble = false;
+        } else if (m.isForwardedCard || m.isMomentForwardCard) {
+            contentHtml = m.text;
+            useBubble = false;
+        } else if (m.isSticker) {
+            contentHtml = `<img src="${m.text}" style="max-width:150px; border-radius:8px; margin-${isSelf?'right':'left'}:12px;" decoding="async">`;
+            useBubble = false;
+        } else if (m.isRealImage) {
+            contentHtml = `<img src="${m.text}" style="max-width:200px; border-radius:8px; display:block;" decoding="async">`;
+            useBubble = false;
+        } else if (m.isDescribeCard) {
+            contentHtml = `<div class="describe-card ${m.expanded ? 'expanded' : ''}" onclick="toggleDescribeCard(${realIndex}, event)"><div class="describe-card-inner">${m.expanded ? m.text : '✉️ [图片描述便签]'}</div></div>`;
+            useBubble = false;
+        } else if (isTheater) {
+            let theaterTitle = "精彩小剧场";
+            const match = m.text.match(/<title>(.*?)<\/title>/i) || m.text.match(/<h1>(.*?)<\/h1>/i);
+            if (match) theaterTitle = match[1];
+            contentHtml = `
+                <div class="theater-card" onclick="openTheater(${realIndex})">
+                    <div class="theater-card-header">THANKS 🥕🥕🥕</div>
+                    <div class="theater-card-body">${theaterTitle}</div>
+                    <div class="theater-card-footer"><span>🎈🎈</span><span>🐰🎵</span></div>
+                </div>`;
+            useBubble = false;
+        }
+
+        if (!isSelf && m.isVoice && !isTheater) {
+            htmlArr.push(`
+                <div class="msg friend">
+                    <div class="avatar" style="width:35px;height:35px;font-size:12px;background:#ccc">${avHtml}</div>
+                    <div class="voice-wrap">
+                        <div class="voice-bar" onclick="playMiniMaxVoice('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}', this)">
+                            <div class="voice-bars">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <span style="font-size:12px; color:#999;">${Math.min(m.text.length, 60)}''</span>
+                        </div>
+                        <div class="translate-trigger" onclick="document.getElementById('trans-${realIndex}').classList.toggle('active')">转文字</div>
+                        <div id="trans-${realIndex}" class="translated-content">${m.text}</div>
+                    </div>
+                </div>`);
+        } else if (m.isSticker) {
+            htmlArr.push(`
+                <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+                    <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
+                    <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
+                    <div style="margin-${isSelf?'right':'left'}:12px;">
+                        <img src="${m.text}" style="max-width:150px; border-radius:8px;" decoding="async">
+                    </div>
+                </div>`);
+        } else {
+            htmlArr.push(`
+                <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+                    <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
+                    <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
+                    <div class="${useBubble ? 'bubble' : ''}" style="position:relative;">
+                        ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
+                        <div id="chat-text-${realIndex}" class="chat-editable-text">${contentHtml}</div>
+                        <button id="chat-save-btn-${realIndex}" style="display:none; margin-top:8px; background:#07c160; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px;" onclick="finishChatMsgEdit(${realIndex})">保存修改</button>
+                    </div>
+                </div>`);
+        }
+    }
+
+    const oldScrollHeight = container.scrollHeight;
+    container.innerHTML = htmlArr.join('');
+    if (isLoadMore) {
+        container.scrollTop = container.scrollHeight - oldScrollHeight;
+    } else {
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 获取所有可以点击的气泡，绑定长按菜单
+    const targets = container.querySelectorAll('.bubble, .recharge-card, .describe-card, .theater-card, img, .voice-bar');
+    targets.forEach((b) => {
+        if (b.closest('.avatar')) return;
+
+        let timer;
+        const start = (e) => { 
+            const touch = e.touches ? e.touches[0] : e; 
+            const allMsgs = Array.from(container.querySelectorAll('.msg'));
+            const parentMsg = b.closest('.msg');
+            const realIdxInView = allMsgs.indexOf(parentMsg);
+
+            if (realIdxInView !== -1) {
+                timer = setTimeout(() => showContextMenu(touch.clientX, touch.clientY, history.length - displayHistory.length + realIdxInView), 700); 
+            }
+        };
+        const stop = () => clearTimeout(timer);
+        b.onmousedown = start; 
+        b.onmouseup = stop;
+        b.ontouchstart = start; 
+        b.ontouchend = stop;
+    });
+}
 
                 let contentHtml = m.text;
 // 强化判断：如果标记了是剧场，或者文本以 < 开头且包含 html/doctype/div，则渲染为卡片
