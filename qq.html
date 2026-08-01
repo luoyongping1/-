@@ -2294,7 +2294,10 @@ container.innerHTML = htmlArr.join('');
 if (isLoadMore) {
     container.scrollTop = container.scrollHeight - oldScrollHeight;
 } else {
-    container.scrollTop = container.scrollHeight;
+    // 使用 setTimeout 延迟 50 毫秒滚动，确保 CSS 美化后的新高度生效后再计算滚动距离
+    setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+    }, 50);
 }
 
 // 获取所有可以点击的部件
@@ -5760,7 +5763,15 @@ async function loadAllDatabaseImages() {
 const oldRenderMessages = renderMessages;
 renderMessages = function(isLoadMore = false) {
     oldRenderMessages(isLoadMore);
-    loadAllDatabaseImages();
+    loadAllDatabaseImages().then(() => {
+        // 在所有数据库头像图片异步加载并渲染出来后，再次强制向下滚动到底部，防止图片撑开高度导致新消息出屏
+        if (!isLoadMore) {
+            const container = document.getElementById('message-container');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    });
 };
 
 // 修改画人设列表函数结尾
