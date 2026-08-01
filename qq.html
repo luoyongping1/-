@@ -4645,7 +4645,6 @@ if (isGroupMode) {
                 <div class="info">主动发消息频率</div>
                 <div id="settings-auto-freq-display" class="settings-value">${formatFreqDisplay(f.autoMsgFreq)}</div>
             </div>
-            <div class="list-item" onclick="triggerReaderFontUpload()"><div class="info">导入阅读字体 (.ttf)</div><div id="settings-font-display" style="color:#888">点击上传</div></div>
             <div class="list-item" onclick="openMcpTools()"><div class="info">MCP工具</div></div>
         </div>
         
@@ -6914,8 +6913,6 @@ function applyHeaderAndInputBarStyles(friendName) {
 </div>
 
 <input type="file" id="user-persona-avatar-upload" style="display:none" accept="image/*">
-<!-- 自定义阅读字体文件上传 -->
-<input type="file" id="reader-font-upload" style="display:none" accept=".ttf,.otf" onchange="handleReaderFontFile(this)">
 <!-- 阅读系统全屏覆盖容器 -->
 <div id="reading-overlay-container" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9000; background:white;">
     <iframe id="reading-iframe" style="width:100%; height:100%; border:none;"></iframe>
@@ -6951,28 +6948,6 @@ function closeReadingSystem() {
     document.getElementById('reading-overlay-container').style.display = "none";
     document.getElementById('reading-iframe').src = "about:blank";
     renderMessages(); // 刷新消息气泡以同步更新可能获得的段评/笔记状态
-}
-
-// 触发字体导入选择器
-function triggerReaderFontUpload() {
-    document.getElementById('reader-font-upload').click();
-}
-
-// 执行字体数据写入数据库（利用原本存在的 IndexedDB userPersonaAvatars 空间存储字体 Blob）
-function handleReaderFontFile(input) {
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const storeId = "custom_reader_ttf_font";
-        
-        saveAvatarBlob(storeId, file).then(() => {
-            alert(`字体文件 ${file.name} 导入成功！阅读系统将启用此字体。`);
-            const display = document.getElementById('settings-font-display');
-            if (display) display.innerText = "已导入";
-        }).catch(err => {
-            alert("字体保存失败，请检查数据库空间。");
-            console.error(err);
-        });
-    }
 }
 </script>
 <!-- ================= 新增顶栏美化全屏页面 ================= -->

@@ -676,11 +676,13 @@
             overflow-y: hidden !important;
             overflow-x: auto !important;
             display: block !important;
-            column-width: calc(100vw - 48px) !important;
-            column-gap: 48px !important;
+            column-width: calc(100vw - 64px) !important;
+            column-gap: 64px !important;
             column-fill: auto !important;
             height: 100% !important;
             scroll-snap-type: x mandatory;
+            padding: 80px 32px 100px 32px !important; /* 精确对称左右边距，使内容完美居中 */
+            box-sizing: border-box !important;
         }
         .reader-body.page-flip-mode p {
             break-inside: avoid-column; /* 避免段落被垂直截断 */
@@ -1021,10 +1023,21 @@
                 </div>
             </div>
             <div style="margin-bottom:20px;">
-                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">自定义TTF字体</label>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span id="custom-font-status" style="font-size:12px; color:var(--text-muted);">检测中...</span>
-                    <button class="btn-green" style="font-size:12px; padding:6px 12px;" onclick="applyCustomFont(true)">开启自定义</button>
+                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">自定义字体管理</label>
+                <div style="display:flex; gap:10px; margin-bottom: 10px;">
+                    <button class="btn-green" style="font-size:12px; padding:8px 12px; flex: 1;" onclick="triggerFontUpload()">📤 导入新字体 (.ttf/.otf)</button>
+                </div>
+                <input type="file" id="font-upload-input" style="display:none;" accept=".ttf,.otf" onchange="importFontFile(this)">
+                
+                <!-- 折叠抽屉标题 -->
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.04); padding:8px 12px; border-radius:8px; cursor:pointer;" onclick="toggleFontDrawer()">
+                    <span style="font-size:13px; font-weight:600; color:var(--text-dark);">已导入字体列表</span>
+                    <span id="font-drawer-arrow" style="font-size:12px; color:var(--text-muted); transition: transform 0.2s;">▼</span>
+                </div>
+                
+                <!-- 折叠抽屉内容 -->
+                <div id="font-drawer-content" style="display:none; max-height:160px; overflow-y:auto; margin-top:8px; border: 1px solid rgba(0,0,0,0.06); border-radius:8px; padding:6px; background:#fff;">
+                    <!-- 动态生成字体列表 -->
                 </div>
             </div>
             <div style="display:flex; justify-content:center;">
@@ -1729,7 +1742,7 @@
             setReaderTheme(savedTheme, null);
 
             readingStartTime = Date.now();
-            checkCustomFontImported();
+            applyCustomFont();
             loadCompanionInfo(); 
             loadChapterContent();
         }
@@ -1763,97 +1776,149 @@
 
         let customFontUrl = null; // 全局对象URL缓存，避免重复创建和内存泄漏
 
-        function checkCustomFontImported() {
-            getAvatarBlob("custom_reader_ttf_font").then(blob => {
-                const statusSpan = document.getElementById('custom-font-status');
-                const toggleBtn = document.querySelector("button[onclick='applyCustomFont(true)']");
-                const isEnabled = localStorage.getItem('reader_use_custom_font') === 'true';
-                
-                if (blob) {
-                    if (isEnabled) {
-                        statusSpan.innerText = "已启用自定义TTF字体";
-                        statusSpan.style.color = "var(--primary-green)";
-                        if (toggleBtn) {
-                            toggleBtn.innerText = "切换回默认";
-                            toggleBtn.style.background = "#8e8e93"; // iOS 样式置灰按钮
-                        }
-                    } else {
-                        statusSpan.innerText = "已导入自定义TTF(未启用)";
-                        statusSpan.style.color = "var(--primary-blue)";
-                        if (toggleBtn) {
-                            toggleBtn.innerText = "开启自定义";
-                            toggleBtn.style.background = "var(--primary-green)";
-                        }
-                    }
-                } else {
-                    statusSpan.innerText = "未导入任何字体文件";
-                    statusSpan.style.color = "var(--text-muted)";
-                    if (toggleBtn) {
-                        toggleBtn.innerText = "开启自定义";
-                        toggleBtn.style.background = "var(--primary-green)";
-                    }
-                }
-            });
+        // 触发字体文件选择
+        function triggerFontUpload() {
+            document.getElementById('font-upload-input').click();
         }
 
-        // 重新注入样式处理
-        function applyCustomFont(forceApply = false) {
-            const isEnabled = localStorage.getItem('reader_use_custom_font') === 'true';
+        // 导入字体文件保存到本地数据库
+        function importFontFile(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const fontId = 'font_ttf_' + Date.now();
+                const fontName = file.name.replace(/\.[^/.]+$/, ""); // 获取不带后缀的文件名
+                
+                const transaction = db.transaction([STORE_AVATARS], 'readwrite');
+                const store = transaction.objectStore(STORE_AVATARS);
+                const request = store.put({ id: fontId, name: fontName, image: file });
+                
+                transaction.oncomplete = () => {
+                    alert(`字体《${fontName}》导入成功！`);
+                    renderFontList();
+                    input.value = '';
+                };
+                transaction.onerror = (e) => {
+                    alert("字体导入失败，请检查空间。");
+                    console.error(e);
+                    input.value = '';
+                };
+            }
+        }
+
+        // 折叠或打开字体列表抽屉
+        function toggleFontDrawer() {
+            const content = document.getElementById('font-drawer-content');
+            const arrow = document.getElementById('font-drawer-arrow');
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+                renderFontList();
+            } else {
+                content.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // 获取并画出已导入的字体列表，提供切换和删除控制
+        function renderFontList() {
+            const container = document.getElementById('font-drawer-content');
+            const transaction = db.transaction([STORE_AVATARS], 'readonly');
+            const store = transaction.objectStore(STORE_AVATARS);
+            const request = store.getAll();
             
-            // 如果是手动点击切换按钮
-            if (forceApply) {
-                if (isEnabled) {
-                    // 当前是开启状态，点击后关闭并恢复默认
-                    localStorage.setItem('reader_use_custom_font', 'false');
-                    document.getElementById('reader-body').classList.remove('custom-font-enabled');
-                    checkCustomFontImported();
-                    alert("已切换回默认系统字体！");
+            request.onsuccess = () => {
+                const allItems = request.result || [];
+                // 过滤出所有前缀为 font_ttf_ 的项目，或者是之前遗留的 custom_reader_ttf_font 键
+                const fonts = allItems.filter(item => item.id.startsWith('font_ttf_') || item.id === 'custom_reader_ttf_font');
+                const activeFontId = localStorage.getItem('reader_selected_font_id') || '';
+
+                let html = `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px; font-size:12px; border-bottom:0.5px solid #eee; background:${!activeFontId ? '#e6f7ff' : 'none'}; cursor:pointer;" onclick="selectReaderFont('')">
+                    <span style="font-weight:${!activeFontId ? 'bold' : 'normal'}; color: var(--text-dark);">系统默认字体</span>
+                    ${!activeFontId ? '<span style="color:var(--primary-green); font-weight:bold;">✓</span>' : ''}
+                </div>`;
+
+                if (fonts.length === 0) {
+                    html += `<div style="text-align:center; color:var(--text-muted); font-size:11px; padding:12px 0;">暂无自定义字体，请点击上方导入</div>`;
                 } else {
-                    // 当前是关闭状态，点击后开启自定义
-                    getAvatarBlob("custom_reader_ttf_font").then(blob => {
-                        if (blob) {
-                            localStorage.setItem('reader_use_custom_font', 'true');
-                            loadFontBlob(blob);
-                            checkCustomFontImported();
-                            alert("自定义字体已成功开启！");
-                        } else {
-                            alert("检测到本地未导入字体文件！请在设置中导入 .ttf 字体文件。");
-                        }
-                    });
+                    html += fonts.map(f => {
+                        const name = f.name || (f.id === 'custom_reader_ttf_font' ? '已导入的旧字体' : '未命名字体');
+                        const isSelected = activeFontId === f.id;
+                        return `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; font-size:12px; border-bottom:0.5px solid #eee; background:${isSelected ? '#e6f7ff' : 'none'}; cursor:pointer;" onclick="selectReaderFont('${f.id}')">
+                            <div style="display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; text-align:left;">
+                                <span style="font-weight:${isSelected ? 'bold' : 'normal'}; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; color: var(--text-dark);">${name}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                ${isSelected ? '<span style="color:var(--primary-green); font-weight:bold;">✓</span>' : ''}
+                                <span style="color:#fa5151; font-size:11px; cursor:pointer;" onclick="event.stopPropagation(); deleteReaderFont('${f.id}')">删除</span>
+                            </div>
+                        </div>`;
+                    }).join('');
                 }
+                container.innerHTML = html;
+            };
+        }
+
+        // 选择并应用字体样式
+        function selectReaderFont(fontId) {
+            if (fontId === '') {
+                localStorage.removeItem('reader_selected_font_id');
+            } else {
+                localStorage.setItem('reader_selected_font_id', fontId);
+            }
+            applyCustomFont();
+            renderFontList();
+        }
+
+        // 从本地数据库物理删除字体文件
+        function deleteReaderFont(fontId) {
+            if (confirm("确定要删除此字体吗？相关的样式设置也将重置。")) {
+                const transaction = db.transaction([STORE_AVATARS], 'readwrite');
+                const store = transaction.objectStore(STORE_AVATARS);
+                store.delete(fontId);
+                transaction.oncomplete = () => {
+                    const activeFontId = localStorage.getItem('reader_selected_font_id');
+                    if (activeFontId === fontId) {
+                        localStorage.removeItem('reader_selected_font_id');
+                        applyCustomFont();
+                    }
+                    renderFontList();
+                    alert("字体删除成功！");
+                };
+            }
+        }
+
+        // 读取选定的字体 Blob 数据并应用渲染
+        function applyCustomFont() {
+            const activeFontId = localStorage.getItem('reader_selected_font_id');
+            if (!activeFontId) {
+                document.getElementById('reader-body').classList.remove('custom-font-enabled');
                 return;
             }
 
-            // 页面加载或打开图书时的自动无感应用逻辑
-            if (isEnabled) {
-                getAvatarBlob("custom_reader_ttf_font").then(blob => {
-                    if (blob) {
-                        loadFontBlob(blob);
+            getAvatarBlob(activeFontId).then(blob => {
+                if (blob) {
+                    if (customFontUrl) {
+                        URL.revokeObjectURL(customFontUrl);
                     }
-                });
-            } else {
-                document.getElementById('reader-body').classList.remove('custom-font-enabled');
-            }
-        }
-
-        // 高效加载 Blob 字体文件，避免使用 FileReader 读取超大 base64 导致的卡顿
-        function loadFontBlob(blob) {
-            if (!customFontUrl) {
-                customFontUrl = URL.createObjectURL(blob);
-            }
-            let style = document.getElementById('injected-book-font-style');
-            if (!style) {
-                style = document.createElement('style');
-                style.id = 'injected-book-font-style';
-                document.head.appendChild(style);
-            }
-            style.innerHTML = `
-                @font-face {
-                    font-family: 'BookCustomFont';
-                    src: url('${customFontUrl}') format('truetype');
+                    customFontUrl = URL.createObjectURL(blob);
+                    let style = document.getElementById('injected-book-font-style');
+                    if (!style) {
+                        style = document.createElement('style');
+                        style.id = 'injected-book-font-style';
+                        document.head.appendChild(style);
+                    }
+                    style.innerHTML = `
+                        @font-face {
+                            font-family: 'BookCustomFont';
+                            src: url('${customFontUrl}') format('truetype');
+                        }
+                    `;
+                    document.getElementById('reader-body').classList.add('custom-font-enabled');
+                } else {
+                    document.getElementById('reader-body').classList.remove('custom-font-enabled');
                 }
-            `;
-            document.getElementById('reader-body').classList.add('custom-font-enabled');
+            });
         }
 
         function loadChapterContent() {
