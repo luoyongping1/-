@@ -2032,13 +2032,44 @@ function openNoteModalForPara(paraIdx) {
         function closeCommentTypeModal() {
             document.getElementById('comment-type-modal').style.display = 'none';
         }
-
         // 新增的单章段评获取辅助处理引擎
         async function generateSingleChapterComments(chapterIdx, showFeedback) {
-            const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
+            let aiConfig = null;
+            
+            // 尝试多种渠道获取 AI 配置，并输出详细日志
+            try {
+                const localData = localStorage.getItem('ai_config');
+                if (localData) {
+                    aiConfig = JSON.parse(localData);
+                    console.log("段评模块：从本地 localStorage 读取配置成功");
+                }
+            } catch (e) {
+                console.error("段评模块：读取本地 localStorage 失败(可能处于隐私沙箱中):", e);
+            }
+
+            if (!aiConfig) {
+                try {
+                    if (window.parent && window.parent.localStorage) {
+                        const parentData = window.parent.localStorage.getItem('ai_config');
+                        if (parentData) {
+                            aiConfig = JSON.parse(parentData);
+                            console.log("段评模块：通过 window.parent.localStorage 获取配置成功");
+                        }
+                    }
+                } catch (e) {
+                    console.warn("段评模块：无法访问父页面 localStorage(跨域或沙箱隔离):", e);
+                }
+            }
+
+            if (!aiConfig && window.parentAiConfig) {
+                aiConfig = window.parentAiConfig;
+                console.log("段评模块：从全局缓存变量 window.parentAiConfig 中获取配置成功");
+            }
+
             if (!aiConfig || !aiConfig.key) {
+                console.error("段评模块：未获取到有效的 API Key。当前配置对象:", aiConfig);
                 if (showFeedback) {
-                    alert("请先在主应用 [我 - API与模型设置] 中配置并保存 Key 才能开启伴读功能！");
+                    alert("请先在主应用 [我 - API与模型设置] 中配置并保存 Key 才能开启伴读功能！\n(如果页面运行在 iframe 中，请检查父级窗口是否提供了同步配置)");
                 }
                 return false;
             }
@@ -2082,9 +2113,17 @@ function openNoteModalForPara(paraIdx) {
                 const data = await res.json();
                 let reply = data.choices[0].message.content.trim();
                 
-                reply = reply.replace(/```json|```/g, '').trim();
+                console.log("段评模块：AI 返回原始文本：", reply);
 
-                const commentsArray = JSON.parse(reply);
+                // 提取最外层的 JSON 数组 [...]，防止 AI 话多附带多余文字导致解析崩溃
+                const jsonStart = reply.indexOf('[');
+                const jsonEnd = reply.lastIndexOf(']');
+                if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
+                    throw new Error("AI 返回的内容中没有包含合法的 JSON 格式的数组。");
+                }
+                
+                const cleanJson = reply.substring(jsonStart, jsonEnd + 1);
+                const commentsArray = JSON.parse(cleanJson);
                 const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
                 
                 const commentsMap = {};
@@ -2097,13 +2136,14 @@ function openNoteModalForPara(paraIdx) {
                 localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
                 return true;
             } catch(e) {
-                console.error(e);
+                console.error("段评模块：请求或解析 JSON 失败：", e);
                 if (showFeedback) {
                     alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
                 }
                 return false;
             }
         }
+
 
         // 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成
         async function generateChapterComments(targetType) {
@@ -2243,8 +2283,40 @@ function openNoteModalForPara(paraIdx) {
 
         // 伴读接口通信逻辑
         async function fetchCompanionAiReply(userPrompt) {
-            const aiConfig = JSON.parse(localStorage.getItem('ai_config'));
+            let aiConfig = null;
+            
+            // 尝试多种渠道获取 AI 配置，并输出详细日志
+            try {
+                const localData = localStorage.getItem('ai_config');
+                if (localData) {
+                    aiConfig = JSON.parse(localData);
+                    console.log("伴读聊天：从本地 localStorage 读取配置成功");
+                }
+            } catch (e) {
+                console.error("伴读聊天：读取本地 localStorage 失败(可能处于隐私沙箱中):", e);
+            }
+
+            if (!aiConfig) {
+                try {
+                    if (window.parent && window.parent.localStorage) {
+                        const parentData = window.parent.localStorage.getItem('ai_config');
+                        if (parentData) {
+                            aiConfig = JSON.parse(parentData);
+                            console.log("伴读聊天：通过 window.parent.localStorage 获取配置成功");
+                        }
+                    }
+                } catch (e) {
+                    console.warn("伴读聊天：无法访问父页面 localStorage(跨域或沙箱隔离):", e);
+                }
+            }
+
+            if (!aiConfig && window.parentAiConfig) {
+                aiConfig = window.parentAiConfig;
+                console.log("伴读聊天：从全局缓存变量 window.parentAiConfig 中获取配置成功");
+            }
+
             if (!aiConfig || !aiConfig.key) {
+                console.error("伴读聊天：未获取到有效的 API Key。当前配置对象:", aiConfig);
                 document.getElementById('companion-bubble').style.display = 'none';
                 alert("请先在主应用配置并保存 API Key 才能进行伴读！");
                 return;
@@ -2298,7 +2370,7 @@ ${bookContext}
                 await displayCompanionBubbles(sentenceLines);
 
             } catch(e) {
-                console.error(e);
+                console.error("伴读聊天：请求 API 或处理失败：", e);
                 const bubble = document.getElementById('companion-bubble');
                 bubble.classList.add('bubble-hidden');
                 await new Promise(r => setTimeout(r, 100));
@@ -2514,45 +2586,56 @@ ${bookContext}
             alert("Reeden 数据模板已完美打包导出成功！");
         }
 
-        // --- 应用生命周期入口初始化 ---
-        window.onload = async () => {
-            await initDatabase();
+// --- 应用生命周期入口初始化 ---
+window.onload = async () => {
+    await initDatabase();
 
-            // 监听父页面发送过来的伴读信息（解决跨域 iframe 的 LocalStorage 隔离/访问报错）
-            window.addEventListener('message', (event) => {
-                const data = event.data;
-                if (data && data.type === 'SEND_COMPANION_INFO') {
-                    loadCompanionInfo(data);
-                }
-            });
-
-            // 向父级发送询问，请求当前伴读信息
-            if (window.parent) {
-                window.parent.postMessage({ type: 'GET_COMPANION_INFO' }, '*');
+    // 监听父页面发送过来的伴读信息（解决跨域 iframe 的 LocalStorage 隔离/访问报错）
+    window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (data && data.type === 'SEND_COMPANION_INFO') {
+            loadCompanionInfo(data);
+        }
+        // 新增：兼容从父窗口接收 AI 模型配置
+        if (data && data.type === 'SEND_AI_CONFIG') {
+            window.parentAiConfig = data.config;
+            try {
+                localStorage.setItem('ai_config', JSON.stringify(data.config));
+                console.log("初始化接收：已同步保存父级传递的 AI 配置");
+            } catch(e) {
+                console.warn("初始化接收：保存 AI 配置到本地 localStorage 失败(隐私沙盒环境):", e);
             }
+        }
+    });
 
-            // 本地防守先运行一次
-            loadCompanionInfo();
-            await loadBooksFromDb();
-            renderShelf();
+    // 向父级发送询问，请求当前伴读信息和 AI 模型配置
+    if (window.parent) {
+        window.parent.postMessage({ type: 'GET_COMPANION_INFO' }, '*');
+        window.parent.postMessage({ type: 'GET_AI_CONFIG' }, '*');
+    }
 
-            // 载入保存的阅读设置
-            const prefSize = localStorage.getItem('reader_pref_font_size') || 18;
-            document.getElementById('setting-font-size').value = prefSize;
-            updateFontSize(prefSize);
+    // 本地防守先运行一次
+    loadCompanionInfo();
+    await loadBooksFromDb();
+    renderShelf();
 
-            const prefLayout = localStorage.getItem('reader_pref_layout') || 'scroll';
-            setReadingLayout(prefLayout);
+    // 载入保存的阅读设置
+    const prefSize = localStorage.getItem('reader_pref_font_size') || 18;
+    document.getElementById('setting-font-size').value = prefSize;
+    updateFontSize(prefSize);
 
-            // 载入自定义 TTF 字体
-            applyCustomFont();
+    const prefLayout = localStorage.getItem('reader_pref_layout') || 'scroll';
+    setReadingLayout(prefLayout);
 
-            // 初始化悬浮球拖动监听
-            initBallDragListener();
+    // 载入自定义 TTF 字体
+    applyCustomFont();
 
-            // 恢复上次关闭时的悬浮球位置
-            restoreBallPosition();
-        };
+    // 初始化悬浮球拖动监听
+    initBallDragListener();
+
+    // 恢复上次关闭时的悬浮球位置
+    restoreBallPosition();
+};
 
         // --- 封面导入与裁剪模块核心逻辑 ---
         
