@@ -2043,73 +2043,82 @@ if (history.length > currentCount) {
     </div>`);
 }
     
-    for(let i = 0; i < displayHistory.length; i++){
-        const m = displayHistory[i];
-const realIndex = history.length - displayHistory.length + i;
-const isSelf = m.type === 'self';
+for(let i = 0; i < displayHistory.length; i++){
+    const m = displayHistory[i];
+    const realIndex = history.length - displayHistory.length + i;
+    const isSelf = m.type === 'self';
 
-// 系统通知（修罗场开启/退出等）
-if (m.isSystemNotice) {
-    htmlArr.push(`<div style="text-align:center; margin:10px 0;"><span style="background:#dadada; color:#666; font-size:12px; padding:4px 12px; border-radius:4px;">${m.text}</span></div>`);
-    continue;
-}
-        
-        let avHtml = "";
-if (isSelf) {
-    // --- 核心修改：检测面具头像 ---
-    const friend = friends.find(f => f.name === currentFriendName);
-    let personaAvatar = "";
-    if (friend && friend.userPersonaId) {
-        const uPersona = userPersonas.find(u => u.id === friend.userPersonaId);
-        if (uPersona && uPersona.avatar) {
-            personaAvatar = uPersona.avatar;
-        }
+    // 系统通知（修罗场开启/退出等）
+    if (m.isSystemNotice) {
+        htmlArr.push(`<div style="text-align:center; margin:10px 0;"><span style="background:#dadada; color:#666; font-size:12px; padding:4px 12px; border-radius:4px;">${m.text}</span></div>`);
+        continue;
     }
 
-if (personaAvatar) {
-    if (personaAvatar.startsWith('indexeddb-')) {
-        avHtml = `<img class="db-img-loader" data-dbid="${personaAvatar}" decoding="async">`;
-    } else {
-        avHtml = `<img src="${personaAvatar}" decoding="async">`;
-    }
-} else {
-    if (myInfo.avatar) {
-        if (myInfo.avatar.startsWith('indexeddb-')) {
-            avHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
-        } else {
-            avHtml = `<img src="${myInfo.avatar}" decoding="async">`;
+    // 新增核心判断：如果上一条消息的发送者和当前这条相同，就不重复显示头像和顶栏签名
+    let isFirstInGroup = true;
+    if (i > 0) {
+        const prevMsg = displayHistory[i - 1];
+        if (prevMsg.type === m.type && !prevMsg.isSystemNotice) {
+            isFirstInGroup = false;
         }
-    } else {
-        avHtml = '我';
     }
-}
-    // --- 修改结束 ---
-} else {
-            // 关键修改：如果是群聊，从消息本身获取发送者头像，否则从好友列表找
-            if (isGroupMode) {
-                const senderObj = friends.find(f => f.name === m.sender);
-                if (senderObj && senderObj.avatarUrl) {
-                    if (senderObj.avatarUrl.startsWith('indexeddb-')) {
-                        avHtml = `<img class="db-img-loader" data-dbid="${senderObj.avatarUrl}" decoding="async">`;
-                    } else {
-                        avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
-                    }
-                } else {
-                    avHtml = `<div>${m.initial || '匿'}</div>`;
-                }
-            } else {
-                const friend = friends.find(f => f.name === currentFriendName);
-                if (friend.avatarUrl) {
-                    if (friend.avatarUrl.startsWith('indexeddb-')) {
-                        avHtml = `<img class="db-img-loader" data-dbid="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
-                    } else {
-                        avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
-                    }
-                } else {
-                    avHtml = `<div onclick="showHeartbeat(${realIndex})">${friend.initial}</div>`;
-                }
+    
+    let avHtml = "";
+    if (isSelf) {
+        const friend = friends.find(f => f.name === currentFriendName);
+        let personaAvatar = "";
+        if (friend && friend.userPersonaId) {
+            const uPersona = userPersonas.find(u => u.id === friend.userPersonaId);
+            if (uPersona && uPersona.avatar) {
+                personaAvatar = uPersona.avatar;
             }
         }
+
+        if (personaAvatar) {
+            if (personaAvatar.startsWith('indexeddb-')) {
+                avHtml = `<img class="db-img-loader" data-dbid="${personaAvatar}" decoding="async">`;
+            } else {
+                avHtml = `<img src="${personaAvatar}" decoding="async">`;
+            }
+        } else {
+            if (myInfo.avatar) {
+                if (myInfo.avatar.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${myInfo.avatar}" decoding="async">`;
+                }
+            } else {
+                avHtml = '我';
+            }
+        }
+    } else {
+        if (isGroupMode) {
+            const senderObj = friends.find(f => f.name === m.sender);
+            if (senderObj && senderObj.avatarUrl) {
+                if (senderObj.avatarUrl.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${senderObj.avatarUrl}" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
+                }
+            } else {
+                avHtml = `<div>${m.initial || '匿'}</div>`;
+            }
+        } else {
+            const friend = friends.find(f => f.name === currentFriendName);
+            if (friend.avatarUrl) {
+                if (friend.avatarUrl.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                }
+            } else {
+                avHtml = `<div onclick="showHeartbeat(${realIndex})">${friend.initial}</div>`;
+            }
+        }
+    }
+
+    // 把连发标记（is-first-msg 或 is-subsequent-msg）作为类名注入 div
+    const groupClass = isFirstInGroup ? 'is-first-msg' : 'is-subsequent-msg';
         // ... (后面渲染气泡的代码保持不变，我就不重复贴了，只需要改上面获取 avHtml 的逻辑)
 
                 let contentHtml = m.text;
@@ -2268,7 +2277,7 @@ htmlArr.push(`
     </div>`);
             } else {
 htmlArr.push(`
-    <div class="msg ${m.type} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+    <div class="msg ${m.type} ${groupClass} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
         <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
         <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
         <div class="${useBubble ? 'bubble' : ''}" style="position:relative;">
