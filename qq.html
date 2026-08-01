@@ -4968,9 +4968,11 @@ function openBubbleEditor() {
     const friend = friends.find(f => f.name === currentFriendName);
     getChatBg('bubblecss_' + currentFriendName).then(val => {
         document.getElementById('bubble-css-input').value = val || (friend ? friend.bubbleCss : "") || "";
+        loadBubblePresets(); // 加载气泡预设列表
         document.getElementById('bubble-editor-page').classList.add('active');
     }).catch(() => {
         document.getElementById('bubble-css-input').value = (friend ? friend.bubbleCss : "") || "";
+        loadBubblePresets(); // 加载气泡预设列表
         document.getElementById('bubble-editor-page').classList.add('active');
     });
 }
@@ -5981,6 +5983,7 @@ function openHeaderBeautify() {
     
     Promise.all(promises).then(() => {
         switchHbTab('bg');
+        loadHeaderPresets(); // 加载顶栏预设列表
         document.getElementById('header-beautify-page').style.display = 'flex';
     });
 }
@@ -6110,6 +6113,7 @@ function openInputBarBeautify() {
     
     Promise.all(promises).then(() => {
         switchIbTab('bg');
+        loadInputbarPresets(); // 加载底栏预设列表
         document.getElementById('inputbar-beautify-page').style.display = 'flex';
     });
 }
@@ -6567,7 +6571,7 @@ function applyHeaderAndInputBarStyles(friendName) {
     });
 }
     </script>
-    <!-- 气泡 CSS 编辑器页面 -->
+<!-- 气泡 CSS 编辑器页面 -->
 <div id="bubble-editor-page" class="page" style="z-index: 5000; background: #f1f1f1;">
     <div class="header">
         <span onclick="closeBubbleEditor()">取消</span>
@@ -6576,6 +6580,14 @@ function applyHeaderAndInputBarStyles(friendName) {
     </div>
     <div class="content">
         <div style="padding:15px; color:#888; font-size:12px;">你可以为每个好友设置独特的气泡样式。</div>
+        <!-- 预设管理区域 -->
+        <div style="padding: 10px 15px; background: white; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; border-radius: 8px; margin: 0 10px 10px 10px;">
+            <select id="bubble-preset-select" style="flex: 1; height: 35px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 13px;" onchange="applyBubblePreset(this.value)">
+                <option value="">-- 选择气泡预设 --</option>
+            </select>
+            <button class="btn-green" style="padding: 0 10px; height: 35px; font-size: 12px; background: #3498db; box-shadow: none;" onclick="saveNewBubblePreset()">存为预设</button>
+            <button class="btn-green" style="padding: 0 10px; height: 35px; font-size: 12px; background: #fa5151; box-shadow: none;" onclick="deleteBubblePreset()">删除</button>
+        </div>
         <textarea id="bubble-css-input" style="width:100%; height:300px; border:none; padding:15px; font-size:14px; outline:none; box-sizing:border-box; resize:none;" placeholder="在此粘贴 AI 生成的气泡 CSS 代码..."></textarea>
         <div style="padding:15px; color:#999; font-size:11px;">
             提示：<br>
@@ -7145,7 +7157,16 @@ function closeReadingSystem() {
         
         <!-- CSS 代码编辑器 -->
         <div style="background: white; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 8px;">
-            <label style="font-size: 13px; color: #666; font-weight: bold;">顶栏 CSS 代码</label>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-size: 13px; color: #666; font-weight: bold;">顶栏 CSS 代码</label>
+                <div style="display: flex; gap: 5px;">
+                    <select id="header-preset-select" style="height: 28px; border: 1px solid #ddd; border-radius: 4px; outline: none; font-size: 11px;" onchange="applyHeaderPreset(this.value)">
+                        <option value="">-- 预设列表 --</option>
+                    </select>
+                    <button style="height: 28px; font-size: 11px; background: #3498db; color: white; border: none; border-radius: 4px; padding: 0 8px;" onclick="saveNewHeaderPreset()">存为预设</button>
+                    <button style="height: 28px; font-size: 11px; background: #fa5151; color: white; border: none; border-radius: 4px; padding: 0 8px;" onclick="deleteHeaderPreset()">删除</button>
+                </div>
+            </div>
             <textarea id="header-css-input" style="width: 100%; height: 180px; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; font-family: monospace;" placeholder="/* 输入自定义 CSS 控制顶栏 */&#10;#chat-page .header {&#10;  border-radius: 0 0 12px 12px !important;&#10;}"></textarea>
         </div>
     </div>
@@ -7190,7 +7211,16 @@ function closeReadingSystem() {
         
         <!-- CSS 代码编辑器 -->
         <div style="background: white; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 8px;">
-            <label style="font-size: 13px; color: #666; font-weight: bold;">底栏 CSS 代码</label>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-size: 13px; color: #666; font-weight: bold;">底栏 CSS 代码</label>
+                <div style="display: flex; gap: 5px;">
+                    <select id="inputbar-preset-select" style="height: 28px; border: 1px solid #ddd; border-radius: 4px; outline: none; font-size: 11px;" onchange="applyInputbarPreset(this.value)">
+                        <option value="">-- 预设列表 --</option>
+                    </select>
+                    <button style="height: 28px; font-size: 11px; background: #3498db; color: white; border: none; border-radius: 4px; padding: 0 8px;" onclick="saveNewInputbarPreset()">存为预设</button>
+                    <button style="height: 28px; font-size: 11px; background: #fa5151; color: white; border: none; border-radius: 4px; padding: 0 8px;" onclick="deleteInputbarPreset()">删除</button>
+                </div>
+            </div>
             <textarea id="inputbar-css-input" style="width: 100%; height: 180px; border: 1px solid #eee; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; font-family: monospace;" placeholder="/* 输入自定义 CSS 控制底栏 */&#10;#chat-page .input-bar {&#10;  border-top: 1px dashed #ddd !important;&#10;}"></textarea>
         </div>
     </div>
@@ -7575,7 +7605,134 @@ function confirmAutoMsgFreq() {
     
     closeAutoMsgFreqModal();
 }
+// ==========================================
+// 美化预设核心逻辑 (气泡、顶栏、底栏)
+// ==========================================
+function loadBubblePresets() {
+    const select = document.getElementById('bubble-preset-select');
+    const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
+    select.innerHTML = '<option value="">-- 选择气泡预设 --</option>';
+    for (const name in presets) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    }
+}
+function saveNewBubblePreset() {
+    const name = prompt("请输入此气泡预设的名称：");
+    if (!name) return;
+    const code = document.getElementById('bubble-css-input').value;
+    const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
+    presets[name] = code;
+    localStorage.setItem('qq_presets_bubble', JSON.stringify(presets));
+    loadBubblePresets();
+    document.getElementById('bubble-preset-select').value = name;
+    alert("气泡预设 [" + name + "] 保存成功！");
+}
+function deleteBubblePreset() {
+    const select = document.getElementById('bubble-preset-select');
+    const name = select.value;
+    if (!name) return alert("请先在下拉列表中选中一个预设！");
+    if (confirm("确定要删除气泡预设 [" + name + "] 吗？")) {
+        const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
+        delete presets[name];
+        localStorage.setItem('qq_presets_bubble', JSON.stringify(presets));
+        loadBubblePresets();
+        alert("预设已删除");
+    }
+}
+function applyBubblePreset(name) {
+    if (!name) return;
+    const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
+    if (presets[name] !== undefined) {
+        document.getElementById('bubble-css-input').value = presets[name];
+    }
+}
 
+function loadHeaderPresets() {
+    const select = document.getElementById('header-preset-select');
+    const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
+    select.innerHTML = '<option value="">-- 预设列表 --</option>';
+    for (const name in presets) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    }
+}
+function saveNewHeaderPreset() {
+    const name = prompt("请输入此顶栏预设的名称：");
+    if (!name) return;
+    const code = document.getElementById('header-css-input').value;
+    const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
+    presets[name] = code;
+    localStorage.setItem('qq_presets_header', JSON.stringify(presets));
+    loadHeaderPresets();
+    document.getElementById('header-preset-select').value = name;
+    alert("顶栏预设 [" + name + "] 保存成功！");
+}
+function deleteHeaderPreset() {
+    const select = document.getElementById('header-preset-select');
+    const name = select.value;
+    if (!name) return alert("请先选择一个预设！");
+    if (confirm("确定要删除顶栏预设 [" + name + "] 吗？")) {
+        const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
+        delete presets[name];
+        localStorage.setItem('qq_presets_header', JSON.stringify(presets));
+        loadHeaderPresets();
+        alert("预设已删除");
+    }
+}
+function applyHeaderPreset(name) {
+    if (!name) return;
+    const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
+    if (presets[name] !== undefined) {
+        document.getElementById('header-css-input').value = presets[name];
+    }
+}
+
+function loadInputbarPresets() {
+    const select = document.getElementById('inputbar-preset-select');
+    const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
+    select.innerHTML = '<option value="">-- 预设列表 --</option>';
+    for (const name in presets) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+    }
+}
+function saveNewInputbarPreset() {
+    const name = prompt("请输入此底栏预设的名称：");
+    if (!name) return;
+    const code = document.getElementById('inputbar-css-input').value;
+    const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
+    presets[name] = code;
+    localStorage.setItem('qq_presets_inputbar', JSON.stringify(presets));
+    loadInputbarPresets();
+    document.getElementById('inputbar-preset-select').value = name;
+    alert("底栏预设 [" + name + "] 保存成功！");
+}
+function deleteInputbarPreset() {
+    const select = document.getElementById('inputbar-preset-select');
+    const name = select.value;
+    if (!name) return alert("请先选择一个预设！");
+    if (confirm("确定要删除底栏预设 [" + name + "] 吗？")) {
+        const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
+        delete presets[name];
+        localStorage.setItem('qq_presets_inputbar', JSON.stringify(presets));
+        loadInputbarPresets();
+        alert("预设已删除");
+    }
+}
+function applyInputbarPreset(name) {
+    if (!name) return;
+    const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
+    if (presets[name] !== undefined) {
+        document.getElementById('inputbar-css-input').value = presets[name];
+    }
+}
 <!-- ===== MCP工具相关代码结束 ===== -->
 </script>
 
