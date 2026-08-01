@@ -4968,11 +4968,11 @@ function openBubbleEditor() {
     const friend = friends.find(f => f.name === currentFriendName);
     getChatBg('bubblecss_' + currentFriendName).then(val => {
         document.getElementById('bubble-css-input').value = val || (friend ? friend.bubbleCss : "") || "";
-        loadBubblePresets(); // 加载气泡预设列表
+        loadBubblePresets(); // 加载预设下拉列表
         document.getElementById('bubble-editor-page').classList.add('active');
     }).catch(() => {
         document.getElementById('bubble-css-input').value = (friend ? friend.bubbleCss : "") || "";
-        loadBubblePresets(); // 加载气泡预设列表
+        loadBubblePresets(); // 加载预设下拉列表
         document.getElementById('bubble-editor-page').classList.add('active');
     });
 }
@@ -5983,7 +5983,7 @@ function openHeaderBeautify() {
     
     Promise.all(promises).then(() => {
         switchHbTab('bg');
-        loadHeaderPresets(); // 加载顶栏预设列表
+        loadHeaderPresets(); // 加上这一行来加载顶栏预设
         document.getElementById('header-beautify-page').style.display = 'flex';
     });
 }
@@ -6113,7 +6113,7 @@ function openInputBarBeautify() {
     
     Promise.all(promises).then(() => {
         switchIbTab('bg');
-        loadInputbarPresets(); // 加载底栏预设列表
+        loadInputbarPresets(); // 加上这一行来加载底栏预设
         document.getElementById('inputbar-beautify-page').style.display = 'flex';
     });
 }
@@ -7606,132 +7606,162 @@ function confirmAutoMsgFreq() {
     closeAutoMsgFreqModal();
 }
 // ==========================================
-// 美化预设核心逻辑 (气泡、顶栏、底栏)
+// 美化预设核心逻辑 (气泡、顶栏、底栏 - 已升级为大容量 IndexedDB 存储)
 // ==========================================
 function loadBubblePresets() {
-    const select = document.getElementById('bubble-preset-select');
-    const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
-    select.innerHTML = '<option value="">-- 选择气泡预设 --</option>';
-    for (const name in presets) {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    }
+    getChatBg('presets_bubble').then(presetsVal => {
+        const presets = presetsVal || {};
+        const select = document.getElementById('bubble-preset-select');
+        select.innerHTML = '<option value="">-- 选择气泡预设 --</option>';
+        for (const name in presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        }
+    }).catch(err => console.error("加载气泡预设失败", err));
 }
 function saveNewBubblePreset() {
     const name = prompt("请输入此气泡预设的名称：");
     if (!name) return;
     const code = document.getElementById('bubble-css-input').value;
-    const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
-    presets[name] = code;
-    localStorage.setItem('qq_presets_bubble', JSON.stringify(presets));
-    loadBubblePresets();
-    document.getElementById('bubble-preset-select').value = name;
-    alert("气泡预设 [" + name + "] 保存成功！");
+    getChatBg('presets_bubble').then(presetsVal => {
+        const presets = presetsVal || {};
+        presets[name] = code;
+        saveChatBg('presets_bubble', presets).then(() => {
+            loadBubblePresets();
+            document.getElementById('bubble-preset-select').value = name;
+            alert("气泡预设 [" + name + "] 保存成功！");
+        });
+    }).catch(err => alert("保存失败：" + err));
 }
 function deleteBubblePreset() {
     const select = document.getElementById('bubble-preset-select');
     const name = select.value;
     if (!name) return alert("请先在下拉列表中选中一个预设！");
     if (confirm("确定要删除气泡预设 [" + name + "] 吗？")) {
-        const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
-        delete presets[name];
-        localStorage.setItem('qq_presets_bubble', JSON.stringify(presets));
-        loadBubblePresets();
-        alert("预设已删除");
+        getChatBg('presets_bubble').then(presetsVal => {
+            const presets = presetsVal || {};
+            delete presets[name];
+            saveChatBg('presets_bubble', presets).then(() => {
+                loadBubblePresets();
+                alert("预设已删除");
+            });
+        });
     }
 }
 function applyBubblePreset(name) {
     if (!name) return;
-    const presets = JSON.parse(localStorage.getItem('qq_presets_bubble') || '{}');
-    if (presets[name] !== undefined) {
-        document.getElementById('bubble-css-input').value = presets[name];
-    }
+    getChatBg('presets_bubble').then(presetsVal => {
+        const presets = presetsVal || {};
+        if (presets[name] !== undefined) {
+            document.getElementById('bubble-css-input').value = presets[name];
+        }
+    });
 }
 
 function loadHeaderPresets() {
-    const select = document.getElementById('header-preset-select');
-    const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
-    select.innerHTML = '<option value="">-- 预设列表 --</option>';
-    for (const name in presets) {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    }
+    getChatBg('presets_header').then(presetsVal => {
+        const presets = presetsVal || {};
+        const select = document.getElementById('header-preset-select');
+        select.innerHTML = '<option value="">-- 预设列表 --</option>';
+        for (const name in presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        }
+    }).catch(err => console.error("加载顶栏预设失败", err));
 }
 function saveNewHeaderPreset() {
     const name = prompt("请输入此顶栏预设的名称：");
     if (!name) return;
     const code = document.getElementById('header-css-input').value;
-    const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
-    presets[name] = code;
-    localStorage.setItem('qq_presets_header', JSON.stringify(presets));
-    loadHeaderPresets();
-    document.getElementById('header-preset-select').value = name;
-    alert("顶栏预设 [" + name + "] 保存成功！");
+    getChatBg('presets_header').then(presetsVal => {
+        const presets = presetsVal || {};
+        presets[name] = code;
+        saveChatBg('presets_header', presets).then(() => {
+            loadHeaderPresets();
+            document.getElementById('header-preset-select').value = name;
+            alert("顶栏预设 [" + name + "] 保存成功！");
+        });
+    }).catch(err => alert("保存失败：" + err));
 }
 function deleteHeaderPreset() {
     const select = document.getElementById('header-preset-select');
     const name = select.value;
     if (!name) return alert("请先选择一个预设！");
     if (confirm("确定要删除顶栏预设 [" + name + "] 吗？")) {
-        const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
-        delete presets[name];
-        localStorage.setItem('qq_presets_header', JSON.stringify(presets));
-        loadHeaderPresets();
-        alert("预设已删除");
+        getChatBg('presets_header').then(presetsVal => {
+            const presets = presetsVal || {};
+            delete presets[name];
+            saveChatBg('presets_header', presets).then(() => {
+                loadHeaderPresets();
+                alert("预设已删除");
+            });
+        });
     }
 }
 function applyHeaderPreset(name) {
     if (!name) return;
-    const presets = JSON.parse(localStorage.getItem('qq_presets_header') || '{}');
-    if (presets[name] !== undefined) {
-        document.getElementById('header-css-input').value = presets[name];
-    }
+    getChatBg('presets_header').then(presetsVal => {
+        const presets = presetsVal || {};
+        if (presets[name] !== undefined) {
+            document.getElementById('header-css-input').value = presets[name];
+        }
+    });
 }
 
 function loadInputbarPresets() {
-    const select = document.getElementById('inputbar-preset-select');
-    const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
-    select.innerHTML = '<option value="">-- 预设列表 --</option>';
-    for (const name in presets) {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-    }
+    getChatBg('presets_inputbar').then(presetsVal => {
+        const presets = presetsVal || {};
+        const select = document.getElementById('inputbar-preset-select');
+        select.innerHTML = '<option value="">-- 预设列表 --</option>';
+        for (const name in presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        }
+    }).catch(err => console.error("加载底栏预设失败", err));
 }
 function saveNewInputbarPreset() {
     const name = prompt("请输入此底栏预设的名称：");
     if (!name) return;
     const code = document.getElementById('inputbar-css-input').value;
-    const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
-    presets[name] = code;
-    localStorage.setItem('qq_presets_inputbar', JSON.stringify(presets));
-    loadInputbarPresets();
-    document.getElementById('inputbar-preset-select').value = name;
-    alert("底栏预设 [" + name + "] 保存成功！");
+    getChatBg('presets_inputbar').then(presetsVal => {
+        const presets = presetsVal || {};
+        presets[name] = code;
+        saveChatBg('presets_inputbar', presets).then(() => {
+            loadInputbarPresets();
+            document.getElementById('inputbar-preset-select').value = name;
+            alert("底栏预设 [" + name + "] 保存成功！");
+        });
+    }).catch(err => alert("保存失败：" + err));
 }
 function deleteInputbarPreset() {
     const select = document.getElementById('inputbar-preset-select');
     const name = select.value;
     if (!name) return alert("请先选择一个预设！");
     if (confirm("确定要删除底栏预设 [" + name + "] 吗？")) {
-        const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
-        delete presets[name];
-        localStorage.setItem('qq_presets_inputbar', JSON.stringify(presets));
-        loadInputbarPresets();
-        alert("预设已删除");
+        getChatBg('presets_inputbar').then(presetsVal => {
+            const presets = presetsVal || {};
+            delete presets[name];
+            saveChatBg('presets_inputbar', presets).then(() => {
+                loadInputbarPresets();
+                alert("预设已删除");
+            });
+        });
     }
 }
 function applyInputbarPreset(name) {
     if (!name) return;
-    const presets = JSON.parse(localStorage.getItem('qq_presets_inputbar') || '{}');
-    if (presets[name] !== undefined) {
-        document.getElementById('inputbar-css-input').value = presets[name];
-    }
+    getChatBg('presets_inputbar').then(presetsVal => {
+        const presets = presetsVal || {};
+        if (presets[name] !== undefined) {
+            document.getElementById('inputbar-css-input').value = presets[name];
+        }
+    });
 }
 <!-- ===== MCP工具相关代码结束 ===== -->
 </script>
