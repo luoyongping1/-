@@ -681,6 +681,7 @@
             height: 100% !important;
             scroll-snap-type: x mandatory;
             padding: 80px 32px 100px 32px !important; /* 精确对称左右边距，使内容完美居中 */
+            scroll-padding: 80px 32px 100px 32px !important; /* 核心修复：强制翻页对齐时保留左右 32px 的安全边距，解决文字贴边问题 */
             box-sizing: border-box !important;
         }
         .reader-body.page-flip-mode p {
