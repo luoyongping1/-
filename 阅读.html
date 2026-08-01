@@ -671,20 +671,20 @@
             transition: background 0.3s, color 0.3s;
         }
 
-        /* 左右分栏翻页模式 */
+        /* 左右翻阅模式 */
         .reader-body.page-flip-mode {
-            overflow-y: hidden;
-            overflow-x: auto;
-            display: flex;
-            flex-direction: row;
+            overflow-y: hidden !important;
+            overflow-x: auto !important;
+            display: block !important;
+            column-width: calc(100vw - 48px) !important;
+            column-gap: 48px !important;
+            column-fill: auto !important;
+            height: 100% !important;
             scroll-snap-type: x mandatory;
         }
-        .page-column {
-            flex: 0 0 100%;
-            height: 100%;
-            box-sizing: border-box;
+        .reader-body.page-flip-mode p {
+            break-inside: avoid-column; /* 避免段落被垂直截断 */
             scroll-snap-align: start;
-            padding-right: 15px;
         }
         .reader-body p {
             margin-bottom: 1.6em;
@@ -1017,7 +1017,7 @@
                 <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:6px;">阅读版式</label>
                 <div style="display:flex; gap:10px;">
                     <button class="btn-gray" style="flex:1" onclick="setReadingLayout('scroll')">上下滚动</button>
-                    <button class="btn-gray" style="flex:1" onclick="setReadingLayout('flip')">左右分栏</button>
+                    <button class="btn-gray" style="flex:1" onclick="setReadingLayout('flip')">左右翻阅</button>
                 </div>
             </div>
             <div style="margin-bottom:20px;">
@@ -1746,53 +1746,114 @@
 
         function setReadingLayout(type) {
             const body = document.getElementById('reader-body');
+            const scrollBtn = document.querySelector("button[onclick=\"setReadingLayout('scroll')\"]");
+            const flipBtn = document.querySelector("button[onclick=\"setReadingLayout('flip')\"]");
+            
             if (type === 'flip') {
                 body.classList.add('page-flip-mode');
+                if (flipBtn) { flipBtn.className = 'btn-green'; flipBtn.style.flex = '1'; }
+                if (scrollBtn) { scrollBtn.className = 'btn-gray'; scrollBtn.style.flex = '1'; }
             } else {
                 body.classList.remove('page-flip-mode');
+                if (scrollBtn) { scrollBtn.className = 'btn-green'; scrollBtn.style.flex = '1'; }
+                if (flipBtn) { flipBtn.className = 'btn-gray'; flipBtn.style.flex = '1'; }
             }
             localStorage.setItem('reader_pref_layout', type);
         }
 
+        let customFontUrl = null; // 全局对象URL缓存，避免重复创建和内存泄漏
+
         function checkCustomFontImported() {
             getAvatarBlob("custom_reader_ttf_font").then(blob => {
                 const statusSpan = document.getElementById('custom-font-status');
+                const toggleBtn = document.querySelector("button[onclick='applyCustomFont(true)']");
+                const isEnabled = localStorage.getItem('reader_use_custom_font') === 'true';
+                
                 if (blob) {
-                    statusSpan.innerText = "已导入自定义TTF";
-                    statusSpan.style.color = "var(--primary-green)";
+                    if (isEnabled) {
+                        statusSpan.innerText = "已启用自定义TTF字体";
+                        statusSpan.style.color = "var(--primary-green)";
+                        if (toggleBtn) {
+                            toggleBtn.innerText = "切换回默认";
+                            toggleBtn.style.background = "#8e8e93"; // iOS 样式置灰按钮
+                        }
+                    } else {
+                        statusSpan.innerText = "已导入自定义TTF(未启用)";
+                        statusSpan.style.color = "var(--primary-blue)";
+                        if (toggleBtn) {
+                            toggleBtn.innerText = "开启自定义";
+                            toggleBtn.style.background = "var(--primary-green)";
+                        }
+                    }
                 } else {
                     statusSpan.innerText = "未导入任何字体文件";
                     statusSpan.style.color = "var(--text-muted)";
+                    if (toggleBtn) {
+                        toggleBtn.innerText = "开启自定义";
+                        toggleBtn.style.background = "var(--primary-green)";
+                    }
                 }
             });
         }
 
         // 重新注入样式处理
         function applyCustomFont(forceApply = false) {
-            getAvatarBlob("custom_reader_ttf_font").then(blob => {
-                if (blob) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        let style = document.getElementById('injected-book-font-style');
-                        if (!style) {
-                            style = document.createElement('style');
-                            style.id = 'injected-book-font-style';
-                            document.head.appendChild(style);
+            const isEnabled = localStorage.getItem('reader_use_custom_font') === 'true';
+            
+            // 如果是手动点击切换按钮
+            if (forceApply) {
+                if (isEnabled) {
+                    // 当前是开启状态，点击后关闭并恢复默认
+                    localStorage.setItem('reader_use_custom_font', 'false');
+                    document.getElementById('reader-body').classList.remove('custom-font-enabled');
+                    checkCustomFontImported();
+                    alert("已切换回默认系统字体！");
+                } else {
+                    // 当前是关闭状态，点击后开启自定义
+                    getAvatarBlob("custom_reader_ttf_font").then(blob => {
+                        if (blob) {
+                            localStorage.setItem('reader_use_custom_font', 'true');
+                            loadFontBlob(blob);
+                            checkCustomFontImported();
+                            alert("自定义字体已成功开启！");
+                        } else {
+                            alert("检测到本地未导入字体文件！请在设置中导入 .ttf 字体文件。");
                         }
-                        style.innerHTML = `
-                            @font-face {
-                                font-family: 'BookCustomFont';
-                                src: url('${e.target.result}');
-                            }
-                        `;
-                        document.getElementById('reader-body').classList.add('custom-font-enabled');
-                        if (forceApply) alert("自定义字体已成功应用！");
-                    };
-                    reader.readAsDataURL(blob);
-                } else if (forceApply) {
-                    alert("请在主应用的设置中导入 .ttf 字体文件。");
+                    });
                 }
-            });
+                return;
+            }
+
+            // 页面加载或打开图书时的自动无感应用逻辑
+            if (isEnabled) {
+                getAvatarBlob("custom_reader_ttf_font").then(blob => {
+                    if (blob) {
+                        loadFontBlob(blob);
+                    }
+                });
+            } else {
+                document.getElementById('reader-body').classList.remove('custom-font-enabled');
+            }
+        }
+
+        // 高效加载 Blob 字体文件，避免使用 FileReader 读取超大 base64 导致的卡顿
+        function loadFontBlob(blob) {
+            if (!customFontUrl) {
+                customFontUrl = URL.createObjectURL(blob);
+            }
+            let style = document.getElementById('injected-book-font-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'injected-book-font-style';
+                document.head.appendChild(style);
+            }
+            style.innerHTML = `
+                @font-face {
+                    font-family: 'BookCustomFont';
+                    src: url('${customFontUrl}') format('truetype');
+                }
+            `;
+            document.getElementById('reader-body').classList.add('custom-font-enabled');
         }
 
         function loadChapterContent() {
@@ -2847,15 +2908,57 @@ window.onload = async () => {
             document.getElementById('cover-crop-modal').style.display = 'none';
             saveImportedBookAndFinish(compressedBase64);
         }
-        // 核心交互：点击小说主体区域时切换菜单栏的显示与隐藏
+        // 核心交互：点击小说主体区域时切换菜单栏的显示与隐藏，在左右翻阅模式下支持点击左右边缘翻页
         function handleReaderClick(event) {
-            // 如果用户正在划词选择文字，或者点击了绿色的段评图标，就不要响应菜单切换
+            // 如果用户正在划词选择文字，或者点击了段评/批注图标，就不要响应
             const selection = window.getSelection().toString();
             if (selection.length > 0) return;
-            if (event.target.classList.contains('para-comment-badge')) return;
+            if (event.target.classList.contains('para-comment-badge') || event.target.closest('.para-comment-badge')) return;
+            if (event.target.classList.contains('para-note-badge') || event.target.closest('.para-note-badge')) return;
 
+            const body = document.getElementById('reader-body');
+            const isFlipMode = body.classList.contains('page-flip-mode');
+
+            if (isFlipMode) {
+                const clickX = event.clientX;
+                const width = window.innerWidth;
+                
+                if (clickX < width * 0.3) {
+                    // 点击左边 30% 区域：向左翻页
+                    turnPage(-1);
+                    return;
+                } else if (clickX > width * 0.7) {
+                    // 点击右边 30% 区域：向右翻页
+                    turnPage(1);
+                    return;
+                }
+            }
+
+            // 点击中间区域：切换菜单栏的显示与隐藏
             const readerView = document.getElementById('reader-view');
             readerView.classList.toggle('menu-active');
+        }
+
+        // 新增的左右翻页控制逻辑
+        function turnPage(direction) {
+            const body = document.getElementById('reader-body');
+            const pageWidth = body.clientWidth + 48; // 页宽加列间距
+            const currentScroll = body.scrollLeft;
+            const targetScroll = currentScroll + direction * pageWidth;
+            
+            // 判断是否跨章，翻过最后一页自动切下一章，翻过第一页切上一章
+            if (direction === 1 && Math.abs(currentScroll + body.clientWidth - body.scrollWidth) < 10) {
+                changeChapter(1);
+                return;
+            } else if (direction === -1 && currentScroll <= 5) {
+                changeChapter(-1);
+                return;
+            }
+
+            body.scrollTo({
+                left: targetScroll,
+                behavior: 'smooth'
+            });
         }
 
         // 修改阅读器的背景色护眼主题
