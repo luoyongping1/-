@@ -1815,7 +1815,8 @@
 
             const paragraphs = chapter.content.split('\n').filter(p => p.trim());
             const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
-            const existingComments = JSON.parse(localStorage.getItem(commentsKey)) || {};
+            // 优先从书籍对象中加载段评，若无则尝试读取 localStorage 里的老段评数据
+            const existingComments = (currentBook.comments && currentBook.comments[currentChapterIndex]) || JSON.parse(localStorage.getItem(commentsKey)) || {};
 
 body.innerHTML = paragraphs.map((text, idx) => {
     const commentBadge = `<span class="para-comment-badge" onclick="event.stopPropagation(); openCommentDrawerForPara(${idx})" title="查看段评"><svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" style="display: block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>`;
@@ -2122,27 +2123,40 @@ function openNoteModalForPara(paraIdx) {
                     throw new Error("AI 返回的内容中没有包含合法的 JSON 格式的数组。");
                 }
                 
-                const cleanJson = reply.substring(jsonStart, jsonEnd + 1);
-                const commentsArray = JSON.parse(cleanJson);
-                const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
-                
-                const commentsMap = {};
-                commentsArray.forEach(item => {
-                    commentsMap[item.paragraphIndex] = [
-                        { name: companionName, text: item.comment, avatar: companionAvatar }
-                    ];
-                });
+        const cleanJson = reply.substring(jsonStart, jsonEnd + 1);
+        const commentsArray = JSON.parse(cleanJson);
+        const commentsKey = `book_comments_${currentBook.id}_ch_${chapterIdx}`;
+        
+        const commentsMap = {};
+        commentsArray.forEach(item => {
+            commentsMap[item.paragraphIndex] = [
+                { name: companionName, text: item.comment, avatar: companionAvatar }
+            ];
+        });
 
-                localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
-                return true;
-            } catch(e) {
-                console.error("段评模块：请求或解析 JSON 失败：", e);
-                if (showFeedback) {
-                    alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
-                }
-                return false;
-            }
+        // 【核心修复】：将段评直接保存到书籍对象中，写入容量极大的 IndexedDB 本地数据库
+        if (!currentBook.comments) {
+            currentBook.comments = {};
         }
+        currentBook.comments[chapterIdx] = commentsMap;
+        await saveBookToDb(currentBook);
+
+        // 兼容备份到 localStorage，如果满了则直接忽略，防止程序崩溃报错
+        try {
+            localStorage.setItem(commentsKey, JSON.stringify(commentsMap));
+        } catch (err) {
+            console.warn("localStorage 空间已满，已跳过本地缓存备份，数据已安全写入 IndexedDB 数据库:", err);
+        }
+        
+        return true;
+    } catch(e) {
+        console.error("段评模块：请求或解析 JSON 失败：", e);
+        if (showFeedback) {
+            alert("生成段评失败，请检查模型名称或网络连接。" + e.message);
+        }
+        return false;
+    }
+}
 
 
         // 修改后的段评主方法：支持本章段评、以及本章+下一章静默生成
@@ -2179,13 +2193,14 @@ function openNoteModalForPara(paraIdx) {
             }
         }
 
-        // --- 渲染与查看段落评论抽屉 ---
-        function openCommentDrawer(paraIdx) {
-            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
-            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
-            const list = commentsMap[paraIdx] || [];
+// --- 渲染与查看段落评论抽屉 ---
+function openCommentDrawer(paraIdx) {
+    const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+    // 优先从书籍对象中加载段评，若无则尝试读取 localStorage 里的老段评数据
+    const commentsMap = (currentBook.comments && currentBook.comments[currentChapterIndex]) || JSON.parse(localStorage.getItem(commentsKey)) || {};
+    const list = commentsMap[paraIdx] || [];
 
-            const container = document.getElementById('comment-drawer-list');
+    const container = document.getElementById('comment-drawer-list');
             container.innerHTML = list.map(c => `
                 <div class="chat-bubble companion" style="background:#e5f9e7; align-self:stretch; max-width:100%; border-radius:12px;">
                     <div style="font-weight:bold; font-size:11px; color:var(--primary-green); margin-bottom:4px;">${c.name} 的点评</div>
@@ -2196,13 +2211,14 @@ function openNoteModalForPara(paraIdx) {
             document.getElementById('comment-drawer').style.display = 'flex';
         }
 
-        // 新增：从段落末尾的气泡icon打开段评抽屉
-        function openCommentDrawerForPara(paraIdx) {
-            const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
-            const commentsMap = JSON.parse(localStorage.getItem(commentsKey)) || {};
-            const list = commentsMap[paraIdx] || [];
+// 新增：从段落末尾的气泡icon打开段评抽屉
+function openCommentDrawerForPara(paraIdx) {
+    const commentsKey = `book_comments_${currentBook.id}_ch_${currentChapterIndex}`;
+    // 优先从书籍对象中加载段评，若无则尝试读取 localStorage 里的老段评数据
+    const commentsMap = (currentBook.comments && currentBook.comments[currentChapterIndex]) || JSON.parse(localStorage.getItem(commentsKey)) || {};
+    const list = commentsMap[paraIdx] || [];
 
-            const container = document.getElementById('comment-drawer-list');
+    const container = document.getElementById('comment-drawer-list');
             if (list.length === 0) {
                 container.innerHTML = `<div style="text-align:center; color:var(--text-muted); margin-top:30px; font-size:13px;">暂无段评，点击右上角生成按钮为本段落生成点评</div>`;
             } else {
