@@ -1935,7 +1935,16 @@ async function playMiniMaxVoice(text, btn) {
                 }
             };
         }
-const apiUrl = `https://shushuxsj.xyz${apiPath}?GroupId=${mmConfig.groupId}`;
+let baseUrl = "https://tts.shushuxsj.xyz";
+if (mmConfig.url) {
+    try {
+        const parsedUrl = new URL(mmConfig.url);
+        baseUrl = parsedUrl.origin;
+    } catch(e) {
+        baseUrl = "https://tts.shushuxsj.xyz";
+    }
+}
+const apiUrl = `${baseUrl}${apiPath}?GroupId=${mmConfig.groupId}`;
 const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
