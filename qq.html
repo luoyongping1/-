@@ -3152,7 +3152,7 @@ if (rawText.includes("[SEND_MONEY]")) {
                     });
                     imgsHtml += `</div>`;
                 }
-                listArr.push(`<div class="moment-item"><div class="moment-avatar">${av}</div><div class="moment-content"><div class="moment-name" onclick="showCommentInput(${realIdx}, '${m.name}')">${m.name}</div><div class="moment-text">${m.text}</div>${imgsHtml}<div class="moment-footer"><span>刚刚 ${m.visibleTo && m.visibleTo.length > 0 ? `<span style="color:#888;margin-left:5px;">🔒部分可见</span>`:''}</span><div class="moment-menu-wrap"><div class="moment-menu-btn" onclick="toggleMomentMenu(${realIdx}, event)">..</div><div id="moment-pop-${realIdx}" class="moment-pop-menu"><div class="menu-action" onclick="likeMoment(${realIdx})">❤ 点赞</div><div class="menu-action" onclick="showCommentInput(${realIdx})">💬 评论</div><div class="menu-action" onclick="forwardMoment(${realIdx})">➔ 转发</div></div></div></div><div id="feedback-${realIdx}" class="moment-feedback" style="display:${(m.likes && m.likes.length) || (m.comments && m.comments.length) ? 'block' : 'none'}">${m.likes && m.likes.length ? `<div class="like-section">❤ ${m.likes.join(', ')}</div>` : ''}${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `<div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')"><span class="comment-user">${c.name}</span>${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}</div>`).join('')}</div>` : ''}</div></div></div>`);
+                listArr.push(`<div class="moment-item"><div class="moment-avatar">${av}</div><div class="moment-content"><div class="moment-name" onclick="showCommentInput(${realIdx}, '${m.name}')">${m.name}</div><div class="moment-text">${m.text}</div>${imgsHtml}<div class="moment-footer"><span>刚刚 ${m.visibleTo && m.visibleTo.length > 0 ? `<span style="color:#888;margin-left:5px;">🔒部分可见</span>`:''}</span><div class="moment-menu-wrap"><div class="moment-menu-btn" onclick="toggleMomentMenu(${realIdx}, event)">..</div><div id="moment-pop-${realIdx}" class="moment-pop-menu"><div class="menu-action" onclick="likeMoment(${realIdx})">❤ 点赞</div><div class="menu-action" onclick="showCommentInput(${realIdx})">💬 评论</div><div class="menu-action" onclick="forwardMoment(${realIdx})">➔ 转发</div><div class="menu-action" onclick="deleteMoment(${realIdx})">🗑️ 删除</div></div></div></div><div id="feedback-${realIdx}" class="moment-feedback" style="display:${(m.likes && m.likes.length) || (m.comments && m.comments.length) ? 'block' : 'none'}">${m.likes && m.likes.length ? `<div class="like-section">❤ ${m.likes.join(', ')}</div>` : ''}${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `<div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')"><span class="comment-user">${c.name}</span>${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}</div>`).join('')}</div>` : ''}</div></div></div>`);
             });
             document.getElementById('moments-list').innerHTML = listArr.join('');
         }
@@ -3185,6 +3185,16 @@ if (rawText.includes("[SEND_MONEY]")) {
             }
         }
         function toggleMomentMenu(idx, e) { e.stopPropagation(); document.querySelectorAll('.moment-pop-menu').forEach(m => { if(m.id !== `moment-pop-${idx}`) m.classList.remove('active'); }); document.getElementById(`moment-pop-${idx}`).classList.toggle('active'); setTimeout(() => document.addEventListener('click', function c(){ if(document.getElementById(`moment-pop-${idx}`)) document.getElementById(`moment-pop-${idx}`).classList.remove('active'); document.removeEventListener('click', c); }), 10); }
+        
+        function deleteMoment(idx) {
+    if (confirm("确定要删除这条朋友圈动态吗？")) {
+        moments.splice(idx, 1);
+        saveData();
+        renderMoments();
+        alert("删除成功！");
+    }
+}
+        
         function likeMoment(idx) { const m = moments[idx]; if(!m.likes) m.likes = []; if(!m.likes.includes(myInfo.name)) { m.likes.push(myInfo.name); saveData(); renderMoments(); aiReactToMoment(idx, 'like'); } }
 function showCommentInput(idx, replyTo = null) { const txt = prompt(replyTo ? `回复 ${replyTo}:` : "评论:"); if(txt) { if(!moments[idx].comments) moments[idx].comments = []; moments[idx].comments.push({ name: myInfo.name, text: txt, replyTo: replyTo }); saveData(); renderMoments(); aiReactToMoment(idx, 'comment', txt, replyTo); } }
 
