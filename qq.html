@@ -4293,7 +4293,7 @@ function executeTransfer() {
             });
 
             const typingEl = document.getElementById('chat-typing');
-            typingEl.innerText = `群成员正在输入中...`;
+            typingEl.innerText = `群成员正在输入...`;
             typingEl.style.display = 'block';
 
             let shuraPrompt = "";
@@ -4313,16 +4313,33 @@ ${membersPersonas}
 1. 根据当前的群聊对话历史，模拟接下来这群角色的互动回复。
 2. 此时此刻并不需要所有人都必须说话，根据话题相关度，让想表达、或者被提及的AI角色发言即可。每次总发言人数控制在 1 到 3 人之间。
 3. 请以角色的口吻回复，避免任何AI客套腔调，要生动、口语化。
-4. 严禁在输出中包含任何思考过程、标签说明（例如"[REPLY]"、"*气泡"等）。
+4. 每一个开口模拟发言的角色，都必须完整输出包含回复、动作、心里活动、情绪、醋意值这5大属性的结构化信息数据块。
 
 ## 输出格式（极其重要）：
-请必须严格按照以下格式输出每条发言，每一个角色的一句话占一行，冒号后面直接写台词，不要输出任何多余的解释字句：
-角色名字: 他的发言内容
-角色名字: 他的发言内容
+必须使用以下特定的格式标签输出每个发言人的数据。每个人的发言块以 [SPEAKER] 开始。输出中切勿含有额外的废话、剧场分析或Markdown代码块：
+
+[SPEAKER] 角色名字
+[REPLY] 发言台词（如果内容多，可以使用换行拆分发送，最多不要超过3句）
+[ACTION] 动作神态描写
+[THOUGHTS] 角色的心里活动
+[EMOTION] 当前的情绪状态描述
+[JEALOUSY] 0-100的醋意数值
 
 例如：
-${group.members[0] || '角色A'}: 我刚才看到你在楼下呢
-${group.members[1] || '角色B'}: 真的假的？我也去看看${shuraPrompt}`;
+[SPEAKER] ${group.members[0] || '角色A'}
+[REPLY] 你怎么突然来群里说话了呀。
+我都以为你睡了。
+[ACTION] 惊喜地看着手机屏幕
+[THOUGHTS] 真是少见，他居然主动在这个时间群发信息了。
+[EMOTION] 开心
+[JEALOUSY] 5
+
+[SPEAKER] ${group.members[1] || '角色B'}
+[REPLY] 哼，一出现就在这嘘寒问暖的。
+[ACTION] 双手插兜，眼神有点赌气
+[THOUGHTS] 真是让人不爽，刚才还跟我私聊呢，转头又在群里这么热闹。
+[EMOTION] 吃醋
+[JEALOUSY] 65${shuraPrompt}`;
 
             try {
                 const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
@@ -4342,35 +4359,65 @@ ${group.members[1] || '角色B'}: 真的假的？我也去看看${shuraPrompt}`;
                 }
                 
                 let rawReply = data.choices[0].message.content.trim();
-                let lines = rawReply.split('\n').filter(t => t.trim() !== '');
+                
+                // 按 [SPEAKER] 标签切分，分割成不同角色的回复块
+                let blocks = rawReply.split(/\[SPEAKER\]/i).filter(b => b.trim() !== '');
 
-                // 逐行解析哪位角色说了什么话，并插入到群聊历史中
-                for (let line of lines) {
-                    const match = line.match(/^([^:：]+)[:：](.+)$/);
-                    if (match) {
-                        const senderName = match[1].trim();
-                        const text = match[2].trim();
-                        
-                        // 验证解析出来的名字是不是在群组里的角色
-                        const targetFriend = friends.find(f => f.name === senderName && group.members.includes(senderName));
-                        if (targetFriend) {
+                for (let block of blocks) {
+                    let lines = block.split('\n');
+                    let senderName = lines[0].trim();
+                    let blockContent = lines.slice(1).join('\n').trim();
+
+                    // 验证解析出来的名字是不是在群组里的角色
+                    const targetFriend = friends.find(f => f.name === senderName && group.members.includes(senderName));
+                    if (targetFriend) {
+                        // 正则匹配提取属性值
+                        let replyPart = blockContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/i)?.[1]?.trim() || "";
+                        let actionPart = blockContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/i)?.[1]?.trim() || "他在静静地看着你。";
+                        let thoughtsPart = blockContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|$)/i)?.[1]?.trim() || "（...）";
+                        let emotionPart = blockContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/i)?.[1]?.trim() || "平静";
+                        let jealousyPart = blockContent.match(/\[JEALOUSY\](\d+)/i)?.[1]?.trim() || "0";
+
+                        // 如果没有提取到 [REPLY] 标签，通过清洗标签作为后备方案
+                        if (!replyPart) {
+                            replyPart = blockContent
+                                .replace(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/gi, "")
+                                .replace(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|$)/gi, "")
+                                .replace(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/gi, "")
+                                .replace(/\[JEALOUSY\]\d+/gi, "")
+                                .replace(/\[REPLY\]/gi, "")
+                                .trim();
+                        }
+
+                        if (!replyPart) continue;
+
+                        // 拆分台词为多条短消息气泡
+                        let replyLimitNum = targetFriend.replyLimit !== undefined ? parseInt(targetFriend.replyLimit) : 0;
+                        let finalLimit = replyLimitNum > 0 ? replyLimitNum : 3;
+                        let splitLines = replyPart.split('\n').filter(t => t.trim() !== '').slice(0, finalLimit);
+
+                        for (let line of splitLines) {
                             // 模拟打字间隔时间，提升真实感
                             await new Promise(r => setTimeout(r, 1000));
                             
                             chatHistories[currentFriendName].push({
                                 type: 'friend',
-                                text: text,
+                                text: line.trim(),
                                 sender: targetFriend.name,
-                                initial: targetFriend.initial || targetFriend.name[0]
+                                initial: targetFriend.initial || targetFriend.name[0],
+                                action: actionPart,
+                                thoughts: thoughtsPart,
+                                emotion: emotionPart,
+                                jealousy: jealousyPart
                             });
 
                             // 记忆同步
                             if (group.memorySync && !shuraActive) {
                                 const ts = new Date().toLocaleString();
-                                targetFriend.longMemory = (targetFriend.longMemory ? targetFriend.longMemory + "\n" : "") + `[${ts} 群聊同步-${group.name}]: ${text}`;
+                                targetFriend.longMemory = (targetFriend.longMemory ? targetFriend.longMemory + "\n" : "") + `[${ts} 群聊同步-${group.name}]: ${line.trim()}`;
                             }
 
-                            group.lastMsg = `${targetFriend.name}: ${text}`;
+                            group.lastMsg = `${targetFriend.name}: ${line.trim()}`;
                             saveData();
                             renderMessages();
 
@@ -4378,8 +4425,27 @@ ${group.members[1] || '角色B'}: 真的假的？我也去看看${shuraPrompt}`;
                             window.parent.postMessage({
                                 type: 'SHOW_NOTIFICATION',
                                 title: group.name,
-                                body: targetFriend.name + ": " + text
+                                body: targetFriend.name + ": " + line.trim()
                             }, '*');
+                        }
+
+                        // 表情包机制（50%概率发送）
+                        if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
+                            await new Promise(r => setTimeout(r, 800));
+                            const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+                            chatHistories[currentFriendName].push({
+                                type: 'friend',
+                                text: randomSticker.url,
+                                isSticker: true,
+                                stickerDesc: randomSticker.desc || "表情",
+                                sender: targetFriend.name,
+                                initial: targetFriend.initial || targetFriend.name[0],
+                                action: actionPart,
+                                thoughts: thoughtsPart
+                            });
+                            group.lastMsg = `${targetFriend.name}: [表情]`;
+                            saveData();
+                            renderMessages();
                         }
                     }
                 }
