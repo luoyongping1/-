@@ -1,0 +1,2218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🌿 我们的秘密花园</title>
+    <style>
+        :root {
+            /* 日系手账草绿配色体系 */
+            --primary: #7d9e80; /* 森林绿 */
+            --primary-grad: linear-gradient(135deg, #9bbba0 0%, #7d9e80 100%);
+            --secondary: #b3cbb6; /* 浅鼠尾草绿 */
+            --bg-color: #e6efe7; /* 绿格子背景底色 */
+            --card-bg: #fdfcf9; /* 温暖燕麦白纸张色 */
+            --text-main: #4e5c4e; /* 深泥土绿 */
+            --text-sub: #8fa08f; /* 浅雾绿 */
+            --border-color: #cad8cb;
+            --shadow: 0 8px 20px rgba(125, 158, 128, 0.05);
+            --border-radius: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Lantinghei SC", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            /* 经典手账格子背景 */
+            background-image: 
+                linear-gradient(90deg, rgba(255,255,255,.5) 50%, transparent 50%),
+                linear-gradient(rgba(255,255,255,.5) 50%, transparent 50%);
+            background-size: 20px 20px;
+            color: var(--text-main);
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部手账风页眉 */
+        .header {
+            padding: calc(var(--ai-phone-app-safe-top, 44px) + 10px) 20px 15px;
+            background: var(--card-bg);
+            border-bottom: 2px dashed var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(125, 158, 128, 0.05);
+        }
+
+        /* 模拟手账撕纸胶带装饰 */
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 16px;
+            background: rgba(179, 203, 182, 0.4);
+            border-left: 2px dashed #fff;
+            border-right: 2px dashed #fff;
+            z-index: 11;
+        }
+
+        .header-title-area {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .welcome-tag {
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            border: 1px solid var(--border-color);
+            padding: 1px 6px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 2px;
+            background: #fff;
+        }
+
+        .main-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .avatar-connection {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 8px 0;
+            width: 100%;
+        }
+
+        /* 拍立得相框风格头像 */
+        .header-avatar {
+            width: 52px;
+            height: 62px;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transform: rotate(-3deg);
+            background-size: cover;
+            background-position: center;
+            box-sizing: border-box;
+            border-bottom: 12px solid #fff; /* 拍立得留白底框 */
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        #userAvatar:active {
+            transform: scale(0.9) rotate(-3deg);
+        }
+
+        #charAvatar {
+            transform: rotate(3deg);
+            cursor: default;
+        }
+
+        .heart-connector {
+            font-size: 18px;
+            animation: heartBeat 1.5s infinite ease-in-out;
+            filter: drop-shadow(0 2px 5px rgba(125, 158, 128, 0.2));
+        }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        /* 等级经验条手账化 */
+        .level-exp-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 260px;
+            gap: 4px;
+        }
+
+        .level-badge {
+            font-size: 10px;
+            color: var(--text-main);
+            border-bottom: 2px double var(--primary);
+            font-weight: bold;
+            padding-bottom: 1px;
+            display: inline-block;
+        }
+
+        .exp-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 8px;
+        }
+
+        .exp-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .exp-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .exp-text-v3 {
+            font-size: 9px;
+            color: var(--text-sub);
+            min-width: 45px;
+            text-align: right;
+        }
+
+        /* 主体内容滚动区 */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            padding-bottom: 40px;
+            scroll-behavior: smooth;
+        }
+
+        .view {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 手账式基本卡片 */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        /* 蕾丝缝线花边大卡片 */
+        .lace-card {
+            border: 2px dashed var(--primary);
+            outline: 4px solid var(--card-bg);
+            outline-offset: -5px;
+            background: #fffdfa;
+            text-align: center;
+            padding: 22px 14px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .handwrite-label {
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: var(--text-sub);
+            font-size: 11px;
+        }
+
+        /* 手写风缝线按钮 */
+        .btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1.5px solid var(--primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+            background-color: #f4f7f4;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: var(--text-sub);
+            border: 1.5px solid var(--border-color);
+            box-shadow: none;
+        }
+
+        .btn:disabled {
+            background: #eef2ee;
+            border-color: #cad8cb;
+            color: var(--text-sub);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 纪念日列表 */
+        .anniversary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dotted var(--border-color);
+        }
+
+        .anniversary-row:last-child {
+            border-bottom: none;
+        }
+
+        .ann-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ann-name {
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .ann-date {
+            font-size: 10px;
+            color: var(--text-sub);
+        }
+
+        .ann-days {
+            font-family: Georgia, serif;
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* 养崽崽：手账插画本舞台 */
+        .child-stage-area {
+            position: relative;
+            background: #fdfdfb;
+            flex: 1;
+            min-height: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: none;
+            border-radius: 0px;
+            box-shadow: none;
+            margin: -15px -15px 20px -15px;
+        }
+
+        /* 模拟笔记本格纹 */
+        .child-stage-area::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(125, 158, 128, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(125, 158, 128, 0.04) 1px, transparent 1px);
+            background-size: 16px 16px;
+            pointer-events: none;
+        }
+
+        /* 漂浮的小星星/气泡 */
+        .bubble {
+            position: absolute;
+            background: rgba(125, 158, 128, 0.08);
+            border-radius: 50%;
+            animation: floatBubble 8s infinite ease-in-out;
+        }
+
+        @keyframes floatBubble {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-15px) scale(1.05); }
+        }
+
+        .side-bar {
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 5;
+        }
+
+        .circle-menu-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .circle-menu-btn:active {
+            transform: scale(0.9);
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Q版插画崽崽 */
+        .baby-avatar-container {
+            position: relative;
+            z-index: 2;
+            animation: bounce 3s infinite ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0) rotate(-1deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+
+        .baby-character {
+            font-size: 76px;
+            filter: drop-shadow(0 6px 12px rgba(125, 158, 128, 0.15));
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .baby-shadow {
+            width: 50px;
+            height: 6px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 50%;
+            margin-top: 4px;
+            animation: shadowScale 3s infinite ease-in-out;
+        }
+
+        @keyframes shadowScale {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.85); opacity: 0.6; }
+        }
+
+        /* 属性栏 */
+        .status-grid {
+            width: 100%;
+            padding: 0 15px;
+            position: absolute;
+            bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            z-index: 3;
+        }
+
+        .status-pill {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 6px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.01);
+        }
+
+        .status-label {
+            font-size: 9px;
+            color: var(--text-sub);
+            margin-bottom: 1px;
+        }
+
+        .status-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* 小游戏：手账板块网格 */
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border: 1px dashed var(--primary);
+            border-radius: 16px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .game-card:active {
+            transform: scale(0.96);
+            box-shadow: none;
+        }
+
+        .game-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .game-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .game-desc {
+            font-size: 10px;
+            color: var(--text-sub);
+        }
+
+        /* 成绩单大卡片 */
+        .report-card {
+            background: #fffdf9;
+            border: 2px dashed var(--primary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+
+        .report-seal {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            width: 60px;
+            height: 60px;
+            border: 2px double var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 12px;
+            transform: rotate(15deg);
+        }
+
+        /* 手账本缝线底部导航 */
+        .tab-bar {
+            height: calc(var(--ai-phone-app-safe-bottom, 20px) + 55px);
+            background: var(--card-bg);
+            border-top: 2px dashed var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            padding-bottom: var(--ai-phone-app-safe-bottom, 20px);
+            z-index: 10;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-sub);
+            font-size: 10px;
+            font-weight: bold;
+            gap: 2px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .tab-item.active {
+            color: var(--primary);
+        }
+
+        .tab-icon {
+            font-size: 20px;
+            transition: transform 0.2s ease;
+        }
+
+        .tab-item.active .tab-icon {
+            transform: scale(1.15) rotate(-4deg);
+        }
+
+        /* 拟真指尖手写板 */
+        .canvas-container {
+            border: 1.5px dashed var(--primary);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            background: #fafbfa;
+            cursor: crosshair;
+        }
+
+        /* 弹窗系统 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(78, 92, 78, 0.4);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-panel {
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 320px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.9) translateY(15px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .input-sweet {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            outline: none;
+            font-size: 13px;
+            transition: border-color 0.3s;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .input-sweet:focus {
+            border-color: var(--primary);
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .step-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(125, 158, 128, 0.2);
+        }
+
+        .step-dot.active {
+            background: var(--primary);
+            width: 14px;
+            border-radius: 3px;
+        }
+
+        /* 新增：角色选择页面全屏样式 */
+        #char-select-screen {
+            position: fixed;
+            inset: 0;
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(90deg, rgba(255,255,255,.5) 50%, transparent 50%),
+                linear-gradient(rgba(255,255,255,.5) 50%, transparent 50%);
+            background-size: 20px 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .select-title-area {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .select-card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 360px;
+            width: 100%;
+        }
+
+        .select-char-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 12px 18px 12px;
+            width: 120px;
+            text-align: center;
+            box-shadow: 0 6px 15px rgba(125, 158, 128, 0.08);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-bottom: 16px solid var(--card-bg); /* 拍立得留白效果 */
+        }
+
+        /* 拍立得卡片交错倾斜排布，增加手账手写感 */
+        .select-char-card:nth-child(odd) {
+            transform: rotate(-3deg);
+        }
+
+        .select-char-card:nth-child(even) {
+            transform: rotate(3deg);
+        }
+
+        .select-char-card:active {
+            transform: scale(0.95) rotate(0deg);
+        }
+
+        .select-avatar {
+            width: 96px;
+            height: 96px;
+            background-color: #eef2ee;
+            border-radius: 10px;
+            margin: 0 auto 12px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 44px;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .select-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text-main);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 选择角色界面 -->
+    <div id="char-select-screen">
+        <div class="select-title-area">
+            <span class="welcome-tag">Welcome Home</span>
+            <h2 style="margin: 5px 0; color: var(--text-main); font-size: 22px;">🌿 我们的秘密花园</h2>
+            <span class="handwrite-label">请选择你想进入的情侣空间</span>
+        </div>
+        <div class="select-card-container" id="characterListContainer">
+            <!-- 角色列表会通过JS动态生成到这里 -->
+        </div>
+    </div>
+
+    <!-- 顶栏：仅在大厅显示 -->
+    <div class="header" id="mainHeader">
+        <div class="header-title-area">
+            <span class="welcome-tag">Welcome Home</span>
+            <h1 class="main-title" id="mainTitle">我 <span style="color: var(--primary)">♥</span> 伴侣</h1>
+            <span class="handwrite-label" style="font-size: 11px;">our little garden · 精装汽水版</span>
+        </div>
+
+        <div class="avatar-connection">
+            <!-- 用户拍立得相框 -->
+            <div class="header-avatar" id="userAvatar" onclick="changeUserAvatar()">👩‍🦰</div>
+            <div class="heart-connector">💚</div>
+            <!-- AI角色拍立得相框 -->
+            <div class="header-avatar" id="charAvatar">👦</div>
+        </div>
+        
+        <div class="level-exp-container">
+            <div class="level-badge" id="levelName">LV.1 见习情侣</div>
+            <div class="exp-row">
+                <div class="exp-bar-bg">
+                    <div class="exp-bar-fill" id="expFill"></div>
+                </div>
+                <span class="exp-text-v3" id="expText">0/100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 滚动视口 -->
+    <div class="content">
+
+        <!-- 1. 首页：包含天数、纪念日、签到 -->
+        <div id="view-home" class="view active">
+            <!-- 蕾丝纪念天数大卡片 -->
+            <div class="card lace-card" id="loveDayCounterCard">
+                <span class="handwrite-label">WE HAVE STAYED CLOSE FOR</span>
+                <div id="loveDaysNumber" style="font-size: 42px; font-weight: bold; color: var(--primary); font-family: Georgia, serif; margin: 5px 0;">0</div>
+                <span class="handwrite-label">days, and counting</span>
+                <div style="font-size: 10px; color: var(--text-sub); margin-top: 10px; border-top: 1px dotted var(--border-color); padding-top: 8px;" id="loveDaysSubText">
+                    since ...
+                </div>
+            </div>
+
+            <!-- 纪念日列表卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🗓️ 我们的纪念日</div>
+                    <button class="btn" onclick="openAddAnniversaryModal()">＋ 新增</button>
+                </div>
+                <div id="anniversaryList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 签到卡片 -->
+            <div class="card" style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <div class="card-title" style="margin-bottom: 2px;">✨ 每日空间签到</div>
+                    <div style="font-size: 11px; color: var(--text-sub);">执子之手，与子偕老。每日登录固定 +20 经验</div>
+                </div>
+                <button class="btn btn-secondary" id="btnCheckin" disabled>已签到</button>
+            </div>
+        </div>
+
+        <!-- 2. 养崽崽 -->
+        <div id="view-child" class="view">
+            <!-- 手账日记风格舞台 -->
+            <div class="child-stage-area">
+                <div class="bubble" style="width: 30px; height: 30px; top: 10%; left: 15%; animation-delay: 0s;"></div>
+                <div class="bubble" style="width: 45px; height: 45px; top: 30%; right: 10%; animation-delay: 2s;"></div>
+                <div class="bubble" style="width: 25px; height: 25px; bottom: 25%; left: 20%; animation-delay: 4s;"></div>
+
+                <div class="side-bar">
+                    <div class="circle-menu-btn" onclick="openChildSettings()">⚙️<br>设置</div>
+                    <div class="circle-menu-btn" onclick="openAdventureMenu()">🎒<br>奇遇</div>
+                </div>
+
+                <div class="baby-avatar-container">
+                    <div class="baby-character" id="babyEmoji">👶</div>
+                </div>
+                <div class="baby-shadow"></div>
+
+                <div id="babyName">未领养的小可爱</div>
+                <div id="schoolCountdown"></div>
+
+                <!-- 状态参数板 -->
+                <div class="status-grid">
+                    <div class="status-pill">
+                        <div class="status-label">📚 学龄阶段</div>
+                        <div class="status-value" id="statusStage">未领养</div>
+                    </div>
+                    <div class="status-pill">
+                        <div class="status-label">🔥 能力值</div>
+                        <div class="status-value" id="statusAbility">0</div>
+                    </div>
+                    <div class="status-pill">
+                        <div class="status-label">💚 心情值</div>
+                        <div class="status-value" id="statusMood">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 成绩单面板 -->
+            <div id="examResultPanel" class="report-card" style="display: none;">
+                <div class="report-seal">合格</div>
+                <h3 style="margin-top: 0; color: var(--primary); font-size: 18px;" id="reportTitle">🎓 升学考试成绩单</h3>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin: 12px 0;">
+                    <span style="font-size: 13px; color: var(--text-sub);">考试得分:</span>
+                    <span style="font-size: 32px; font-weight: bold; color: var(--primary);" id="reportScore">95</span>
+                    <span style="font-size: 13px; color: var(--text-sub);">/ 100</span>
+                </div>
+                
+                <div class="card" style="background: rgba(255,255,255,0.7); padding: 12px; margin-bottom: 12px; border-radius: 10px; border-style: dashed;">
+                    <span style="font-weight: bold; font-size: 12px;" id="charCommentLabel">AI 妈妈/爸爸 看法:</span>
+                    <p id="charCommentText" style="font-size: 12px; margin: 4px 0 0; font-style: italic; color: #555;"></p>
+                </div>
+
+                <input type="text" id="userOpinionInput" class="input-sweet" placeholder="作为家长的你，有什么话想对崽崽说？">
+                <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="submitUserOpinion()">递交家长寄语</button>
+            </div>
+        </div>
+
+        <!-- 3. 小游戏 -->
+        <div id="view-games" class="view">
+            <div class="game-grid">
+                <div class="game-card" onclick="openQAIntro()">
+                    <span class="game-icon">💖</span>
+                    <div class="game-title">默契问答</div>
+                    <div class="game-desc">Soul Q&A · +30 EXP</div>
+                </div>
+                <div class="game-card" onclick="openDrawIntro()">
+                    <span class="game-icon">🎨</span>
+                    <div class="game-title">你画我猜</div>
+                    <div class="game-desc">Draw & Guess · +20 EXP</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部 Tab 导航 -->
+    <div class="tab-bar">
+        <div class="tab-item active" onclick="switchTab('home', this)">
+            <span class="tab-icon">🏠</span>
+            <span>大厅</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('child', this)">
+            <span class="tab-icon">🐣</span>
+            <span>养崽崽</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('games', this)">
+            <span class="tab-icon">🎮</span>
+            <span>小游戏</span>
+        </div>
+    </div>
+
+    <!-- 模态弹窗系统 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-panel" id="modalPanel">
+            <!-- 动态注入 -->
+        </div>
+    </div>
+
+    <script>
+        // ==================== 核心 IndexedDB 共享通信引擎 ====================
+        const DB_NAME = 'WeChatAIPlusDB';
+        const DB_VERSION = 3;
+        const KV_STORE_NAME = 'app_kv_store';
+        let dbConnection;
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onsuccess = (event) => {
+                    dbConnection = event.target.result;
+                    resolve();
+                };
+                request.onerror = (event) => reject(event.target.errorCode);
+            });
+        }
+
+        function getKV(key, defaultValue = null) {
+            return new Promise((resolve) => {
+                if (!dbConnection) return resolve(defaultValue);
+                const transaction = dbConnection.transaction([KV_STORE_NAME], 'readonly');
+                const store = transaction.objectStore(KV_STORE_NAME);
+                const request = store.get(key);
+                request.onsuccess = () => {
+                    resolve(request.result ? request.result.value : defaultValue);
+                };
+                request.onerror = () => resolve(defaultValue);
+            });
+        }
+
+        function setKV(key, value) {
+            return new Promise((resolve, reject) => {
+                if (!dbConnection) return reject("DB not initialized");
+                const transaction = dbConnection.transaction([KV_STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(KV_STORE_NAME);
+                const request = store.put({ key: key, value: value });
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.errorCode);
+            });
+        }
+
+        function getAvatarBlob(id) {
+            return new Promise((resolve) => {
+                if (!dbConnection) return resolve(null);
+                const transaction = dbConnection.transaction(['userPersonaAvatars'], 'readonly');
+                const store = transaction.objectStore(['userPersonaAvatars']);
+                const request = store.get(id);
+                request.onsuccess = () => resolve(request.result ? request.result.image : null);
+                request.onerror = () => resolve(null);
+            });
+        }
+
+        function saveAvatarBlob(id, blob) {
+            return new Promise((resolve, reject) => {
+                if (!dbConnection) return reject("DB not initialized");
+                const transaction = dbConnection.transaction(['userPersonaAvatars'], 'readwrite');
+                const store = transaction.objectStore('userPersonaAvatars');
+                const request = store.put({ id: id, image: blob });
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(event.target.errorCode);
+            });
+        }
+
+        function dataURLtoBlob(dataUrl) {
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        }
+
+        async function loadAvatarToElement(avatarId, elementId, fallbackText) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            if (avatarId && avatarId.startsWith('indexeddb-')) {
+                const blob = await getAvatarBlob(avatarId);
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    el.style.backgroundImage = `url(${url})`;
+                    el.innerText = '';
+                    return;
+                }
+            }
+            if (avatarId && avatarId.startsWith('http')) {
+                el.style.backgroundImage = `url(${avatarId})`;
+                el.innerText = '';
+            } else if (avatarId && avatarId.startsWith('data:image')) {
+                el.style.backgroundImage = `url(${avatarId})`;
+                el.innerText = '';
+            } else {
+                el.style.backgroundImage = 'none';
+                el.innerText = fallbackText;
+            }
+        }
+
+        // ==================== 接口仿真适配器 ====================
+        const api = {
+            characters: {
+                list: async () => {
+                    await initDB();
+                    const friends = await getKV('qq_friends', []);
+                    return friends.map(f => ({
+                        id: f.name,
+                        name: f.name,
+                        avatar: f.avatarUrl
+                    }));
+                }
+            },
+            user: {
+                getProfile: async () => {
+                    await initDB();
+                    const myInfo = await getKV('my_info', { name: '我', avatar: '' });
+                    return {
+                        name: myInfo.name,
+                        avatar: myInfo.avatar
+                    };
+                }
+            },
+            db: {
+                list: async (storeName) => {
+                    await initDB();
+                    const state = await getKV(storeName, null);
+                    return state ? [state] : [];
+                },
+                create: async (storeName, data) => {
+                    await initDB();
+                    data.id = 'state_' + Date.now();
+                    await setKV(storeName, data);
+                    return data;
+                },
+                update: async (storeName, id, data) => {
+                    await initDB();
+                    await setKV(storeName, data);
+                    return data;
+                }
+            },
+            ai: {
+                generate: async ({ characterId, instruction, appTags }) => {
+                    await initDB();
+                    const aiConfig = await getKV('ai_config', { url: '', key: '', model: '' });
+                    const friends = await getKV('qq_friends', []);
+                    const friend = friends.find(f => f.name === characterId) || { persona: '开朗温柔' };
+                    
+                    if (!aiConfig.key) {
+                        throw new Error("请先在主屏幕[设置]中配置 API 密钥");
+                    }
+
+                    const sysPrompt = `你现在是用户的情侣/爱人，名字叫[${characterId}]。你的性格设定是：[${friend.persona}]。
+当前场景：你们在“情侣空间”中养崽崽或玩游戏。
+任务要求：根据用户的最新剧情或指令给出深情、调皮且自然的口吻回应。禁止使用AI格式的分析语言，字数要求在50字内。`;
+
+                    const response = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${aiConfig.key}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: aiConfig.model,
+                            messages: [
+                                { role: 'system', content: sysPrompt },
+                                { role: 'user', content: instruction }
+                            ],
+                            temperature: 0.9
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.error) {
+                        throw new Error(data.error.message || "API 错误");
+                    }
+                    return { text: data.choices[0].message.content.trim() };
+                }
+            },
+            chat: {
+                writeHistory: async ({ characterId, role, content }) => {
+                    await initDB();
+                    const chatHistories = await getKV('qq_history', {});
+                    if (!chatHistories[characterId]) chatHistories[characterId] = [];
+                    
+                    chatHistories[characterId].push({
+                        type: role === 'assistant' ? 'friend' : 'self',
+                        text: content,
+                        time: Date.now()
+                    });
+                    await setKV('qq_history', chatHistories);
+
+                    // 同步更新 QQ 消息列表的最新消息预览
+                    const friends = await getKV('qq_friends', []);
+                    const friend = friends.find(f => f.name === characterId);
+                    if (friend) {
+                        friend.lastMsg = content.substring(0, 45);
+                        await setKV('qq_friends', friends);
+                    }
+                },
+                sendCard: async ({ characterId, role, summary, card }) => {
+                    await initDB();
+                    const chatHistories = await getKV('qq_history', {});
+                    if (!chatHistories[characterId]) chatHistories[characterId] = [];
+                    
+                    // 构建精美的情侣卡片，利用 isForwardedCard 跳过默认消息气泡，直接在 QQ 中原样输出 HTML
+                    const cardHtml = `
+                        <div style="background:#ffffff; border:1.5px solid #7d9e80; border-radius:14px; padding:15px; width:220px; box-shadow:0 4px 12px rgba(125,158,128,0.08); font-family:system-ui, sans-serif; color:#4e5c4e; text-align:left; border-style:dashed;">
+                            <div style="font-size:11px; font-weight:bold; color:#7d9e80; margin-bottom:6px; border-bottom:1px dotted #cad8cb; padding-bottom:4px;">
+                                🐣 崽崽成长成绩单
+                            </div>
+                            <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">${card.title}</div>
+                            <div style="font-size:12px; color:#555; line-height:1.5; white-space:pre-wrap; word-break:break-all;">${card.body}</div>
+                        </div>
+                    `;
+
+                    chatHistories[characterId].push({
+                        type: role === 'assistant' ? 'friend' : 'self',
+                        text: cardHtml,
+                        isForwardedCard: true,
+                        time: Date.now()
+                    });
+                    await setKV('qq_history', chatHistories);
+
+                    const friends = await getKV('qq_friends', []);
+                    const friend = friends.find(f => f.name === characterId);
+                    if (friend) {
+                        friend.lastMsg = `[成长成绩单] ${card.title}`;
+                        await setKV('qq_friends', friends);
+                    }
+                }
+            },
+            ui: {
+                toast: (msg) => {
+                    const toastEl = document.createElement('div');
+                    toastEl.style.cssText = `
+                        position: fixed;
+                        bottom: 80px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(78,92,78,0.85);
+                        backdrop-filter: blur(5px);
+                        -webkit-backdrop-filter: blur(5px);
+                        color: white;
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        z-index: 10000;
+                        pointer-events: none;
+                        transition: opacity 0.3s;
+                        border: 1px solid rgba(255,255,255,0.2);
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                    `;
+                    toastEl.innerText = msg;
+                    document.body.appendChild(toastEl);
+                    setTimeout(() => {
+                        toastEl.style.opacity = '0';
+                        setTimeout(() => toastEl.remove(), 300);
+                    }, 2000);
+                }
+            }
+        };
+
+        // 全局核心数据状态
+        let state = {
+            exp: 0,
+            level: 1,
+            lastCheckin: '',
+            userAvatar: '', 
+            anniversaries: [
+                { name: '相识第一天', date: '2023-05-20' }
+            ],
+            child: {
+                adopted: false,
+                name: '小汤圆',
+                personality: '温柔听话',
+                avatar: '', 
+                ability: 30,
+                mood: 80,
+                stage: '幼儿园', 
+                studyCount: 0,
+                examCount: 0,
+                isStudying: false,
+                studyStartTime: 0
+            },
+            drawGame: {
+                role: 'user', 
+                topic: '爱心',
+                score: 0
+            }
+        };
+
+        let currentPartner = null;
+
+        // 修改后的初始化：获取角色列表，并渲染选择界面
+        async function init() {
+            try {
+                await initDB();
+                const chars = await api.characters.list();
+                const container = document.getElementById('characterListContainer');
+                container.innerHTML = '';
+
+                if (!chars || chars.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; color: var(--text-sub); font-size: 13px; padding: 20px;">还没有在 QQ 里面添加任何好友哦，请先去 QQ 列表添加好友吧~</div>`;
+                    return;
+                }
+
+                // 循环生成拍立得选择卡片
+                for (const char of chars) {
+                    const card = document.createElement('div');
+                    card.className = 'select-char-card';
+                    
+                    const avatarId = `select-av-${char.name.replace(/\s+/g, '_')}`;
+                    card.innerHTML = `
+                        <div class="select-avatar" id="${avatarId}">👦</div>
+                        <div class="select-name">${char.name || 'AI伴侣'}</div>
+                    `;
+
+                    // 给卡片绑定点击事件
+                    card.onclick = () => selectPartner(char);
+                    container.appendChild(card);
+
+                    // 异步渲染拍立得头像（支持 IndexedDB 和常规链接）
+                    await loadAvatarToElement(char.avatar, avatarId, char.name[0]);
+                }
+
+            } catch (err) {
+                console.error("Initialization error:", err);
+                api.ui.toast('初始化失败，请重新加载');
+            }
+        }
+
+        // 选定角色后进入空间，加载独立数据
+        async function selectPartner(partner) {
+            currentPartner = partner;
+            
+            // 1. 隐藏选择屏幕
+            document.getElementById('char-select-screen').style.display = 'none';
+            api.ui.toast(`正在进入与 ${partner.name} 的花园...`);
+
+            // 2. 加载选定角色的右侧头像
+            await loadAvatarToElement(partner.avatar, 'charAvatar', partner.name ? partner.name[0] : '👦');
+
+            // 3. 读取当前用户名
+            let userName = '我';
+            try {
+                const userProfile = await api.user.getProfile();
+                if (userProfile && userProfile.name) {
+                    userName = userProfile.name;
+                }
+            } catch (uErr) {
+                console.warn("Failed to get profile:", uErr);
+            }
+
+            // 4. 更新顶部标题
+            document.getElementById('mainTitle').innerHTML = `${userName} <span style="color: var(--primary)">♥</span> ${partner.name}`;
+
+            // 5. 根据角色ID载入独立的数据库数据，避免多个角色数据混淆
+            const dbName = `couple_space_v2_${partner.name}`;
+            const savedState = await api.db.list(dbName);
+            
+            // 重置一下基础 state 的结构模板，以便新建时使用
+            const defaultState = {
+                exp: 0,
+                level: 1,
+                lastCheckin: '',
+                userAvatar: '', 
+                anniversaries: [
+                    { name: '相识第一天', date: '2023-05-20' }
+                ],
+                child: {
+                    adopted: false,
+                    name: '小汤圆',
+                    personality: '温柔听话',
+                    avatar: '', 
+                    ability: 30,
+                    mood: 80,
+                    stage: '幼儿园', 
+                    studyCount: 0,
+                    examCount: 0,
+                    isStudying: false,
+                    studyStartTime: 0
+                },
+                drawGame: {
+                    role: 'user', 
+                    topic: '爱心',
+                    score: 0
+                }
+            };
+
+            if (savedState && savedState.length > 0) {
+                state = savedState[0];
+                if (state.userAvatar === undefined) state.userAvatar = '';
+                if (!state.child) state.child = {};
+                if (state.child.avatar === undefined) state.child.avatar = '';
+            } else {
+                const newState = await api.db.create(dbName, defaultState);
+                state = newState;
+            }
+
+            // 重新绑定保存状态的函数，指向该角色的数据库
+            window.saveState = async function() {
+                try {
+                    await api.db.update(dbName, state.id, state);
+                } catch (e) {
+                    console.error("Save state error:", e);
+                }
+            };
+
+            // 6. 初始化并渲染大厅各个子面板
+            checkDailyCheckIn();
+            updateHeaderUI();
+            renderAnniversaries();
+            updateChildUI();
+            checkSchoolTimer();
+            setupAnniversaryTrigger();
+        }
+
+        // 统一 Tab 切换，包含顶栏动态收起隐藏逻辑
+        function switchTab(tabId, tabEl) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById('view-' + tabId).classList.add('active');
+            tabEl.classList.add('active');
+
+            // 只有大厅（home）页面显示顶部的双头像和经验等级条
+            const header = document.getElementById('mainHeader');
+            if (header) {
+                if (tabId === 'home') {
+                    header.style.display = 'flex';
+                } else {
+                    header.style.display = 'none';
+                }
+            }
+        }
+
+        // 经验与等级计算
+        async function updateHeaderUI() {
+            const levelNames = ['见习情侣', '热恋伴侣', '黄金誓盟', '白金眷侣', '钻石至爱', '灵魂伴侣'];
+            const levelIdx = Math.min(Math.floor(state.level / 5), levelNames.length - 1);
+            
+            document.getElementById('levelName').innerText = `LV.${state.level} ${levelNames[levelIdx]}`;
+            
+            const progress = state.exp % 100;
+            document.getElementById('expFill').style.width = `${progress}%`;
+            document.getElementById('expText').innerText = `${progress}/100`;
+
+            await loadAvatarToElement(state.userAvatar, 'userAvatar', '👩‍🦰');
+        }
+
+        // 修改用户头像弹窗
+        function changeUserAvatar() {
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">👩‍🦰 修改我的头像</h3>
+                <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 12px;">支持输入网络图片 URL，或者选择本地文件上传：</p>
+                
+                <input type="text" id="avatarUrlInput" class="input-sweet" placeholder="输入图片 URL (如 https://...)" value="${state.userAvatar || ''}">
+                
+                <div style="margin-bottom: 15px;">
+                    <label class="btn btn-secondary" style="display: inline-flex; cursor: pointer; width: 100%; justify-content: center; padding: 8px 12px; box-sizing: border-box; font-size:11px;">
+                        📁 选择本地图片
+                        <input type="file" id="avatarFileInput" accept="image/*" style="display: none;" onchange="handleAvatarFileSelect(event)">
+                    </label>
+                </div>
+                
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeModal()">取消</button>
+                    <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveUserAvatar()">保存</button>
+                </div>
+            `);
+        }
+
+        function handleAvatarFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                api.ui.toast('图片大小不能超过 2MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('avatarUrlInput').value = e.target.result;
+                api.ui.toast('本地图片已加载，点击保存生效');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveUserAvatar() {
+            const urlInput = document.getElementById('avatarUrlInput').value.trim();
+            if (urlInput.startsWith('data:image')) {
+                const uniqueId = `indexeddb-my-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                try {
+                    const blob = dataURLtoBlob(urlInput);
+                    await saveAvatarBlob(uniqueId, blob);
+                    state.userAvatar = uniqueId;
+                } catch(e) {
+                    console.error("保存头像到数据库失败", e);
+                    state.userAvatar = urlInput;
+                }
+            } else {
+                state.userAvatar = urlInput;
+            }
+            await saveState();
+            await updateHeaderUI();
+            closeModal();
+            api.ui.toast('✨ 头像修改成功！');
+        }
+
+        async function addExp(amount) {
+            state.exp += amount;
+            const newLevel = Math.floor(state.exp / 100) + 1;
+            if (newLevel > state.level) {
+                state.level = newLevel;
+                api.ui.toast(`🎉 恭喜！你们的关系等级升到了 LV.${state.level}！`);
+            } else {
+                api.ui.toast('✨ 获得经验值！');
+            }
+            await updateHeaderUI();
+            await saveState();
+        }
+
+        // 每日签到
+        function checkDailyCheckIn() {
+            const today = new Date().toLocaleDateString();
+            const btn = document.getElementById('btnCheckin');
+            if (state.lastCheckin === today) {
+                btn.innerText = '今日已签到';
+                btn.disabled = true;
+            } else {
+                btn.innerText = '点击签到';
+                btn.disabled = false;
+                btn.className = 'btn btn-primary';
+                btn.onclick = async () => {
+                    state.lastCheckin = today;
+                    btn.innerText = '今日已签到';
+                    btn.disabled = true;
+                    btn.className = 'btn btn-secondary';
+                    await addExp(20);
+                };
+            }
+        }
+
+        // 纪念日数据更新时动态更新爱意卡片天数
+        function updateLoveDays() {
+            if (state.anniversaries && state.anniversaries.length > 0) {
+                const sorted = [...state.anniversaries].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const firstAnn = sorted[0];
+                const diffTime = new Date() - new Date(firstAnn.date);
+                const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+                
+                document.getElementById('loveDaysNumber').innerText = diffDays;
+                document.getElementById('loveDaysSubText').innerText = `since ${firstAnn.date.replace(/-/g, '.')} · 「 ${firstAnn.name} 」`;
+            } else {
+                document.getElementById('loveDaysNumber').innerText = '0';
+                document.getElementById('loveDaysSubText').innerText = 'since ...';
+            }
+        }
+
+        // 纪念日渲染
+        function renderAnniversaries() {
+            const list = document.getElementById('anniversaryList');
+            list.innerHTML = '';
+            
+            if (!state.anniversaries || state.anniversaries.length === 0) {
+                list.innerHTML = `<div style="text-align: center; color: var(--text-sub); font-size: 12px; padding: 20px 0;">暂无纪念日，快去添加一个吧~</div>`;
+                updateLoveDays();
+                return;
+            }
+
+            state.anniversaries.forEach((ann, idx) => {
+                const diffTime = new Date(ann.date) - new Date();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                const row = document.createElement('div');
+                row.className = 'anniversary-row';
+                
+                row.innerHTML = `
+                    <div class="ann-info">
+                        <span class="ann-name">${ann.name}</span>
+                        <span class="ann-date">${ann.date}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        ${diffDays > 0 ? `<span class="ann-days">还有 ${diffDays} 天</span>` : `<span class="ann-days">已过 ${Math.abs(diffDays)} 天</span>`}
+                        <button class="del-btn" style="background: #fff; color: #9e7d7d; border: 1.5px solid #d8caca; padding: 4px 10px; font-size: 10px; font-weight: bold; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center;">删除</button>
+                    </div>
+                `;
+                
+                const deleteButton = row.querySelector('.del-btn');
+                deleteButton.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    deleteAnniversary(idx);
+                });
+                
+                list.appendChild(row);
+            });
+
+            updateLoveDays();
+        }
+
+        // 删除纪念日
+        function deleteAnniversary(index) {
+            showModal(`
+                <h3 style="margin-top:0; color: #9e7d7d;">🗑️ 删除纪念日</h3>
+                <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5; margin-bottom: 15px;">
+                    确定要删除纪念日「<b>${state.anniversaries[index].name}</b>」吗？此操作不可恢复。
+                </p>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeModal()">取消</button>
+                    <button class="btn btn-primary" style="flex:1; justify-content:center; background:#9e7d7d; border-color:#9e7d7d; color:white;" onclick="confirmDeleteAnniversary(${index})">确认删除</button>
+                </div>
+            `);
+        }
+
+        async function confirmDeleteAnniversary(index) {
+            state.anniversaries.splice(index, 1);
+            await saveState();
+            renderAnniversaries();
+            closeModal();
+            api.ui.toast('🗑️ 纪念日已删除');
+        }
+
+        // 纪念日主动问候检测
+        async function setupAnniversaryTrigger() {
+            if (!state.anniversaries || state.anniversaries.length === 0) return;
+            const todayStr = new Date().toISOString().slice(5, 10);
+            const checkedToday = await api.db.list('anniversary_checked_today');
+            if (checkedToday.length > 0 && checkedToday[0].date === todayStr) {
+                return;
+            }
+
+            for (let ann of state.anniversaries) {
+                if (ann.date.slice(5) === todayStr && currentPartner) {
+                    try {
+                        const prompt = `今天是我们的纪念日: ${ann.name}。作为我的爱人，请发一条热情的私聊，主动向我庆祝并提起这个纪念日。`;
+                        const res = await api.ai.generate({
+                            characterId: currentPartner.id,
+                            instruction: prompt,
+                            appTags: ['couple_anniversary']
+                        });
+                        
+                        await api.chat.writeHistory({
+                            characterId: currentPartner.id,
+                            role: 'assistant',
+                            content: res.text
+                        });
+
+                        api.ui.toast(`💌 收到 ${currentPartner.name} 发来的纪念日问候！`);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+            }
+
+            if (checkedToday.length > 0) {
+                await api.db.update('anniversary_checked_today', checkedToday[0].id, { date: todayStr });
+            } else {
+                await api.db.create('anniversary_checked_today', { date: todayStr });
+            }
+        }
+
+        // 打开新增纪念日模态框
+        function openAddAnniversaryModal() {
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">🗓️ 记录新纪念日</h3>
+                <input type="text" id="newAnnName" class="input-sweet" placeholder="纪念日名称（如相识一周年）">
+                <input type="date" id="newAnnDate" class="input-sweet">
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeModal()">取消</button>
+                    <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveNewAnniversary()">保存</button>
+                </div>
+            `);
+        }
+
+        async function saveNewAnniversary() {
+            const name = document.getElementById('newAnnName').value.trim();
+            const date = document.getElementById('newAnnDate').value;
+            if (!name || !date) {
+                api.ui.toast('请填写完整信息~');
+                return;
+            }
+            if(!state.anniversaries) state.anniversaries = [];
+            state.anniversaries.push({ name, date });
+            await saveState();
+            renderAnniversaries();
+            closeModal();
+            api.ui.toast('📅 纪念日保存成功！');
+        }
+
+        // 统一弹窗控制
+        function showModal(html) {
+            const overlay = document.getElementById('modalOverlay');
+            const panel = document.getElementById('modalPanel');
+            panel.innerHTML = html;
+            overlay.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        // ==================== 养崽崽核心 ====================
+        const stageEmojis = {
+            '幼儿园': '👶',
+            '小学': '👦',
+            '初中': '🧑',
+            '高中': '🧑‍🎓',
+            '大学': '👩‍🎓',
+            '毕业': '👑'
+        };
+
+        async function updateChildUI() {
+            const babyEmoji = document.getElementById('babyEmoji');
+            if (!state.child || !state.child.adopted) {
+                babyEmoji.style.backgroundImage = 'none';
+                babyEmoji.style.width = '';
+                babyEmoji.style.height = '';
+                babyEmoji.style.borderRadius = '';
+                babyEmoji.style.border = '';
+                babyEmoji.style.boxShadow = '';
+                babyEmoji.style.display = '';
+                babyEmoji.innerText = '🥚';
+                document.getElementById('babyName').innerText = '未领养小宝贝';
+                document.getElementById('statusStage').innerText = '待领养';
+                document.getElementById('statusAbility').innerText = '0';
+                document.getElementById('statusMood').innerText = '0';
+                return;
+            }
+
+            if (state.child.avatar) {
+                await loadAvatarToElement(state.child.avatar, 'babyEmoji', '👶');
+                babyEmoji.style.width = '160px';
+                babyEmoji.style.height = '160px';
+                babyEmoji.style.borderRadius = '20px';
+                babyEmoji.style.border = '2px dashed var(--border-color)';
+                babyEmoji.style.boxShadow = 'var(--shadow)';
+                babyEmoji.style.display = 'inline-block';
+            } else {
+                babyEmoji.style.backgroundImage = 'none';
+                babyEmoji.style.width = '';
+                babyEmoji.style.height = '';
+                babyEmoji.style.borderRadius = '';
+                babyEmoji.style.border = '';
+                babyEmoji.style.boxShadow = '';
+                babyEmoji.style.display = '';
+                babyEmoji.innerText = stageEmojis[state.child.stage] || '👶';
+            }
+
+            document.getElementById('babyName').innerText = state.child.name;
+            document.getElementById('statusStage').innerText = state.child.stage;
+            document.getElementById('statusAbility').innerText = state.child.ability;
+            document.getElementById('statusMood').innerText = state.child.mood;
+        }
+
+        function openAdventureMenu() {
+            if (!state.child || !state.child.adopted) {
+                openAdoptModal();
+                return;
+            }
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">🎒 选择崽崽奇遇</h3>
+                <button class="btn btn-primary" style="width:100%; margin-bottom:12px; justify-content:center;" onclick="startSchoolAdventure()">🏫 去上学 (20分钟)</button>
+                <button class="btn btn-primary" style="width:100%; margin-bottom:12px; justify-content:center;" onclick="startTutoring()">📖 辅导班奇遇 (能力+10, 心情-4)</button>
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="startPlayAdventure()">🎡 游玩奇遇 (心情+10)</button>
+            `);
+        }
+
+        function openAdoptModal() {
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">🥚 领养我们的崽崽</h3>
+                <p style="font-size: 12px; color: var(--text-sub);">给它起一个好听且充满爱意的名字吧！</p>
+                <input type="text" id="adoptBabyName" class="input-sweet" placeholder="如：小布丁">
+                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:10px;" onclick="confirmAdopt()">孵化小天使 ✨</button>
+            `);
+        }
+
+        async function confirmAdopt() {
+            const name = document.getElementById('adoptBabyName').value.trim();
+            if (!name) {
+                api.ui.toast('名字不能为空哦');
+                return;
+            }
+            state.child = {
+                adopted: true,
+                name: name,
+                ability: 20,
+                mood: 100,
+                stage: '幼儿园',
+                studyCount: 0,
+                examCount: 0,
+                isStudying: false,
+                studyStartTime: 0,
+                avatar: '',
+                personality: '温柔听话'
+            };
+            await saveState();
+            await updateChildUI();
+            closeModal();
+            api.ui.toast(`🎉 恭喜！领养了可爱的 ${name}！`);
+        }
+
+        function openChildSettings() {
+            if (!state.child || !state.child.adopted) {
+                openAdoptModal();
+                return;
+            }
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">⚙️ 崽崽设定</h3>
+                
+                <div style="margin-bottom: 12px; text-align: left;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 4px;">🧠 崽崽性格</label>
+                    <input type="text" id="personalityInput" class="input-sweet" value="${state.child.personality || ''}" placeholder="自定义性格，如：活泼好动" style="margin-bottom: 8px;">
+                    <button class="btn btn-secondary" style="width:100%; justify-content:center; padding: 6px 12px; font-size: 11px;" onclick="generateAIPersonality()">✨ AI 智能生成性格</button>
+                </div>
+                
+                <hr style="border: none; border-top: 1px dashed var(--border-color); margin: 12px 0;">
+                
+                <div style="margin-bottom: 12px; text-align: left;">
+                    <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 4px;">🖼️ 崽崽形象</label>
+                    <input type="text" id="childAvatarInput" class="input-sweet" value="${state.child.avatar || ''}" placeholder="输入图片 URL (如 https://...)" style="margin-bottom: 8px;">
+                    
+                    <label class="btn btn-secondary" style="display: inline-flex; cursor: pointer; width: 100%; justify-content: center; padding: 6px 12px; font-size: 11px; margin-bottom: 8px; box-sizing: border-box;">
+                        📁 选择本地图片
+                        <input type="file" id="childFileInput" accept="image/*" style="display: none;" onchange="handleChildFileSelect(event)">
+                    </label>
+                    ${state.child.avatar ? `<button class="btn btn-secondary" style="width:100%; justify-content:center; padding: 6px 12px; font-size: 11px; border-color: #ff4757; color: #ff4757;" onclick="resetChildAvatar()">🚫 恢复默认形象</button>` : ''}
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeModal()">取消</button>
+                    <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveChildSettings()">保存</button>
+                </div>
+            `);
+        }
+
+        function handleChildFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                api.ui.toast('图片大小不能超过 2MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('childAvatarInput').value = e.target.result;
+                api.ui.toast('本地图片已加载');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetChildAvatar() {
+            document.getElementById('childAvatarInput').value = '';
+            api.ui.toast('已重置为默认，保存后生效');
+        }
+
+        async function saveChildSettings() {
+            const p = document.getElementById('personalityInput').value.trim();
+            const avatar = document.getElementById('childAvatarInput').value.trim();
+            
+            state.child.personality = p;
+            if (avatar.startsWith('data:image')) {
+                const uniqueId = `indexeddb-child-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                try {
+                    const blob = dataURLtoBlob(avatar);
+                    await saveAvatarBlob(uniqueId, blob);
+                    state.child.avatar = uniqueId;
+                } catch(e) {
+                    console.error("保存崽崽头像到数据库失败", e);
+                    state.child.avatar = avatar;
+                }
+            } else {
+                state.child.avatar = avatar;
+            }
+            
+            await saveState();
+            await updateChildUI();
+            closeModal();
+            api.ui.toast('✨ 崽崽设定已更新！');
+        }
+
+        async function generateAIPersonality() {
+            if (!currentPartner) {
+                api.ui.toast('请先在第一页挑选你的伴侣！');
+                return;
+            }
+            api.ui.toast('AI 正在分析性格中...');
+            try {
+                const res = await api.ai.generate({
+                    characterId: currentPartner.id,
+                    instruction: `请根据我们情侣的日常互动氛围，为我们的孩子(学龄:${state.child.stage})生成一个具有两三个词的可爱性格（如：古灵精怪、傲娇体贴）。仅输出性格词汇，不要有多余文字。`,
+                    appTags: ['couple_child']
+                });
+                document.getElementById('personalityInput').value = res.text.replace(/["'。]/g, '').trim();
+            } catch (e) {
+                api.ui.toast('AI 生成失败，请重试');
+            }
+        }
+
+        async function startSchoolAdventure() {
+            if (state.child.isStudying) {
+                api.ui.toast('崽崽已经在学校了哦！');
+                return;
+            }
+            state.child.isStudying = true;
+            state.child.studyStartTime = Date.now();
+            await saveState();
+            closeModal();
+            checkSchoolTimer();
+            api.ui.toast('🎒 崽崽开心地背着书包去上学啦！');
+        }
+
+        function checkSchoolTimer() {
+            if (!state.child || !state.child.isStudying) return;
+            const elapsed = Date.now() - state.child.studyStartTime;
+            const duration = 20 * 60 * 1000; 
+            const display = document.getElementById('schoolCountdown');
+
+            if (elapsed >= duration) {
+                finishSchoolAdventure();
+            } else {
+                const remainSec = Math.ceil((duration - elapsed) / 1000);
+                const min = Math.floor(remainSec / 60);
+                const sec = remainSec % 60;
+                display.innerText = `🏫 崽崽正在认真上课：${min}分${sec}秒后放学`;
+                setTimeout(checkSchoolTimer, 1000);
+            }
+        }
+
+        async function finishSchoolAdventure() {
+            state.child.isStudying = false;
+            state.child.studyCount++;
+            document.getElementById('schoolCountdown').innerText = '';
+            await saveState();
+            api.ui.toast('🔔 叮铃铃！崽崽放学啦，快去奇遇中心看看！');
+
+            if (state.child.studyCount % 2 === 0) {
+                triggerExam();
+            }
+        }
+
+        async function startTutoring() {
+            state.child.ability = Math.min(100, state.child.ability + 10);
+            state.child.mood = Math.max(0, state.child.mood - 4);
+            await saveState();
+            await updateChildUI();
+            closeModal();
+            api.ui.toast('📖 崽崽去上了辅导班，感觉自己变聪明了，但有点疲惫！');
+        }
+
+        async function startPlayAdventure() {
+            state.child.mood = Math.min(100, state.child.mood + 10);
+            await saveState();
+            await updateChildUI();
+            closeModal();
+            api.ui.toast('🎡 崽崽在游乐园玩了旋转木马，心情大好！');
+        }
+
+        let lastExamScore = 0;
+        let lastExamIsFinal = false;
+
+        async function triggerExam() {
+            state.child.examCount++;
+            const isFinal = state.child.examCount % 2 === 0;
+            lastExamIsFinal = isFinal;
+
+            const passRate = (state.child.ability + state.child.mood) / 2; 
+            let score = Math.floor(passRate * 0.8 + Math.random() * 20);
+            if (state.child.ability === 100 && state.child.mood === 100) score = 100;
+            score = Math.min(100, Math.max(0, score));
+            lastExamScore = score;
+
+            api.ui.toast('📝 正在批改崽崽的考卷...');
+            let charComment = "崽崽很努力了，下次继续加油！";
+            try {
+                const res = await api.ai.generate({
+                    characterId: currentPartner.id,
+                    instruction: `我们的崽崽（性格：${state.child.personality}）刚刚参加了${state.child.stage}${isFinal ? '升学' : ''}考试，取得了${score}分（满分100）。请以爱人/共同父母的口吻发表你的看法。`,
+                    appTags: ['couple_child_exam']
+                });
+                charComment = res.text;
+            } catch (e) {
+                console.error(e);
+            }
+
+            const panel = document.getElementById('examResultPanel');
+            panel.style.display = 'block';
+            document.getElementById('reportTitle').innerText = isFinal ? `🎓 决定命运的【升学考试】` : `📝 阶段性成长小测验`;
+            document.getElementById('reportScore').innerText = score;
+            document.getElementById('charCommentText').innerText = charComment;
+            
+            const seal = document.querySelector('.report-seal');
+            if (score >= 60) {
+                seal.innerText = '及格';
+                seal.style.color = 'var(--primary)';
+                seal.style.borderColor = 'var(--primary)';
+            } else {
+                seal.innerText = '不及格';
+                seal.style.color = '#c0392b';
+                seal.style.borderColor = '#c0392b';
+            }
+
+            setTimeout(() => {
+                panel.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        }
+
+        async function submitUserOpinion() {
+            const userOpinion = document.getElementById('userOpinionInput').value.trim();
+            if (!userOpinion) {
+                api.ui.toast('请输入你对成绩单的看法~');
+                return;
+            }
+
+            api.ui.toast('正在派送家长寄语...');
+            
+            try {
+                await api.chat.sendCard({
+                    characterId: currentPartner.id,
+                    role: 'assistant',
+                    summary: `崽崽的${state.child.stage}成绩出来了！`,
+                    card: {
+                        title: `🐣 ${state.child.name}的成长成绩单`,
+                        body: `学龄阶段：${state.child.stage}\n考试成绩：${lastExamScore} 分\n\n💬 另一半评语：\n${document.getElementById('charCommentText').innerText}\n\n💬 我的评语：\n${userOpinion}`,
+                        accentColor: '#7d9e80'
+                    }
+                });
+
+                const replyText = `[系统消息]：崽崽看到了爸妈的评语，暗下决心要更努力！${currentPartner.name}对你说：“看到孩子这么懂事，真希望我们能一直这样幸福地走下去。”`;
+                await api.chat.writeHistory({
+                    characterId: currentPartner.id,
+                    role: 'assistant',
+                    content: replyText
+                });
+
+                if (lastExamIsFinal) {
+                    if (lastExamScore >= 60) {
+                        const stages = ['幼儿园', '小学', '初中', '高中', '大学', '毕业'];
+                        const curIdx = stages.indexOf(state.child.stage);
+                        if (curIdx < stages.length - 1) {
+                            state.child.stage = stages[curIdx + 1];
+                            api.ui.toast(`🎉 太棒了！崽崽成功升入了【${state.child.stage}】！`);
+                        }
+                    } else {
+                        api.ui.toast('❌ 升学考试未通过，要多给崽崽补习能力和心情哦！');
+                    }
+                }
+
+                document.getElementById('examResultPanel').style.display = 'none';
+                document.getElementById('userOpinionInput').value = '';
+                await saveState();
+                await updateChildUI();
+
+            } catch (e) {
+                api.ui.toast('联动回复生成失败，请重试');
+            }
+        }
+
+
+        // ==================== 小游戏核心 ====================
+
+        let qaStep = 0;
+        const qaQuestions = [
+            "我们第一次相遇是在什么时候/什么场景？",
+            "如果我们要去旅游，你最想和TA去哪里？",
+            "你觉得对方身上最吸引你的一个优点是？",
+            "当对方心情不好的时候，你会怎么安慰TA？",
+            "想象一下，我们5年后的生活会是什么样子的？"
+        ];
+        let userQAAnswers = [];
+
+        function openQAIntro() {
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">💖 默契情侣问答</h3>
+                <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5;">系统将给出 5 道关于你们关系与未来的灵魂提问，你和角色都会进行回答。完成可获得 30 经验值！</p>
+                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top: 10px;" onclick="startQAGame()">开始问答之旅</button>
+            `);
+        }
+
+        function startQAGame() {
+            qaStep = 0;
+            userQAAnswers = [];
+            showQAPage();
+        }
+
+        function showQAPage() {
+            let dots = '';
+            for (let i = 0; i < 5; i++) {
+                dots += `<div class="step-dot ${i === qaStep ? 'active' : ''}"></div>`;
+            }
+
+            showModal(`
+                <div class="step-indicator">${dots}</div>
+                <h3 style="margin-top:0; font-size:14px;">问题 ${qaStep + 1}/5</h3>
+                <p style="font-weight:bold; margin-bottom:15px; font-size: 13px;" id="qaQuestionText">${qaQuestions[qaStep]}</p>
+                <input type="text" id="qaAnswerInput" class="input-sweet" placeholder="输入你的真心话回答...">
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="nextQA()">下一题</button>
+            `);
+        }
+
+        async function nextQA() {
+            const ans = document.getElementById('qaAnswerInput').value.trim();
+            if (!ans) {
+                api.ui.toast('请填写你的回答~');
+                return;
+            }
+            userQAAnswers.push(ans);
+            qaStep++;
+
+            if (qaStep < 5) {
+                showQAPage();
+            } else {
+                api.ui.toast('正在采集对方的默契回答...');
+                try {
+                    const prompt = `我们刚刚完成了一轮情侣问答，这是我的答案：${userQAAnswers.join(' | ')}。请给出你的对应回答，并生成一段评价我们默契度的话。`;
+                    const res = await api.ai.generate({
+                        characterId: currentPartner.id,
+                        instruction: prompt,
+                        appTags: ['couple_qa']
+                    });
+
+                    await api.chat.writeHistory({
+                        characterId: currentPartner.id,
+                        role: 'assistant',
+                        content: `📊 [系统：情侣问答完成]\n\n我的回答与默契点评：\n${res.text}`
+                    });
+
+                    await addExp(30);
+                    closeModal();
+                    api.ui.toast('🎉 问答已同步上传至 QQ 中，快去看看TA的回答吧！');
+                } catch (e) {
+                    api.ui.toast('AI 生成失败，请重试');
+                }
+            }
+        }
+
+        function openDrawIntro() {
+            showModal(`
+                <h3 style="margin-top:0; color: var(--primary);">🎨 浪漫你画我猜</h3>
+                <p style="font-size:12px; color:var(--text-sub); line-height: 1.5;">选择由谁来担任灵魂画手：完成游戏可获得情侣空间积分！</p>
+                <div style="display:flex; gap:10px; margin-top: 15px;">
+                    <button class="btn btn-primary" style="flex:1; justify-content:center; font-size:11px;" onclick="startDrawGame('user')">我来画，TA猜</button>
+                    <button class="btn btn-primary" style="flex:1; justify-content:center; font-size:11px;" onclick="startDrawGame('char')">TA来画，我猜</button>
+                </div>
+            `);
+        }
+
+        const topics = ['红玫瑰', '甜甜圈', '摩天轮', '小猫咪', '爱心气球', '雨伞'];
+
+        function startDrawGame(role) {
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            state.drawGame.role = role;
+            state.drawGame.topic = randomTopic;
+
+            if (role === 'user') {
+                showModal(`
+                    <h3 style="margin-top:0; font-size:14px;">🎨 请画出：<span style="color:var(--primary); font-size:16px;">${randomTopic}</span></h3>
+                    <div class="canvas-container">
+                        <canvas id="drawCanvas" width="280" height="200"></canvas>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="clearCanvas()">重画</button>
+                        <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="submitUserDraw()">让TA猜</button>
+                    </div>
+                `);
+                setupCanvas();
+            } else {
+                api.ui.toast('画手正在构思中...');
+                setTimeout(async () => {
+                    try {
+                        const prompt = `我们要玩你画我猜，现在轮到你画了，你抽到的题目是【${randomTopic}】。请用生动、画面感强烈的文字，向我描述你“画了什么”（但绝对不能直接说出这三个字），让我来猜。`;
+                        const res = await api.ai.generate({
+                            characterId: currentPartner.id,
+                            instruction: prompt,
+                            appTags: ['couple_draw']
+                        });
+
+                        showModal(`
+                            <h3 style="margin-top:0; font-size:14px;">🎨 ${currentPartner.name} 画好啦！</h3>
+                            <p style="font-size:12px; background:#f4f7f4; padding:12px; border-radius:10px; font-style:italic; line-height: 1.5;">"${res.text}"</p>
+                            <input type="text" id="guessInput" class="input-sweet" placeholder="猜猜画的是什么？">
+                            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="submitUserGuess()">提交猜测</button>
+                        `);
+                    } catch (e) {
+                        api.ui.toast('生成画作失败');
+                    }
+                }, 1000);
+            }
+        }
+
+        let canvas, ctx, drawing = false;
+
+        function setupCanvas() {
+            canvas = document.getElementById('drawCanvas');
+            ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#7d9e80';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+
+            canvas.addEventListener('mousedown', startEvent);
+            canvas.addEventListener('mousemove', drawEvent);
+            canvas.addEventListener('mouseup', endEvent);
+            canvas.addEventListener('touchstart', startEvent);
+            canvas.addEventListener('touchmove', drawEvent);
+            canvas.addEventListener('touchend', endEvent);
+        }
+
+        function startEvent(e) {
+            drawing = true;
+            drawEvent(e);
+        }
+
+        function drawEvent(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function endEvent() {
+            drawing = false;
+            ctx.beginPath();
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        async function submitUserDraw() {
+            api.ui.toast('TA 正在盯着画布看...');
+            setTimeout(async () => {
+                try {
+                    const prompt = `我们要玩你画我猜，现在我画完了，题目是【${state.drawGame.topic}】。请用充满爱意的语气假装你已经看懂了我的画，并大声猜出正确的答案！`;
+                    const res = await api.ai.generate({
+                        characterId: currentPartner.id,
+                        instruction: prompt,
+                        appTags: ['couple_draw_guess']
+                    });
+
+                    await addExp(20);
+                    showModal(`
+                        <h3 style="margin-top:0; color:var(--primary);">🎉 猜对啦！</h3>
+                        <p style="font-size:12px; line-height: 1.5;"><b>${currentPartner.name}：</b> "${res.text}"</p>
+                        <p style="font-size:11px; color:var(--text-sub);">情侣空间积分 +20 成功！</p>
+                        <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top: 10px;" onclick="closeModal()">太棒了</button>
+                    `);
+                } catch (e) {
+                    closeModal();
+                }
+            }, 1000);
+        }
+
+        async function submitUserGuess() {
+            const guess = document.getElementById('guessInput').value.trim();
+            if (!guess) return;
+
+            const isCorrect = guess.includes(state.drawGame.topic) || state.drawGame.topic.includes(guess);
+            const points = isCorrect ? 20 : 10;
+            await addExp(points);
+
+            showModal(`
+                <h3 style="margin-top:0; color:var(--primary);">${isCorrect ? '🎉 恭喜你答对啦！' : '😢 遗憾答错啦'}</h3>
+                <p style="font-size:13px;">正确答案其实是：<b style="color:var(--primary);">${state.drawGame.topic}</b></p>
+                <p style="font-size:11px; color:var(--text-sub);">获得情侣空间积分 +${points}！</p>
+                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top: 10px;" onclick="closeModal()">确认</button>
+            `);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

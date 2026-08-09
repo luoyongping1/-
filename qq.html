@@ -1546,7 +1546,7 @@ input:checked + .slider:before {
                 <div style="width:100%; height:100%; background: rgba(0,0,0,0.2);"></div>
                 <div class="moments-user">
                     <span id="moments-my-name" style="color:white; margin-right:10px; text-shadow:1px 1px 2px rgba(0,0,0,0.8); font-weight:bold;">我</span>
-                    <div class="main-avatar" id="moments-my-avatar">ME</div>
+                    <div class="main-avatar" id="moments-my-avatar" onclick="event.stopPropagation(); changeMyAvatar()">ME</div>
                 </div>
             </div>
             <div id="moments-list" style="background:#fff;"></div>
@@ -1664,12 +1664,92 @@ function initTheaterPetDrag() {
 }
 // 在页面加载后启动
 window.addEventListener('DOMContentLoaded', initTheaterPetDrag);
-        // --- 数据定义 ---
-        // 自动应用来自主页面的全局美化样式
-function applyGlobalStyles() {
+// --- IndexedDB 公共键值对存储定义 ---
+let appKVDB;
+const KV_STORE_NAME = 'app_kv_store';
+
+function setKV(key, value) {
+    return new Promise((resolve, reject) => {
+        if (!appKVDB) return reject("Database not initialized");
+        const transaction = appKVDB.transaction([KV_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(KV_STORE_NAME);
+        const request = store.put({ key: key, value: value });
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.errorCode);
+    });
+}
+
+function getKV(key, defaultValue = null) {
+    return new Promise((resolve, reject) => {
+        if (!appKVDB) return resolve(defaultValue);
+        const transaction = appKVDB.transaction([KV_STORE_NAME], 'readonly');
+        const store = transaction.objectStore(KV_STORE_NAME);
+        const request = store.get(key);
+        request.onsuccess = () => {
+            resolve(request.result ? request.result.value : defaultValue);
+        };
+        request.onerror = (event) => reject(event.target.errorCode);
+    });
+}
+
+function removeKV(key) {
+    return new Promise((resolve, reject) => {
+        if (!appKVDB) return reject("Database not initialized");
+        const transaction = appKVDB.transaction([KV_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(KV_STORE_NAME);
+        const request = store.delete(key);
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.errorCode);
+    });
+}
+
+// --- 数据定义 ---
+let currentFriendName = "";
+let friends = [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '' }];
+let groups = ['我的好友'];
+let collapsedGroups = [];
+let chatHistories = {};
+let groupChats = [];
+let isGroupMode = false; 
+let isWatching = false;
+let currentVideoName = "";
+let datingHistories = {};
+let moments = [];
+let userPersonas = [];
+let currentFireFriend = null; 
+let tempUserPersonaFile = null; 
+
+let aiConfig = {"url":"","key":"","model":"gpt-3.5-turbo"};
+let myInfo = { name: '我', wxid: 'wxid_001', avatar: '' };
+let walletData = { balance: 0.00, history: [] };
+let favorites = [];
+let stickers = [];
+
+// 从 IndexedDB 加载全部配置数据到内存变量中
+async function loadAllKVData() {
+    friends = await getKV('qq_friends', friends);
+    groups = await getKV('qq_groups', groups);
+    collapsedGroups = await getKV('qq_collapsed_groups', collapsedGroups);
+    chatHistories = await getKV('qq_history', chatHistories);
+    groupChats = await getKV('qq_group_chats', groupChats);
+    datingHistories = await getKV('qq_dating_history', datingHistories);
+    moments = await getKV('qq_moments', moments);
+    userPersonas = await getKV('qq_user_personas', userPersonas);
+    aiConfig = await getKV('ai_config', aiConfig);
+    myInfo = await getKV('my_info', myInfo);
+    walletData = await getKV('wallet_data', walletData);
+    favorites = await getKV('qq_favorites_list', favorites);
+    stickers = await getKV('qq_stickers', stickers);
+}
+
+// 自动应用来自主页面的全局美化样式
+async function applyGlobalStyles() {
     const keys = ['qq_chatlist_css', 'qq_contacts_css', 'qq_discover_css', 'qq_me_css'];
     let combinedCss = "";
-    keys.forEach(key => { combinedCss += localStorage.getItem(key) || ""; });
+    for (const key of keys) {
+        const val = await getKV(key) || "";
+        combinedCss += val;
+    }
 
     let styleTag = document.getElementById('qq-custom-global-style');
     if(!styleTag) {
@@ -1679,29 +1759,10 @@ function applyGlobalStyles() {
     }
     styleTag.innerHTML = combinedCss;
 }
-applyGlobalStyles();
-        let currentFriendName = "";
-        let friends = JSON.parse(localStorage.getItem('qq_friends')) || [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '' }];
-let groups = JSON.parse(localStorage.getItem('qq_groups')) || ['我的好友'];
-let collapsedGroups = JSON.parse(localStorage.getItem('qq_collapsed_groups')) || [];
-let chatHistories = JSON.parse(localStorage.getItem('qq_history')) || {};
-// 新增：群聊数据存储
-let groupChats = JSON.parse(localStorage.getItem('qq_group_chats')) || [];
-let isGroupMode = false; // 标记当前是否在群聊中
-let isWatching = false;
-let currentVideoName = "";
-// 新增：约会记录数据库
-let datingHistories = JSON.parse(localStorage.getItem('qq_dating_history')) || {};
-let moments = JSON.parse(localStorage.getItem('qq_moments')) || [];
-// 新增：User人设数据库
-let userPersonas = JSON.parse(localStorage.getItem('qq_user_personas')) || [];
-let currentFireFriend = null; // 当前正在查看的小火人所属好友
-
-let tempUserPersonaFile = null; // 用于存储用户选择的 User Persona 头像文件 Blob
 
 // --- IndexedDB 核心修正代码 ---
 const DB_NAME = 'WeChatAIPlusDB';
-const DB_VERSION = 2; // 升级版本至 2，与阅读子页面无冲突共享
+const DB_VERSION = 3; // 升级版本至 3，支持全局键值对存储，与阅读子页面无冲突共享
 const AVATAR_STORE_NAME = 'userPersonaAvatars';
 let userPersonaAvatarDB;
 let chatBgDB;
@@ -1720,10 +1781,15 @@ function openUserPersonaAvatarDB() {
             if (!db.objectStoreNames.contains('reeden_books_store')) {
                 db.createObjectStore('reeden_books_store', { keyPath: 'id' });
             }
+            // 确保公共 KV 存储表存在
+            if (!db.objectStoreNames.contains(KV_STORE_NAME)) {
+                db.createObjectStore(KV_STORE_NAME, { keyPath: 'key' });
+            }
         };
 
         request.onsuccess = (event) => {
             userPersonaAvatarDB = event.target.result;
+            appKVDB = event.target.result; // appKVDB 共享同一个连接
             resolve();
         };
 
@@ -1826,24 +1892,24 @@ function dataURLtoBlob(dataUrl) {
 // 在 saveData 函数里也要加上这一行
 async function saveData() {
     try {
-        localStorage.setItem('qq_friends', JSON.stringify(friends));
-        localStorage.setItem('qq_groups', JSON.stringify(groups));
-        localStorage.setItem('qq_collapsed_groups', JSON.stringify(collapsedGroups));
-        localStorage.setItem('qq_history', JSON.stringify(chatHistories));
-        localStorage.setItem('qq_dating_history', JSON.stringify(datingHistories));
-        localStorage.setItem('qq_moments', JSON.stringify(moments));
-        localStorage.setItem('ai_config', JSON.stringify(aiConfig));
-        localStorage.setItem('my_info', JSON.stringify(myInfo));
-        localStorage.setItem('wallet_data', JSON.stringify(walletData));
-        localStorage.setItem('qq_favorites_list', JSON.stringify(favorites));
-        localStorage.setItem('qq_stickers', JSON.stringify(stickers));
-        localStorage.setItem('qq_group_chats', JSON.stringify(groupChats));
-        localStorage.setItem('qq_user_personas', JSON.stringify(userPersonas));
+        await setKV('qq_friends', friends);
+        await setKV('qq_groups', groups);
+        await setKV('qq_collapsed_groups', collapsedGroups);
+        await setKV('qq_history', chatHistories);
+        await setKV('qq_dating_history', datingHistories);
+        await setKV('qq_moments', moments);
+        await setKV('ai_config', aiConfig);
+        await setKV('my_info', myInfo);
+        await setKV('wallet_data', walletData);
+        await setKV('qq_favorites_list', favorites);
+        await setKV('qq_stickers', stickers);
+        await setKV('qq_group_chats', groupChats);
+        await setKV('qq_user_personas', userPersonas);
 
         // --- 同步数据到云服务器 ---
-        const subRaw = localStorage.getItem('web_push_subscription');
+        const subRaw = await getKV('web_push_subscription');
         if (subRaw) {
-            const sub = JSON.parse(subRaw);
+            const sub = typeof subRaw === 'string' ? JSON.parse(subRaw) : subRaw;
             fetch('http://113.45.248.178:3000/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1859,11 +1925,6 @@ async function saveData() {
         }
     } catch (e) { console.error("Save Error", e); }
 }
-        let aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
-        let myInfo = JSON.parse(localStorage.getItem('my_info')) || { name: '我', wxid: 'wxid_001', avatar: '' };
-        let walletData = JSON.parse(localStorage.getItem('wallet_data')) || { balance: 0.00, history: [] };
-        let favorites = JSON.parse(localStorage.getItem('qq_favorites_list')) || [];
-        let stickers = JSON.parse(localStorage.getItem('qq_stickers')) || [];
         
         let tempMomentImages = [];
         let tempVisibleFriends = []; 
@@ -1885,7 +1946,8 @@ async function saveData() {
         }
 
 async function playMiniMaxVoice(text, btn) {
-    const mmConfig = JSON.parse(localStorage.getItem('minimax_config') || '{}');
+    let mmConfigVal = await getKV('minimax_config') || {};
+    const mmConfig = typeof mmConfigVal === 'string' ? JSON.parse(mmConfigVal) : mmConfigVal;
     const friend = friends.find(f => f.name === currentFriendName);
     const apiKey = mmConfig.key || mmConfig.apiKey;
     if (!apiKey || !mmConfig.groupId) return alert("请在设置中配置 MiniMax，检查 API Key 和 Group ID 是否填写");
@@ -2514,7 +2576,14 @@ async function sendPetMsg() {
 
 async function getAiReply(isProactive = false) {
     // 强制同步主页面的 API 设置
-    aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
+    let savedAiConfig = await getKV('ai_config');
+    if (savedAiConfig) {
+        if (typeof savedAiConfig === 'string') {
+            try { aiConfig = JSON.parse(savedAiConfig); } catch(e) {}
+        } else {
+            aiConfig = savedAiConfig;
+        }
+    }
     if(!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
     const friend = friends.find(f => f.name === currentFriendName);
     
@@ -2542,7 +2611,8 @@ const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => {
     };
 });
     
-    let wb = JSON.parse(localStorage.getItem('wb_data') || '{"books":[]}');
+    let wbVal = await getKV('wb_data') || {"books":[]};
+    let wb = typeof wbVal === 'string' ? JSON.parse(wbVal) : wbVal;
             let worldBookPrompt = "";
             const globalBooks = wb.books.filter(b => b.scope === 'global');
             const mountedLocalBooks = wb.books.filter(b => b.scope === 'local' && (friend.mountedBooks || []).includes(b.title));
@@ -2650,7 +2720,7 @@ let proactivePrompt = isProactive ? "\n【强制指令】：用户已经很久�
             // 在下面这一行中，我们将 userPersonaPrompt 加入了 sys
             // 构建MCP工具提示词
 let mcpToolsPrompt = "";
-const savedMcpUrl = localStorage.getItem('mcp_server_url');
+const savedMcpUrl = await getKV('mcp_server_url');
 if (savedMcpUrl && typeof mcpTools !== 'undefined' && mcpTools.length > 0) {
     const toolList = mcpTools.map(t => `- 工具名：${t.name}，说明：${t.description || '无描述'}，参数：${JSON.stringify(t.inputSchema?.properties || {})}`).join('\n');
     mcpToolsPrompt = `
@@ -3124,25 +3194,47 @@ if (rawText.includes("[SEND_MONEY]")) {
 
         function openMoments() { document.getElementById('moments-page').classList.add('active'); renderMoments(); }
         function closeMoments() { document.getElementById('moments-page').classList.remove('active'); }
-        function renderMoments() {
-    document.getElementById('moments-my-name').innerText = myInfo.name;
-    const myAvatarHtml = myInfo.avatar ? `<img src="${myInfo.avatar}" decoding="async">` : myInfo.name[0];
-    document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
-    // 核心修复：直接读取背景图，不再使用 replace 过滤，防止 Base64 编码损坏
-    const momentsBg = localStorage.getItem('moments_bg_url');
-    if (momentsBg) {
-        const bgEl = document.getElementById('moments-bg-display');
-        if (bgEl) {
-            bgEl.style.backgroundImage = "url('" + momentsBg.trim() + "')";
-            bgEl.style.backgroundSize = "cover";
-            bgEl.style.backgroundPosition = "center";
-        }
+    async function renderMoments() {
+document.getElementById('moments-my-name').innerText = myInfo.name;
+let myAvatarHtml = "";
+if (myInfo.avatar) {
+    if (myInfo.avatar.startsWith('indexeddb-')) {
+        myAvatarHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
+    } else {
+        myAvatarHtml = `<img src="${myInfo.avatar}" decoding="async">`;
     }
-    const listArr = [];
+} else {
+    myAvatarHtml = myInfo.name[0];
+}
+document.getElementById('moments-my-avatar').innerHTML = myAvatarHtml;
+// 核心修复：直接读取背景图，不再使用 replace 过滤，防止 Base64 编码损坏
+const momentsBg = await getKV('moments_bg_url');
+if (momentsBg) {
+    const bgEl = document.getElementById('moments-bg-display');
+    if (bgEl) {
+        bgEl.style.backgroundImage = "url('" + momentsBg.trim() + "')";
+        bgEl.style.backgroundSize = "cover";
+        bgEl.style.backgroundPosition = "center";
+    }
+}
+const listArr = [];
             moments.slice().reverse().forEach((m, idx) => {
                 const realIdx = moments.length - 1 - idx;
                 const friend = friends.find(f => f.name === m.name);
-                const av = m.name === myInfo.name ? myAvatarHtml : (friend && friend.avatarUrl ? `<img src="${friend.avatarUrl}" decoding="async">` : m.name[0]);
+                let av = "";
+                if (m.name === myInfo.name) {
+                    av = myAvatarHtml;
+                } else {
+                    if (friend && friend.avatarUrl) {
+                        if (friend.avatarUrl.startsWith('indexeddb-')) {
+                            av = `<img class="db-img-loader" data-dbid="${friend.avatarUrl}" decoding="async">`;
+                        } else {
+                            av = `<img src="${friend.avatarUrl}" decoding="async">`;
+                        }
+                    } else {
+                        av = m.name[0];
+                    }
+                }
                 let imgsHtml = "";
                 if(m.images && m.images.length > 0) {
                     imgsHtml = `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; margin-top:8px; width:240px;">`;
@@ -3155,6 +3247,7 @@ if (rawText.includes("[SEND_MONEY]")) {
                 listArr.push(`<div class="moment-item"><div class="moment-avatar">${av}</div><div class="moment-content"><div class="moment-name" onclick="showCommentInput(${realIdx}, '${m.name}')">${m.name}</div><div class="moment-text">${m.text}</div>${imgsHtml}<div class="moment-footer"><span>刚刚 ${m.visibleTo && m.visibleTo.length > 0 ? `<span style="color:#888;margin-left:5px;">🔒部分可见</span>`:''}</span><div class="moment-menu-wrap"><div class="moment-menu-btn" onclick="toggleMomentMenu(${realIdx}, event)">..</div><div id="moment-pop-${realIdx}" class="moment-pop-menu"><div class="menu-action" onclick="likeMoment(${realIdx})">❤ 点赞</div><div class="menu-action" onclick="showCommentInput(${realIdx})">💬 评论</div><div class="menu-action" onclick="forwardMoment(${realIdx})">➔ 转发</div><div class="menu-action" onclick="deleteMoment(${realIdx})">🗑️ 删除</div></div></div></div><div id="feedback-${realIdx}" class="moment-feedback" style="display:${(m.likes && m.likes.length) || (m.comments && m.comments.length) ? 'block' : 'none'}">${m.likes && m.likes.length ? `<div class="like-section">❤ ${m.likes.join(', ')}</div>` : ''}${m.comments && m.comments.length ? `<div class="comment-section">${m.comments.map(c => `<div class="comment-item" onclick="event.stopPropagation(); showCommentInput(${realIdx}, '${c.name}')"><span class="comment-user">${c.name}</span>${c.replyTo ? `回复 <span class="comment-user">${c.replyTo}</span>` : ''}: ${c.text}</div>`).join('')}</div>` : ''}</div></div></div>`);
             });
             document.getElementById('moments-list').innerHTML = listArr.join('');
+            loadAllDatabaseImages();
         }
         function openMomentsEditor() { tempMomentImages = []; tempVisibleFriends = []; document.getElementById('moment-edit-text').value = ""; document.getElementById('visibility-display').innerText = "公开"; renderEditorImages(); document.getElementById('moments-editor-page').classList.add('active'); }
         function closeMomentsEditor() { document.getElementById('moments-editor-page').classList.remove('active'); }
@@ -3461,11 +3554,11 @@ function checkStickerMatch(val) {
             document.getElementById('moments-bg-url-input-area').style.display = 'none';
             document.getElementById('moments-bg-url-field').value = '';
         }
-        function confirmMomentsBgUrl() {
+        async function confirmMomentsBgUrl() {
             const u = document.getElementById('moments-bg-url-field').value.trim();
             if (u) {
-                localStorage.setItem('moments_bg_url', u);
-                renderMoments();
+                await setKV('moments_bg_url', u);
+                await renderMoments();
                 closeMomentsBgChoiceModal();
             } else {
                 alert('请输入有效的图片 URL');
@@ -3476,16 +3569,22 @@ function checkStickerMatch(val) {
         const reader = new FileReader();
         reader.onload = function(e) {
             // 核心修复：调用压缩函数，将背景图宽度限制在 1000 像素内，画质 0.7，确保能存入浏览器
-            compressImage(e.target.result, 1000, function(compressedData) {
-                localStorage.setItem('moments_bg_url', compressedData);
-                renderMoments();
+            compressImage(e.target.result, 1000, async function(compressedData) {
+                await setKV('moments_bg_url', compressedData);
+                await renderMoments();
                 alert("朋友圈背景上传成功（已自动压缩）");
             });
         };
         reader.readAsDataURL(this.files[0]);
     }
 };
-        function openWorldBookSelector() { const f=friends.find(f=>f.name===currentFriendName); const wb=JSON.parse(localStorage.getItem('wb_data')||'{"books":[]}'); document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); document.getElementById('worldbook-page').classList.add('active'); }
+async function openWorldBookSelector() { 
+    const f=friends.find(f=>f.name===currentFriendName); 
+    const wbVal = await getKV('wb_data') || {"books":[]};
+    const wb = typeof wbVal === 'string' ? JSON.parse(wbVal) : wbVal;
+    document.getElementById('worldbook-list-container').innerHTML=wb.books.map(b=>`<div class="list-item">${b.title} <input type="checkbox" class="wb-checkbox" value="${b.title}" ${(f.mountedBooks||[]).includes(b.title)?'checked':''}></div>`).join(''); 
+    document.getElementById('worldbook-page').classList.add('active'); 
+}
         function closeWorldBookSelector() { document.getElementById('worldbook-page').classList.remove('active'); }
         function saveWorldBookConfig() { const f=friends.find(f=>f.name===currentFriendName); const boxes=document.querySelectorAll('.wb-checkbox:checked'); f.mountedBooks=Array.from(boxes).map(b=>b.value); saveData(); closeWorldBookSelector(); }
         function openMomentsConfig() { document.getElementById('moments-config-page').classList.add('active'); }
@@ -3707,27 +3806,29 @@ await getAiReply(true);
             else document.getElementById('avatar-upload').click();
             closeAvatarChoiceModal();
         }
-        function openAvatarUrlInput() {
-            const u = prompt("请输入图片 URL:");
-            if (u) {
-                if (avatarTarget === 'me') {
-                    myInfo.avatar = u;
-                    renderMePage(); // 刷新我的页面
-                    renderMessages(); // 刷新聊天气泡
-                } else {
-                    const friend = friends.find(f => f.name === currentFriendName);
-                    if (friend) {
-                        friend.avatarUrl = u;
-                        openSettings(); // 刷新设置面板内的头像
-                        renderMessages(); // 核心修复：立即刷新聊天气泡的头像
-                        renderChatList(); // 核心修复：立即刷新消息列表的头像
-                        renderContactList(); // 核心修复：立即刷新通讯录的头像
-                    }
-                }
-                saveData(); // 保存修改
+function openAvatarUrlInput() {
+    const u = prompt("请输入图片 URL:");
+    if (u) {
+        if (avatarTarget === 'me') {
+            myInfo.avatar = u;
+            renderMePage(); // 刷新我的页面
+            renderMessages(); // 刷新聊天气泡
+            renderMoments(); // 刷新朋友圈头像
+        } else {
+            const friend = friends.find(f => f.name === currentFriendName);
+            if (friend) {
+                friend.avatarUrl = u;
+                openSettings(); // 刷新设置面板内的头像
+                renderMessages(); // 核心修复：立即刷新聊天气泡的头像
+                renderChatList(); // 核心修复：立即刷新消息列表的头像
+                renderContactList(); // 核心修复：立即刷新通讯录的头像
+                renderMoments(); // 刷新朋友圈头像
             }
-            closeAvatarChoiceModal();
         }
+        saveData(); // 保存修改
+    }
+    closeAvatarChoiceModal();
+}
 
         // 压缩图片的通用函数，彻底解决手机照片太大存不进去、一刷新就消失的问题
 function compressImage(base64Str, maxWidth, callback) {
@@ -3766,6 +3867,7 @@ document.getElementById('my-avatar-upload').onchange = function() {
                     saveData(); // 调用全局保存，同步云端
                     renderMePage(); // 刷新“我”页面头像
                     renderMessages(); // 立即刷新聊天气泡，使自己的新头像立即生效
+                    renderMoments(); // 刷新朋友圈头像
                     alert("我的头像保存成功（已安全存入本地数据库）");
                 }).catch(err => {
                     console.error("保存头像到数据库失败:", err);
@@ -3773,6 +3875,7 @@ document.getElementById('my-avatar-upload').onchange = function() {
                     saveData();
                     renderMePage();
                     renderMessages();
+                    renderMoments(); // 刷新朋友圈头像
                     alert("我的头像保存成功（已使用备用本地存储）");
                 });
                 inputElement.value = ''; // 核心修复：清空文件选择器，允许重复上传同一张图
@@ -4106,10 +4209,17 @@ function executeTransfer() {
         }
 
         // 3. 独立出来的群聊回复逻辑（包含输入状态显示）
-                                async function getGroupAiReply() {
-            // 强制同步主页面的 API 设置
-            aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{"url":"","key":"","model":"gpt-3.5-turbo"}');
-            if (!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
+                    async function getGroupAiReply() {
+// 强制同步主页面的 API 设置
+let savedAiConfig = await getKV('ai_config');
+if (savedAiConfig) {
+    if (typeof savedAiConfig === 'string') {
+        try { aiConfig = JSON.parse(savedAiConfig); } catch(e) {}
+    } else {
+        aiConfig = savedAiConfig;
+    }
+}
+if (!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
             const group = groupChats.find(g => g.id === currentFriendName);
             if (!group) return;
 
@@ -4646,7 +4756,15 @@ closeChat = function() {
     originalCloseChat();
 };
 
-        function openChat(n) { 
+        async function openChat(n) { 
+    // 在打开聊天的一瞬间，强制重新读取共享的 IndexedDB 数据库
+    try {
+        friends = await getKV('qq_friends', friends);
+        chatHistories = await getKV('qq_history', chatHistories);
+    } catch (e) {
+        console.warn("重新加载数据库失败", e);
+    }
+
     currentFriendName = n; 
     const friend = friends.find(f => f.name === n);
     let titleHtml = n;
@@ -4925,10 +5043,12 @@ function toggleTimeAwareness(val) {
         Notification.requestPermission();
     }
 
+    // 初始化新公共 KV 数据库并加载全局数据
     try {
-        await openUserPersonaAvatarDB(); 
-    } catch (e) {
-        console.warn("数据库初始化被跳过:", e);
+        await openUserPersonaAvatarDB(); // 这个函数现在同时打开 version 3 并建立 appKVDB 连接
+        await loadAllKVData();
+    } catch(e) {
+        console.error("KV数据库初始化失败:", e);
     }
 
     // 新增：打开并初始化大容量背景图数据库
@@ -4938,11 +5058,18 @@ function toggleTimeAwareness(val) {
         console.warn("背景数据库初始化失败:", e);
     }
 
+    // 应用美化和背景图设置
+    try {
+        await applyGlobalStyles();
+    } catch(e) {
+        console.error("全局样式应用失败:", e);
+    }
+
     // 新增监听：当阅读器子页面（Iframe）载入时，向其传送当前对话好友的名字、头像及人设
-    window.addEventListener('message', function(event) {
+    window.addEventListener('message', async function(event) {
         const data = event.data;
         if (data && data.type === 'GET_COMPANION_INFO') {
-            const companionName = localStorage.getItem('active_reading_companion') || currentFriendName;
+            const companionName = await getKV('active_reading_companion') || currentFriendName;
             const friend = friends.find(f => f.name === companionName) || { name: 'AI 伴读', persona: '喜欢看书', avatarUrl: '' };
             
             // 安全发送到 iframe
@@ -4961,7 +5088,7 @@ function toggleTimeAwareness(val) {
     renderContactList(); 
     renderMePage(); 
         
-    const momentsBg = localStorage.getItem('moments_bg_url');
+    const momentsBg = await getKV('moments_bg_url');
     if (momentsBg) { 
         const bgEl = document.getElementById('moments-bg-display'); 
         if (bgEl) {
@@ -5060,22 +5187,22 @@ openChat = function(n) {
     applyFriendBubbleStyle();
     applyHeaderAndInputBarStyles(n);
 };
-function openAppBeautify() {
-    document.getElementById('edit-qq-chatlist-css').value = localStorage.getItem('qq_chatlist_css') || "";
-    document.getElementById('edit-qq-contacts-css').value = localStorage.getItem('qq_contacts_css') || "";
-    document.getElementById('edit-qq-discover-css').value = localStorage.getItem('qq_discover_css') || "";
-    document.getElementById('edit-qq-me-css').value = localStorage.getItem('qq_me_css') || "";
+async function openAppBeautify() {
+    document.getElementById('edit-qq-chatlist-css').value = await getKV('qq_chatlist_css') || "";
+    document.getElementById('edit-qq-contacts-css').value = await getKV('qq_contacts_css') || "";
+    document.getElementById('edit-qq-discover-css').value = await getKV('qq_discover_css') || "";
+    document.getElementById('edit-qq-me-css').value = await getKV('qq_me_css') || "";
     document.getElementById('app-beautify-page').classList.add('active');
 }
 function closeAppBeautify() {
     document.getElementById('app-beautify-page').classList.remove('active');
 }
-function saveAppBeautify() {
-    localStorage.setItem('qq_chatlist_css', document.getElementById('edit-qq-chatlist-css').value);
-    localStorage.setItem('qq_contacts_css', document.getElementById('edit-qq-contacts-css').value);
-    localStorage.setItem('qq_discover_css', document.getElementById('edit-qq-discover-css').value);
-    localStorage.setItem('qq_me_css', document.getElementById('edit-qq-me-css').value);
-    applyGlobalStyles(); // 立即应用新样式
+async function saveAppBeautify() {
+    await setKV('qq_chatlist_css', document.getElementById('edit-qq-chatlist-css').value);
+    await setKV('qq_contacts_css', document.getElementById('edit-qq-contacts-css').value);
+    await setKV('qq_discover_css', document.getElementById('edit-qq-discover-css').value);
+    await setKV('qq_me_css', document.getElementById('edit-qq-me-css').value);
+    await applyGlobalStyles(); // 立即应用新样式
     alert("美化配置已保存并生效");
     closeAppBeautify();
 }
@@ -5111,12 +5238,12 @@ function previewLocalBg(input) {
 }
 
 // 新函数 2：点击确认后正式保存
-function saveBgLocalSetting() {
+async function saveBgLocalSetting() {
     if (!tempLocalBgData) return alert("请先选择图片");
     const targetPage = document.getElementById('bg-target-page').value;
     try {
-        localStorage.setItem('qq_' + targetPage + '_bg', tempLocalBgData);
-        applyAllBackgrounds(); // 立即刷新界面
+        await setKV('qq_' + targetPage + '_bg', tempLocalBgData);
+        await applyAllBackgrounds(); // 立即刷新界面
         alert("背景图应用成功！");
         
         // 成功后关闭弹窗并重置按钮状态
@@ -5126,44 +5253,44 @@ function saveBgLocalSetting() {
         document.getElementById('bg-local-confirm').style.display = 'none';
         document.getElementById('bg-pick-btn').innerText = "① 从相册选择图片";
     } catch (e) {
-        alert("保存失败：图片文件太大（超过5MB），请压缩图片后上传或使用URL链接。");
+        alert("保存失败，发生错误：" + e.message);
     }
 }
 
 // 处理 URL 设置
-function saveBgUrlSetting() {
+async function saveBgUrlSetting() {
     const url = document.getElementById('bg-url-input').value.trim();
     if (!url) return alert("请输入有效的 URL");
     const targetPage = document.getElementById('bg-target-page').value;
-    localStorage.setItem('qq_' + targetPage + '_bg', url);
-    applyAllBackgrounds();
+    await setKV('qq_' + targetPage + '_bg', url);
+    await applyAllBackgrounds();
     alert("URL 背景图已设置");
     document.getElementById('bg-url-input').value = "";
     closeBgSettingModal();
 }
 
 // 应用所有页面的背景图（包含标题栏和搜索栏透明逻辑）
-function applyAllBackgrounds() {
+async function applyAllBackgrounds() {
     const pages = [
         { id: 'tab-chat', key: 'qq_chatlist_bg' },
         { id: 'tab-contacts', key: 'qq_contacts_bg' },
         { id: 'tab-discover', key: 'qq_discover_bg' },
         { id: 'tab-me', key: 'qq_me_bg' }
     ];
-    pages.forEach(p => {
-    const bgData = localStorage.getItem(p.key);
-    const el = document.getElementById(p.id);
-    if (el) {
-        const header = el.querySelector('.header');
-        const searchWrap = el.querySelector('.chat-search-wrap'); // 搜索栏外部容器
-        if (bgData) {
-            el.style.backgroundImage = `url("${bgData}")`;
-            el.style.backgroundSize = 'cover';
-            el.style.backgroundPosition = 'center';
-            el.style.backgroundRepeat = 'no-repeat';
-            // 核心修复：强制切除溢出的图片部分，确保圆角生效
-            el.style.overflow = 'hidden'; 
-            if (header) {
+    for (const p of pages) {
+        const bgData = await getKV(p.key);
+        const el = document.getElementById(p.id);
+        if (el) {
+            const header = el.querySelector('.header');
+            const searchWrap = el.querySelector('.chat-search-wrap'); // 搜索栏外部容器
+            if (bgData) {
+                el.style.backgroundImage = `url("${bgData}")`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+                el.style.backgroundRepeat = 'no-repeat';
+                // 核心修复：强制切除溢出的图片部分，确保圆角生效
+                el.style.overflow = 'hidden'; 
+                if (header) {
                     header.style.background = 'transparent';
                     header.style.borderBottom = 'none';
                 }
@@ -5184,26 +5311,27 @@ function applyAllBackgrounds() {
                 }
             }
         }
-    });
+    }
 }
 
 // 新增：重置背景功能的 JS 逻辑
-function resetAppBackgrounds() {
+async function resetAppBackgrounds() {
     if(confirm("确定要还原所有页面的背景图吗？")) {
         const keys = ['qq_chatlist_bg', 'qq_contacts_bg', 'qq_discover_bg', 'qq_me_bg'];
-        keys.forEach(k => localStorage.removeItem(k));
-        applyAllBackgrounds();
+        for (const k of keys) {
+            await removeKV(k);
+        }
+        await applyAllBackgrounds();
         alert("背景已还原为默认");
     }
 }
 
 // 补齐：在原来的 applyGlobalStyles 里也调用一下 applyAllBackgrounds，确保加载
 const oldApplyGlobalStyles = applyGlobalStyles;
-applyGlobalStyles = function() {
-    oldApplyGlobalStyles();
-    applyAllBackgrounds();
+applyGlobalStyles = async function() {
+    await oldApplyGlobalStyles();
+    await applyAllBackgrounds();
 };
-applyAllBackgrounds(); // 初始化执行一次
 // 领取 AI 发来的转账
 function receiveAiTransfer(msgIndex) {
     const msg = chatHistories[currentFriendName][msgIndex];
@@ -6075,6 +6203,22 @@ function clearHbImage() {
     renderHbPreview();
 }
 
+async function resetHeaderBeautify() {
+    if (!confirm("确定要恢复默认顶栏图标与背景吗？")) return;
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (friend) friend.headerCss = "";
+    const keys = ['bg', 'back', 'title', 'more'];
+    for (const k of keys) {
+        const dbKey = `header_${k}_img_${currentFriendName}`;
+        await saveChatBg(dbKey, null);
+        localStorage.removeItem(`header_${k}_opacity_${currentFriendName}`);
+    }
+    saveData();
+    applyHeaderAndInputBarStyles(currentFriendName);
+    alert("顶栏已恢复默认");
+    closeHeaderBeautify();
+}
+
 function updateHbOpacity(val) {
     hbTempOpacities[currentHbTab] = parseInt(val);
     document.getElementById('hb-opacity-value').innerText = val + '%';
@@ -6203,6 +6347,22 @@ function triggerIbUrl() {
 function clearIbImage() {
     delete ibTempImages[currentIbTab];
     renderIbPreview();
+}
+
+async function resetInputBarBeautify() {
+    if (!confirm("确定要恢复默认底栏图标与背景吗？")) return;
+    const friend = friends.find(f => f.name === currentFriendName);
+    if (friend) friend.inputBarCss = "";
+    const keys = ['bg', 'plus', 'mic', 'send'];
+    for (const k of keys) {
+        const dbKey = `inputbar_${k}_img_${currentFriendName}`;
+        await saveChatBg(dbKey, null);
+        localStorage.removeItem(`inputbar_${k}_opacity_${currentFriendName}`);
+    }
+    saveData();
+    applyHeaderAndInputBarStyles(currentFriendName);
+    alert("底栏已恢复默认");
+    closeInputBarBeautify();
 }
 
 function updateIbOpacity(val) {
@@ -7115,12 +7275,12 @@ function updateToolBoxPageIndicator() {
 }
 
 // 唤醒阅读页面
-function openReadingSystem() {
+async function openReadingSystem() {
     // 隐藏菜单框
     document.getElementById('tool-box').style.display = 'none';
     
     // 存入当前正在对话的伴读者昵称，方便阅读子页面同步获取伴读信息
-    localStorage.setItem('active_reading_companion', currentFriendName);
+    await setKV('active_reading_companion', currentFriendName);
     
     const container = document.getElementById('reading-overlay-container');
     const iframe = document.getElementById('reading-iframe');
@@ -7152,25 +7312,26 @@ function closeReadingSystem() {
             <div class="bg-tab-btn" id="tab-hb-more" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchHbTab('more')">更多按钮</div>
         </div>
         
-        <!-- 上传及预览区域 -->
-        <div style="background: white; border-radius: 12px; padding: 15px; text-align: center;">
-            <div id="hb-preview-box" style="width: 100%; height: 60px; background: #eee; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; border: 1px dashed #ccc; font-size: 12px; color: #999;">
-                预览区域
-            </div>
-            <!-- 新增：透明度滑块进度条 -->
-            <div style="margin: 10px 0; text-align: left;">
-                <label style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
-                    <span>图片透明度:</span>
-                    <span id="hb-opacity-value">100%</span>
-                </label>
-                <input type="range" id="hb-opacity-slider" min="0" max="100" value="100" style="width: 100%; accent-color: #07c160;" oninput="updateHbOpacity(this.value)">
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerHbUpload()">相册上传</button>
-                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerHbUrl()">输入 URL</button>
-            </div>
-            <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #fa5151; margin-bottom: 0;" onclick="clearHbImage()">清除此图片</button>
-        </div>
+<!-- 上传及预览区域 -->
+<div style="background: white; border-radius: 12px; padding: 15px; text-align: center;">
+    <div id="hb-preview-box" style="width: 100%; height: 60px; background: #eee; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; border: 1px dashed #ccc; font-size: 12px; color: #999;">
+        预览区域
+    </div>
+    <!-- 新增：透明度滑块进度条 -->
+    <div style="margin: 10px 0; text-align: left;">
+        <label style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
+            <span>图片透明度:</span>
+            <span id="hb-opacity-value">100%</span>
+        </label>
+        <input type="range" id="hb-opacity-slider" min="0" max="100" value="100" style="width: 100%; accent-color: #07c160;" oninput="updateHbOpacity(this.value)">
+    </div>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerHbUpload()">相册上传</button>
+        <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerHbUrl()">输入 URL</button>
+    </div>
+    <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #fa5151; margin-bottom: 10px;" onclick="clearHbImage()">清除此图片</button>
+    <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #07c160; margin-bottom: 0;" onclick="resetHeaderBeautify()">恢复默认顶栏</button>
+</div>
         
         <!-- CSS 代码编辑器 -->
         <div style="background: white; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 8px;">
@@ -7206,25 +7367,26 @@ function closeReadingSystem() {
             <div class="bg-tab-btn" id="tab-ib-send" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px;" onclick="switchIbTab('send')">发送按钮</div>
         </div>
         
-                <!-- 上传及预览区域 -->
-        <div style="background: white; border-radius: 12px; padding: 15px; text-align: center;">
-            <div id="ib-preview-box" style="width: 100%; height: 60px; background: #eee; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; border: 1px dashed #ccc; font-size: 12px; color: #999;">
-                预览区域
-            </div>
-            <!-- 新增：透明度滑块进度条 -->
-            <div style="margin: 10px 0; text-align: left;">
-                <label style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
-                    <span>图片透明度:</span>
-                    <span id="ib-opacity-value">100%</span>
-                </label>
-                <input type="range" id="ib-opacity-slider" min="0" max="100" value="100" style="width: 100%; accent-color: #07c160;" oninput="updateIbOpacity(this.value)">
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerIbUpload()">相册上传</button>
-                <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerIbUrl()">输入 URL</button>
-            </div>
-            <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #fa5151; margin-bottom: 0;" onclick="clearIbImage()">清除此图片</button>
-        </div>
+<!-- 上传及预览区域 -->
+<div style="background: white; border-radius: 12px; padding: 15px; text-align: center;">
+    <div id="ib-preview-box" style="width: 100%; height: 60px; background: #eee; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; border-radius: 6px; overflow: hidden; border: 1px dashed #ccc; font-size: 12px; color: #999;">
+        预览区域
+    </div>
+    <!-- 新增：透明度滑块进度条 -->
+    <div style="margin: 10px 0; text-align: left;">
+        <label style="font-size: 12px; color: #666; display: flex; justify-content: space-between;">
+            <span>图片透明度:</span>
+            <span id="ib-opacity-value">100%</span>
+        </label>
+        <input type="range" id="ib-opacity-slider" min="0" max="100" value="100" style="width: 100%; accent-color: #07c160;" oninput="updateIbOpacity(this.value)">
+    </div>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerIbUpload()">相册上传</button>
+        <button class="wx-btn" style="flex: 1; height: 36px; font-size: 13px; margin-bottom: 0;" onclick="triggerIbUrl()">输入 URL</button>
+    </div>
+    <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #fa5151; margin-bottom: 10px;" onclick="clearIbImage()">清除此图片</button>
+    <button class="wx-btn" style="width: 100%; height: 36px; font-size: 13px; background: #f2f2f2; color: #07c160; margin-bottom: 0;" onclick="resetInputBarBeautify()">恢复默认底栏</button>
+</div>
         
         <!-- CSS 代码编辑器 -->
         <div style="background: white; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 8px;">
@@ -7356,9 +7518,9 @@ let mcpSelectedTool = null;
 let mcpLastResult = "";
 
 // 打开MCP弹窗
-function openMcpTools() {
+async function openMcpTools() {
     // 读取之前保存的服务器地址
-    const savedUrl = localStorage.getItem('mcp_server_url') || '';
+    const savedUrl = await getKV('mcp_server_url') || '';
     document.getElementById('mcp-server-url').value = savedUrl;
     
     // 重置结果区域
@@ -7375,10 +7537,10 @@ function closeMcpModal() {
 }
 
 // 保存服务器地址
-function saveMcpConfig() {
+async function saveMcpConfig() {
     const url = document.getElementById('mcp-server-url').value.trim();
     if (!url) return alert("请输入服务器地址");
-    localStorage.setItem('mcp_server_url', url);
+    await setKV('mcp_server_url', url);
     alert("地址已保存：" + url);
 }
 

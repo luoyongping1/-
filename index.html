@@ -906,6 +906,7 @@ input, textarea {
     <div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>
     <div id="item-shouna" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openShounaApp()"><span>收纳助手</span></div>
     <div id="item-forum" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openForumApp()"><span>微博论坛</span></div>
+    <div id="item-couple" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vbJJ/1080X1080/image_1776692512012.png/webp') !important; background-size: cover !important;" onclick="openCoupleApp()"><span>情侣空间</span></div>
 </div>
 
 <div class="content" id="page-2" style="width: 50%; flex-shrink: 0;">
@@ -946,6 +947,7 @@ input, textarea {
 <iframe id="iframe-ddp" data-src="对对碰背单词.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     <iframe id="iframe-shouna" data-src="收纳助手.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     <iframe id="iframe-forum" data-src="论坛.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+    <iframe id="iframe-couple" data-src="情侣空间.html" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
     
     <div id="worldbook-app" style="display: none;">
     <div class="wb-header">
@@ -1237,19 +1239,20 @@ function showFloatingMenu() {
     content.innerHTML = ''; // 清空内容
     
     // 应用配置映射
-    const appConfig = {
-        'item-qq': { name: 'QQ', func: 'openQQ()' },
-        'item-xhs': { name: '小红书', func: 'openApp()' },
-        'item-gacha': { name: '扭蛋机', func: 'openGacha()' },
-        'item-self': { name: '自律打卡', func: 'openSelfApp()' },
-        'item-checkphone': { name: '查手机', func: 'showFriendSelector()' },
-        'item-wl': { name: '网恋模拟', func: 'openWlApp()' },
-        'item-shop': { name: '购物商城', func: 'openShopApp()' },
-        'item-ddp': { name: '对对碰', func: 'openDDPApp()' },
-        'item-shouna': { name: '收纳助手', func: 'openShounaApp()' },
-        'item-wb': { name: '世界书', func: 'openWorldBook()' },
-        'item-forum': { name: '微博论坛', func: 'openForumApp()' }
-    };
+const appConfig = {
+    'item-qq': { name: 'QQ', func: 'openQQ()' },
+    'item-xhs': { name: '小红书', func: 'openApp()' },
+    'item-gacha': { name: '扭蛋机', func: 'openGacha()' },
+    'item-self': { name: '自律打卡', func: 'openSelfApp()' },
+    'item-checkphone': { name: 'showFriendSelector()' },
+    'item-wl': { name: 'openWlApp()' },
+    'item-shop': { name: 'openShopApp()' },
+    'item-ddp': { name: 'openDDPApp()' },
+    'item-shouna': { name: 'openShounaApp()' },
+    'item-wb': { name: 'openWorldBook()' },
+    'item-forum': { name: 'openForumApp()' },
+    'item-couple': { name: '情侣空间', func: 'openCoupleApp()' }
+};
     
     // 循环创建两列网格图标
     shortcuts.forEach(appId => {
@@ -1617,7 +1620,7 @@ function initGridSortable() {
 }
 
 function switchAppWindow(targetId) {
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'iframe-shouna', 'iframe-forum', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'iframe-shouna', 'iframe-forum', 'iframe-couple', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -1635,6 +1638,7 @@ function switchAppWindow(targetId) {
 }
 
 function openQQ() { switchAppWindow("iframe-qq"); }
+function openCoupleApp() { switchAppWindow("iframe-couple"); }
 function openApp() { switchAppWindow("iframe-xhs"); }
 function openGacha() { switchAppWindow("iframe-gacha"); }
 function openSelfApp() { switchAppWindow("iframe-self"); }
@@ -1654,7 +1658,7 @@ function closeApp() {
     if(isDraggingBall) return;
     document.getElementById('app-overlay').style.display = "none";
     ball.style.display = "none";
-    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'iframe-shouna', 'iframe-forum', 'worldbook-app'];
+    const allApps = ['iframe-qq', 'iframe-xhs', 'iframe-gacha', 'iframe-self', 'iframe-wl', 'iframe-checkphone', 'iframe-shop', 'iframe-ddp', 'iframe-shouna', 'iframe-forum', 'iframe-couple', 'worldbook-app'];
     allApps.forEach(id => {
         const el = document.getElementById(id);
         if(el) el.style.display = "none";
@@ -2463,20 +2467,21 @@ window.onload = function() {
     const savedGrid2 = localStorage.getItem('saved_grid_page_2');
     if (savedGrid2) { document.getElementById('page-2').innerHTML = savedGrid2; }
 
-    // 确保默认图标存在且不重复
-    let needSave = false;
-    const defaultApps = [
-        { id: 'item-time', html: `<div id="item-time" class="grid-item time-widget" onclick="openTimeColorPicker()"><div class="date-str" id="date-display"></div><div class="clock-str" id="clock-display">00:00</div></div>` },
-        { id: 'item-xhs', html: `<div id="item-xhs" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/K1R2/1080X1080/image_1776692583750.png/webp') !important; background-size: cover !important;" onclick="openApp()"><span>小红书</span></div>` },
-        { id: 'item-gacha', html: `<div id="item-gacha" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp') !important; background-size: cover !important;" onclick="openGacha()"><span>扭蛋机</span></div>` },
-        { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openSelfApp()"><span>自律打卡</span></div>` },
-        { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/cJUV/1080X1080/image_1776692589613.png/webp') !important; background-size: cover !important;" onclick="showFriendSelector()"><span>查手机</span></div>` },
-        { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp') !important; background-size: cover !important;" onclick="openWlApp()"><span>网恋模拟</span></div>` },
-        { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>` },
-        { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` },
-        { id: 'item-shouna', html: `<div id="item-shouna" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openShounaApp()"><span>收纳助手</span></div>` },
-        { id: 'item-forum', html: `<div id="item-forum" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openForumApp()"><span>微博论坛</span></div>` }
-    ];
+            // 确保默认图标存在且不重复
+            let needSave = false;
+            const defaultApps = [
+                { id: 'item-time', html: `<div id="item-time" class="grid-item time-widget" onclick="openTimeColorPicker()"><div class="date-str" id="date-display"></div><div class="clock-str" id="clock-display">00:00</div></div>` },
+                { id: 'item-xhs', html: `<div id="item-xhs" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/K1R2/1080X1080/image_1776692583750.png/webp') !important; background-size: cover !important;" onclick="openApp()"><span>小红书</span></div>` },
+                { id: 'item-gacha', html: `<div id="item-gacha" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/apFO/1080X1080/image_1776692595297.png/webp') !important; background-size: cover !important;" onclick="openGacha()"><span>扭蛋机</span></div>` },
+                { id: 'item-self', html: `<div id="item-self" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openSelfApp()"><span>自律打卡</span></div>` },
+                { id: 'item-checkphone', html: `<div id="item-checkphone" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/cJUV/1080X1080/image_1776692589613.png/webp') !important; background-size: cover !important;" onclick="showFriendSelector()"><span>查手机</span></div>` },
+                { id: 'item-wl', html: `<div id="item-wl" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/ksf5/1080X1080/image_1776692580955.png/webp') !important; background-size: cover !important;" onclick="openWlApp()"><span>网恋模拟</span></div>` },
+                { id: 'item-shop', html: `<div id="item-shop" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vLWc/1080X1080/image_1776692592430.png/webp') !important; background-size: cover !important;" onclick="openShopApp()"><span>购物商城</span></div>` },
+                { id: 'item-ddp', html: `<div id="item-ddp" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/5kYX/1080X1080/image_1776692578177.png/webp') !important; background-size: cover !important;" onclick="openDDPApp()"><span>对对碰背单词</span></div>` },
+                { id: 'item-shouna', html: `<div id="item-shouna" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/RNsZ/1080X1080/image_1776692575133.png/webp') !important; background-size: cover !important;" onclick="openShounaApp()"><span>收纳助手</span></div>` },
+                { id: 'item-forum', html: `<div id="item-forum" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/OKRI/1080X1080/image_1776692586639.png/webp') !important; background-size: cover !important;" onclick="openForumApp()"><span>微博论坛</span></div>` },
+                { id: 'item-couple', html: `<div id="item-couple" class="grid-item icon-btn" style="background-image: url('https://test.fukit.cn/autoupload/f/svHJcC37wJ89882deQTMqtiO_OyvX7mIgxFBfDMDErs/20260420/vbJJ/1080X1080/image_1776692512012.png/webp') !important; background-size: cover !important;" onclick="openCoupleApp()"><span>情侣空间</span></div>` }
+            ];
     
     // 监听来自 App（如 qq.html）的消息，用于后台发送通知
     window.addEventListener('message', function(event) {
@@ -2613,19 +2618,20 @@ function initFloatingBallShortcuts() {
     const container = document.getElementById('floating-ball-shortcuts-container');
     const shortcuts = JSON.parse(localStorage.getItem('floating_ball_shortcuts') || '[]');
     
-    const appList = [
-        { id: 'item-qq', name: 'QQ' },
-        { id: 'item-xhs', name: '小红书' },
-        { id: 'item-gacha', name: '扭蛋机' },
-        { id: 'item-self', name: '自律打卡' },
-        { id: 'item-checkphone', name: '查手机' },
-        { id: 'item-wl', name: '网恋模拟' },
-        { id: 'item-shop', name: '购物商城' },
-        { id: 'item-ddp', name: '对对碰' },
-        { id: 'item-shouna', name: '收纳助手' },
-        { id: 'item-wb', name: '世界书' },
-        { id: 'item-forum', name: '微博论坛' }
-    ];
+const appList = [
+    { id: 'item-qq', name: 'QQ' },
+    { id: 'item-xhs', name: '小红书' },
+    { id: 'item-gacha', name: '扭蛋机' },
+    { id: 'item-self', name: '自律打卡' },
+    { id: 'item-checkphone', name: '查手机' },
+    { id: 'item-wl', name: '网恋模拟' },
+    { id: 'item-shop', name: '购物商城' },
+    { id: 'item-ddp', name: '对对碰' },
+    { id: 'item-shouna', name: '收纳助手' },
+    { id: 'item-wb', name: '世界书' },
+    { id: 'item-forum', name: '微博论坛' },
+    { id: 'item-couple', name: '情侣空间' }
+];
     
     container.innerHTML = '';
     
