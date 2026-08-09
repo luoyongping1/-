@@ -4250,180 +4250,142 @@ function executeTransfer() {
         }
 
         // 3. 独立出来的群聊回复逻辑（包含输入状态显示）
-                    async function getGroupAiReply() {
-// 核心修改：直接从 localStorage 强制同步主页面的最新 API 设置
-let savedAiConfig = localStorage.getItem('ai_config');
-if (savedAiConfig) {
-    try {
-        aiConfig = JSON.parse(savedAiConfig);
-    } catch(e) {
-        console.error("同步 ai_config 失败", e);
-    }
-}
-if (!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
+        async function getGroupAiReply() {
+            // 核心修改：直接从 localStorage 强制同步主页面的最新 API 设置
+            let savedAiConfig = localStorage.getItem('ai_config');
+            if (savedAiConfig) {
+                try {
+                    aiConfig = JSON.parse(savedAiConfig);
+                } catch(e) {
+                    console.error("同步 ai_config 失败", e);
+                }
+            }
+            if (!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
             const group = groupChats.find(g => g.id === currentFriendName);
             if (!group) return;
 
-for (const memberName of group.members) {
-    const friend = friends.find(f => f.name === memberName);
-    if (!friend) continue;
-
-    // --- 极其核心的修复：重塑 AI 视角 ---
-    // 对于此刻正在思考 of AI 来说：只有它自己发的消息才算 `assistant`
-    // 你（用户）和其他 AI 发的消息，全都是抛给它的问题，统统算作 `user`
-    const freshHistory = (chatHistories[currentFriendName] || []).slice(-20).map(m => {
-        const isMyOwnMsg = (m.type === 'friend' && m.sender === friend.name);
-        const role = isMyOwnMsg ? 'assistant' : 'user';
-        const prefixName = m.type === 'self' ? '用户' : (m.sender || '某人');
-        
-// 预处理聊天历史，将表情包、图片等非文本消息翻译为纯文本描述
-let contentText = m.text;
-if (m.isSticker) {
-    contentText = `[发送了表情包: ${m.stickerDesc || '表情'}]`;
-} else if (m.isRealImage) {
-    contentText = `[发送了图片]`;
-} else if (m.isDescribeCard) {
-    contentText = `[发送了图片描述: ${m.text}]`;
-} else if (m.isMomentForwardCard) {
-    const isUserSelf = m.momentAuthor === myInfo.name;
-    const authorDesc = isUserSelf ? `群内用户（即 ${m.momentAuthor}）自己` : `群内成员“${m.momentAuthor}”`;
-    contentText = `[系统通知：有人在群里分享转发了一条朋友圈动态（注意：这只是普通的朋友圈图文内容分享，不是给你发送了视频链接或外部链接，请勿误会）。该朋友圈发布者是：${authorDesc}，朋友圈正文内容是：“${m.momentText || ''}”${m.momentImagesCount ? `，附带了 ${m.momentImagesCount} 张图片` : ''}。请围绕此朋友圈内容在群里进行交流互动。]`;
-} else if (m.isShoppingPay) {
-    contentText = `[发送了代付请求卡片：代付商品是“${m.payItems}”，金额为 ￥${m.text} 元]`;
-} else if (m.isShoppingPayResponse) {
-    contentText = `[已发送代付处理结果卡片：商品为“${m.payItems}”，金额为 ￥${m.text} 元，处理状态为：${m.payStatus === 'paid' ? '已完成支付' : '已拒绝代付'}]`;
-}
-
-        return {
-            role: role,
-            content: isMyOwnMsg ? contentText : `[${prefixName} 说]: ${contentText}`
-        };
-    });
-
-    const typingEl = document.getElementById('chat-typing');
-                typingEl.innerText = `${friend.name} 正在输入...`;
-                typingEl.style.display = 'block';
-
-                await new Promise(r => setTimeout(r, 1200 + Math.random() * 1800));
-
-                let longMemoryPrompt = friend.longMemory ? "\n你的长期记忆：\n" + friend.longMemory : "";
-
-                let shuraPrompt = "";
-                if (shuraActive && shuraScenario) {
-                    shuraPrompt = `\n\n【🔥 修罗场剧情背景（当前正在发生）】：
-${shuraScenario}
-请基于以上剧情背景，结合你的人设性格，立刻做出反应！你可以质问、吃醋、生气、委屈、阴阳怪气等。`;
+            // 获取群内所有 AI 成员的名字和人设，组合到 prompt 中
+            let membersPersonas = "";
+            group.members.forEach(memberName => {
+                const friend = friends.find(f => f.name === memberName);
+                if (friend) {
+                    membersPersonas += `- 【${friend.name}】 人设/性格特点：${friend.persona}\n`;
                 }
+            });
 
-                let sys = `你是微信群聊里的一个真人，名叫[${friend.name}]。
-1. 你的性格设定：${friend.persona}
-2. 当前群聊中，[用户] 的真实名字叫：[${myInfo.name}]。
-3. 如果你的人设中提到你喜欢或认识 [${myInfo.name}]，请在群聊中表现出这种亲密关系。
-群内成员有：[${myInfo.name}] (即用户), ${group.members.join(', ')}
+            // 预处理群聊历史
+            const freshHistory = (chatHistories[currentFriendName] || []).slice(-20).map(m => {
+                const prefixName = m.type === 'self' ? myInfo.name : (m.sender || '某人');
+                let contentText = m.text;
+                if (m.isSticker) {
+                    contentText = `[发送了表情包: ${m.stickerDesc || '表情'}]`;
+                } else if (m.isRealImage) {
+                    contentText = `[发送了图片]`;
+                } else if (m.isDescribeCard) {
+                    contentText = `[发送了图片描述: ${m.text}]`;
+                } else if (m.isMomentForwardCard) {
+                    contentText = `[分享了朋友圈: ${m.momentText || ''}]`;
+                }
+                return {
+                    role: 'user',
+                    content: `${prefixName}: ${contentText}`
+                };
+            });
 
-## 强制规则（严格遵守）：
-1. 这是一个"修罗场"群聊，随时处于吃醋、争宠和修罗场氛围。看到用户被别人撩，必须根据你的性格作出反应！
-2. 绝对不能替别人回答！你只代表你自己。
-3. 你的回复绝对不能带任何名字前缀（禁用 "${friend.name}：" 等）。
-4. 像真实微信聊天，你可以分段发，一条消息最多拆分为 1~3 行（使用换行符）。
-5. 口语化，不必文绉绉，拒绝AI礼貌用语。
-6. 沉浸式扮演：严禁在回复中输出你的思考过程、分析思路或类似“* 气泡1：”、“* 注意：”等解释性说明文字，直接输出你要说的话。
-${shuraPrompt}
-${longMemoryPrompt}`;
+            const typingEl = document.getElementById('chat-typing');
+            typingEl.innerText = `群成员正在输入中...`;
+            typingEl.style.display = 'block';
 
-                try {
-                    const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: aiConfig.model,
-                            messages: [{ role: "system", content: sys }, ...freshHistory],
-                            temperature: 0.85,
-                            presence_penalty: 0.6
-                        })
-                    });
-                    const data = await res.json();
-                    
-                    // 防止 AI 出现 400 或 抛错，安全获取内容
-                    if (!data.choices || !data.choices[0]) {
-                        throw new Error("API 返回异常");
-                    }
-                    
-                    let rawReply = data.choices[0].message.content.trim();
+            let shuraPrompt = "";
+            if (shuraActive && shuraScenario) {
+                shuraPrompt = `\n\n【🔥 修罗场剧情背景（当前正在发生）】：\n${shuraScenario}\n请在模拟对话时将此修罗场冲突推向高潮，角色们会因此产生争执、吃醋、质问等强烈反应。`;
+            }
 
-// --- 核心修复：过滤掉群聊回复中的心声标签 ---
-let reply = rawReply;
-if (rawReply.includes("[REPLY]")) {
-    reply = rawReply.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || rawReply;
-}
+            // 单次请求的全局 System 设定
+            let sys = `你现在要同时模拟一个活跃的微信群聊，群聊名称是：[${group.name}]。
+群里的AI角色有：${group.members.join(', ')}。
+群里的人类用户叫：[${myInfo.name}]。
 
+群内各AI角色的人设如下：
+${membersPersonas}
 
-// 彻底删除内容中可能混入的零散标签
-reply = reply.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\].*?(\s|$)|\[.*?\]/g, "").trim();
+## 模拟发言规则（严格遵守）：
+1. 根据当前的群聊对话历史，模拟接下来这群角色的互动回复。
+2. 此时此刻并不需要所有人都必须说话，根据话题相关度，让想表达、或者被提及的AI角色发言即可。每次总发言人数控制在 1 到 3 人之间。
+3. 请以角色的口吻回复，避免任何AI客套腔调，要生动、口语化。
+4. 严禁在输出中包含任何思考过程、标签说明（例如"[REPLY]"、"*气泡"等）。
 
-// 双重清洗：去掉可能生成的烦人前缀
-group.members.forEach(name => {
-    const pattern = new RegExp(`^\\[?${name}\\]?[:：\\s]*`, 'gim');
-    reply = reply.replace(pattern, "");
-});
-reply = reply.replace(/^\[?用户\]?[:：\s]*/gim, "");
+## 输出格式（极其重要）：
+请必须严格按照以下格式输出每条发言，每一个角色的一句话占一行，冒号后面直接写台词，不要输出任何多余的解释字句：
+角色名字: 他的发言内容
+角色名字: 他的发言内容
 
-// 限制只发设定的句数气泡（如果未设定或为0，则默认最多发3句）
-let replyLimitNum = friend.replyLimit !== undefined ? parseInt(friend.replyLimit) : 0;
-let finalLimit = replyLimitNum > 0 ? replyLimitNum : 3;
+例如：
+${group.members[0] || '角色A'}: 我刚才看到你在楼下呢
+${group.members[1] || '角色B'}: 真的假的？我也去看看${shuraPrompt}`;
 
-let lines = reply.split('\n').filter(t => t.trim() !== '').slice(0, finalLimit);
-// --- 修复结束 ---
+            try {
+                const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: aiConfig.model,
+                        messages: [{ role: "system", content: sys }, ...freshHistory],
+                        temperature: 0.85,
+                        presence_penalty: 0.6
+                    })
+                });
+                const data = await res.json();
+                
+                if (!data.choices || !data.choices[0]) {
+                    throw new Error("API 返回异常");
+                }
+                
+                let rawReply = data.choices[0].message.content.trim();
+                let lines = rawReply.split('\n').filter(t => t.trim() !== '');
 
-                    for (let line of lines) {
-                        await new Promise(r => setTimeout(r, 600));
-                        let cleanText = line.trim();
+                // 逐行解析哪位角色说了什么话，并插入到群聊历史中
+                for (let line of lines) {
+                    const match = line.match(/^([^:：]+)[:：](.+)$/);
+                    if (match) {
+                        const senderName = match[1].trim();
+                        const text = match[2].trim();
                         
-                        chatHistories[currentFriendName].push({
-                            type: 'friend',
-                            text: cleanText,
-                            sender: friend.name,
-                            initial: friend.initial || friend.name[0]
-                        });
+                        // 验证解析出来的名字是不是在群组里的角色
+                        const targetFriend = friends.find(f => f.name === senderName && group.members.includes(senderName));
+                        if (targetFriend) {
+                            // 模拟打字间隔时间，提升真实感
+                            await new Promise(r => setTimeout(r, 1000));
+                            
+                            chatHistories[currentFriendName].push({
+                                type: 'friend',
+                                text: text,
+                                sender: targetFriend.name,
+                                initial: targetFriend.initial || targetFriend.name[0]
+                            });
 
-                        if (group.memorySync && !shuraActive) {
-    const ts = new Date().toLocaleString();
-    const friendInList = friends.find(ff => ff.name === friend.name);
-    if (friendInList) {
-        friendInList.longMemory = (friendInList.longMemory ? friendInList.longMemory + "\n" : "") + `[${ts} 群聊同步-${group.name}]: ${cleanText}`;
-    }
-}
-group.lastMsg = `${friend.name}: ${cleanText}`;
-saveData();
-renderMessages();
+                            // 记忆同步
+                            if (group.memorySync && !shuraActive) {
+                                const ts = new Date().toLocaleString();
+                                targetFriend.longMemory = (targetFriend.longMemory ? targetFriend.longMemory + "\n" : "") + `[${ts} 群聊同步-${group.name}]: ${text}`;
+                            }
 
-// --- 新增：向主页面发送群聊通知信号 ---
-window.parent.postMessage({
-    type: 'SHOW_NOTIFICATION',
-    title: group.name,
-    body: friend.name + ": " + cleanText
-}, '*');
+                            group.lastMsg = `${targetFriend.name}: ${text}`;
+                            saveData();
+                            renderMessages();
+
+                            // 向主页面发送通知信号
+                            window.parent.postMessage({
+                                type: 'SHOW_NOTIFICATION',
+                                title: group.name,
+                                body: targetFriend.name + ": " + text
+                            }, '*');
+                        }
                     }
-
-                    // 表情包机制（50%概率发送）
-if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
-                        await new Promise(r => setTimeout(r, 800));
-                        const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
-                        chatHistories[currentFriendName].push({
-                            type: 'friend',
-                            text: randomSticker.url,
-                            isSticker: true,
-                            stickerDesc: randomSticker.desc || "表情", // 新增：保存表情包的中文描述
-                            sender: friend.name,
-                            initial: friend.initial || friend.name[0]
-                        });
-                        group.lastMsg = `${friend.name}: [表情]`;
-                        saveData();
-                        renderMessages();
-                    }
-                } catch (e) {
-                    console.error("【群聊轮次错误】", friend.name, "失败原因:", e);
                 }
+            } catch (e) {
+                console.error("【群聊单次合并调用错误】", e);
+            } finally {
                 typingEl.style.display = 'none';
             }
         }
