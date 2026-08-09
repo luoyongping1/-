@@ -1735,7 +1735,19 @@ async function loadAllKVData() {
     datingHistories = await getKV('qq_dating_history', datingHistories);
     moments = await getKV('qq_moments', moments);
     userPersonas = await getKV('qq_user_personas', userPersonas);
-    aiConfig = await getKV('ai_config', aiConfig);
+    
+    // 核心修改：直接从 localStorage 读取主页面的 API 配置以保持同步
+    const localConfig = localStorage.getItem('ai_config');
+    if (localConfig) {
+        try {
+            aiConfig = JSON.parse(localConfig);
+        } catch (e) {
+            console.error("解析 ai_config 失败", e);
+        }
+    } else {
+        aiConfig = await getKV('ai_config', aiConfig);
+    }
+    
     myInfo = await getKV('my_info', myInfo);
     walletData = await getKV('wallet_data', walletData);
     favorites = await getKV('qq_favorites_list', favorites);
@@ -1898,7 +1910,11 @@ async function saveData() {
         await setKV('qq_history', chatHistories);
         await setKV('qq_dating_history', datingHistories);
         await setKV('qq_moments', moments);
+        
+        // 核心修改：同步写入到 localStorage，确保主页面也能即时获取修改
+        localStorage.setItem('ai_config', JSON.stringify(aiConfig));
         await setKV('ai_config', aiConfig);
+        
         await setKV('my_info', myInfo);
         await setKV('wallet_data', walletData);
         await setKV('qq_favorites_list', favorites);
@@ -2575,13 +2591,13 @@ async function sendPetMsg() {
 }
 
 async function getAiReply(isProactive = false) {
-    // 强制同步主页面的 API 设置
-    let savedAiConfig = await getKV('ai_config');
+    // 核心修改：直接从 localStorage 强制同步主页面的最新 API 设置
+    let savedAiConfig = localStorage.getItem('ai_config');
     if (savedAiConfig) {
-        if (typeof savedAiConfig === 'string') {
-            try { aiConfig = JSON.parse(savedAiConfig); } catch(e) {}
-        } else {
-            aiConfig = savedAiConfig;
+        try {
+            aiConfig = JSON.parse(savedAiConfig);
+        } catch(e) {
+            console.error("同步 ai_config 失败", e);
         }
     }
     if(!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
@@ -3791,7 +3807,32 @@ await getAiReply(true);
         function openApiConfig() { document.getElementById('api-url').value=aiConfig.url; document.getElementById('api-key').value=aiConfig.key; document.getElementById('current-model-display').innerText=aiConfig.model; document.getElementById('api-config-page').classList.add('active'); }
         function closeApiConfig() { document.getElementById('api-config-page').classList.remove('active'); }
         function saveApiConfig() { aiConfig.url=document.getElementById('api-url').value; aiConfig.key=document.getElementById('api-key').value; saveData(); closeApiConfig(); }
-        async function fetchModels() { const res = await fetch(aiConfig.url.replace(/\/$/,"")+"/models", {headers:{'Authorization':'Bearer '+aiConfig.key}}); const d = await res.json(); showModelSelector(d.data.map(m=>m.id)); }
+        async function fetchModels() {
+    const url = document.getElementById('api-url').value.trim().replace(/\/$/, "");
+    const key = document.getElementById('api-key').value.trim();
+    if (!url || !key) {
+        alert("请先填写 API 地址和 Key");
+        return;
+    }
+    try {
+        const res = await fetch(url + "/models", {
+            headers: { 'Authorization': 'Bearer ' + key }
+        });
+        if (!res.ok) {
+            throw new Error("HTTP 状态错误: " + res.status);
+        }
+        const d = await res.json();
+        if (d.data && Array.isArray(d.data)) {
+            showModelSelector(d.data.map(m => m.id));
+        } else if (Array.isArray(d)) {
+            showModelSelector(d.map(m => m.id || m));
+        } else {
+            throw new Error("未能解析出模型列表");
+        }
+    } catch (err) {
+        alert("拉取模型列表失败，请检查 API 地址、Key 或网络状况。\n错误信息: " + err.message);
+    }
+}
         function showModelSelector(ids) { document.getElementById('model-list-container').innerHTML=ids.map(id=>`<div class="list-item" onclick="aiConfig.model='${id}'; saveData(); closeModelSelector();">${id}</div>`).join(''); document.getElementById('model-selector-page').classList.add('active'); }
         function closeModelSelector() { document.getElementById('model-selector-page').classList.remove('active'); }
         function changeMyName() { const n=prompt("名字:"); if(n){myInfo.name=n; saveData(); renderMePage();}}
@@ -4210,13 +4251,13 @@ function executeTransfer() {
 
         // 3. 独立出来的群聊回复逻辑（包含输入状态显示）
                     async function getGroupAiReply() {
-// 强制同步主页面的 API 设置
-let savedAiConfig = await getKV('ai_config');
+// 核心修改：直接从 localStorage 强制同步主页面的最新 API 设置
+let savedAiConfig = localStorage.getItem('ai_config');
 if (savedAiConfig) {
-    if (typeof savedAiConfig === 'string') {
-        try { aiConfig = JSON.parse(savedAiConfig); } catch(e) {}
-    } else {
-        aiConfig = savedAiConfig;
+    try {
+        aiConfig = JSON.parse(savedAiConfig);
+    } catch(e) {
+        console.error("同步 ai_config 失败", e);
     }
 }
 if (!aiConfig.key) return alert("请先在 [我-设置-API设置] 中配置 Key");
@@ -4757,12 +4798,16 @@ closeChat = function() {
 };
 
         async function openChat(n) { 
-    // 在打开聊天的一瞬间，强制重新读取共享的 IndexedDB 数据库
+    // 在打开聊天的一瞬间，强制重新读取共享的 IndexedDB 数据库和 localStorage 中的 API 设置
     try {
         friends = await getKV('qq_friends', friends);
         chatHistories = await getKV('qq_history', chatHistories);
+        const localConfig = localStorage.getItem('ai_config');
+        if (localConfig) {
+            aiConfig = JSON.parse(localConfig);
+        }
     } catch (e) {
-        console.warn("重新加载数据库失败", e);
+        console.warn("重新加载数据失败", e);
     }
 
     currentFriendName = n; 
