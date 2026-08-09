@@ -1099,6 +1099,15 @@ input:checked + .slider:before {
                 <div class="me-item-title">API 与模型设置</div>
                 <div class="me-item-arrow">〉</div>
             </div>
+            <!-- 新增回复延迟栏目 -->
+            <div class="me-card-item" style="cursor: default;">
+                <div class="me-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                <div class="me-item-title">回复延迟</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="global-delay-toggle" onchange="toggleGlobalDelay(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
     </div>
 </div>
@@ -2145,6 +2154,14 @@ for(let i = 0; i < displayHistory.length; i++){
         }
     }
     
+    // 缓存辅助渲染函数：如果内存有缓存，直接显示src属性；否则加上标记，等待后续渲染
+    function getSyncAvatarHtml(dbid, extra = "") {
+        if (window.blobUrlCache && window.blobUrlCache[dbid]) {
+            return `<img src="${window.blobUrlCache[dbid]}" ${extra} decoding="async">`;
+        }
+        return `<img class="db-img-loader" data-dbid="${dbid}" ${extra} decoding="async">`;
+    }
+
     let avHtml = "";
     if (isSelf) {
         const friend = friends.find(f => f.name === currentFriendName);
@@ -2158,14 +2175,14 @@ for(let i = 0; i < displayHistory.length; i++){
 
         if (personaAvatar) {
             if (personaAvatar.startsWith('indexeddb-')) {
-                avHtml = `<img class="db-img-loader" data-dbid="${personaAvatar}" decoding="async">`;
+                avHtml = getSyncAvatarHtml(personaAvatar);
             } else {
                 avHtml = `<img src="${personaAvatar}" decoding="async">`;
             }
         } else {
             if (myInfo.avatar) {
                 if (myInfo.avatar.startsWith('indexeddb-')) {
-                    avHtml = `<img class="db-img-loader" data-dbid="${myInfo.avatar}" decoding="async">`;
+                    avHtml = getSyncAvatarHtml(myInfo.avatar);
                 } else {
                     avHtml = `<img src="${myInfo.avatar}" decoding="async">`;
                 }
@@ -2178,7 +2195,7 @@ for(let i = 0; i < displayHistory.length; i++){
             const senderObj = friends.find(f => f.name === m.sender);
             if (senderObj && senderObj.avatarUrl) {
                 if (senderObj.avatarUrl.startsWith('indexeddb-')) {
-                    avHtml = `<img class="db-img-loader" data-dbid="${senderObj.avatarUrl}" decoding="async">`;
+                    avHtml = getSyncAvatarHtml(senderObj.avatarUrl);
                 } else {
                     avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
                 }
@@ -2189,7 +2206,7 @@ for(let i = 0; i < displayHistory.length; i++){
             const friend = friends.find(f => f.name === currentFriendName);
             if (friend.avatarUrl) {
                 if (friend.avatarUrl.startsWith('indexeddb-')) {
-                    avHtml = `<img class="db-img-loader" data-dbid="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
+                    avHtml = getSyncAvatarHtml(friend.avatarUrl, `onclick="showHeartbeat(${realIndex})"`);
                 } else {
                     avHtml = `<img src="${friend.avatarUrl}" onclick="showHeartbeat(${realIndex})" decoding="async">`;
                 }
@@ -3053,7 +3070,9 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
 }
 
 for (let mObj of msgs) {
-    await new Promise(r => setTimeout(r, 100));
+    // 如果开启了回复延迟，则时间间隔定为 1000毫秒 (1秒)，否则使用默认的 100毫秒
+    const delayTime = myInfo.replyDelay ? 1000 : 100;
+    await new Promise(r => setTimeout(r, delayTime));
     let rawText = mObj.text.trim();
     if (!rawText) continue;
 
@@ -4397,8 +4416,9 @@ ${membersPersonas}
                         let splitLines = replyPart.split('\n').filter(t => t.trim() !== '').slice(0, finalLimit);
 
                         for (let line of splitLines) {
-                            // 模拟打字间隔时间，提升真实感
-                            await new Promise(r => setTimeout(r, 1000));
+                            // 如果开启了回复延迟，时间间隔定为 1000毫秒 (1秒)，否则使用默认的 1000毫秒
+                            const delayTime = myInfo.replyDelay ? 1000 : 1000;
+                            await new Promise(r => setTimeout(r, delayTime));
                             
                             chatHistories[currentFriendName].push({
                                 type: 'friend',
@@ -4456,6 +4476,11 @@ ${membersPersonas}
             }
         }
         
+function toggleGlobalDelay(val) {
+    myInfo.replyDelay = val;
+    saveData();
+}
+
 function renderMePage() {
     // 设置名字和微信号
     document.getElementById('my-name-display').innerText = myInfo.name;
@@ -4472,6 +4497,13 @@ function renderMePage() {
     } else {
         avatarContainer.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#ccc; color:white;">ME</div>';
     }
+    
+    // 更新全局回复延迟开关状态
+    const delayToggle = document.getElementById('global-delay-toggle');
+    if (delayToggle) {
+        delayToggle.checked = !!myInfo.replyDelay;
+    }
+    
     loadAllDatabaseImages(); // 渲染后加载数据库图片
 }
         // --- 约会功能逻辑 ---
@@ -5991,16 +6023,25 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 // ================= 小火人核心逻辑结束 =================
+// 新增全局头像内存缓存，防止重复读取数据库导致头像黑屏闪烁
+window.blobUrlCache = {};
+
 // 这是一个自动填图器，它会搜索页面上所有需要从数据库加载的图片标签并填入
 async function loadAllDatabaseImages() {
     const loaders = document.querySelectorAll('.db-img-loader');
     for (const img of loaders) {
         const dbid = img.getAttribute('data-dbid');
         if (dbid && !img.src) { // 如果有ID且还没图片
-            const blob = await getAvatarBlob(dbid);
-            if (blob) {
-                const url = URL.createObjectURL(blob);
-                img.src = url;
+            // 优先从内存缓存中获取已转换的 URL
+            if (window.blobUrlCache[dbid]) {
+                img.src = window.blobUrlCache[dbid];
+            } else {
+                const blob = await getAvatarBlob(dbid);
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    window.blobUrlCache[dbid] = url; // 存入缓存
+                    img.src = url;
+                }
             }
         }
     }
