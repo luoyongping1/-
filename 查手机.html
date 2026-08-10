@@ -825,15 +825,17 @@ async function triggerAI() {
     const friendsData = JSON.parse(localStorage.getItem('qq_friends')) || [];
     const targetPersona = (friendsData.find(f => f.name === targetName) || { persona: "普通人" }).persona;
     
-    // 提前在顶层读取 userName，方便所有应用分支（如钱包、购物车等）使用面具名字进行个性化定制
+    // 提前在顶层读取 userName 和面具详细内容，方便所有应用分支（如钱包、日记、购物车等）使用进行个性化定制
     const myInfo = await getDBValue('my_info', { name: "我" });
     let userName = myInfo.name || "我"; // 默认兜底
+    let userPersonaContent = "普通人"; // 默认面具人设描述
     const targetFriend = friendsData.find(f => f.name === targetName);
     if (targetFriend && targetFriend.userPersonaId) {
         const userPersonas = await getDBValue('qq_user_personas', []);
         const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
         if (matchedPersona && matchedPersona.name) {
             userName = matchedPersona.name; // 将置顶联系人名字同步为面具名
+            userPersonaContent = matchedPersona.content || "普通人"; // 同步获取面具的背景人设内容
         }
     }
     
@@ -963,15 +965,21 @@ async function triggerAI() {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ 
                     model: aiConfig.model || "gpt-3.5-turbo", 
-                    messages: [{ role: "user", content: `写一篇非常详尽的日记。
-人设背景：${targetPersona}。
-要求：
-1. 正文必须包含丰富的心理活动和细节，字数超过600字。
-2. 必须且只能按以下标记包裹内容（禁止代码块，禁止任何前导语）：
-[日期]内容[/日期]
-[正文]内容[/正文]
-[秘密]内容[/秘密]
-[心情]内容[/心情]` }] 
+                    messages: [{ role: "user", content: `请以手机主人[${targetName}]的视角，写一篇非常详尽私密的个人备忘日记。
+    【手机主人人设背景】：${targetPersona}
+    【重要：关于机主的心仪对象/密切交互者（即用户）的信息】：
+    - 对方的名字/昵称：[${userName}]
+    - 对方的人设背景与性别描述：[${userPersonaContent}]
+    
+    【核心撰写要求】：
+    1. 日记内容必须围绕手机主人对[${userName}]的复杂深切的情感、互动点滴或难以忘怀的秘密来展开。
+    2. 必须仔细阅读并严格认清[${userName}]的性别与人设背景（例如：如果人设描述中写明[${userName}]是女生，日记里绝不能用男生的称呼或代词描写对方，严禁性别搞反；必须完全合乎你们俩的身份背景关系）。
+    3. 正文必须包含极其丰富的内心心理挣扎与细腻的细节描写，情感克制但深情，字数必须超过 600 字。
+    4. 必须且只能按以下标记包裹输出内容，严禁任何代码块，严禁任何前导或后导的解释性旁白：
+    [日期]内容[/日期]
+    [正文]内容[/正文]
+    [秘密]内容[/秘密]
+    [心情]内容[/心情]` }] 
                 })
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
