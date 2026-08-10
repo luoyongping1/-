@@ -849,14 +849,18 @@ async function triggerAI() {
                 }
             }
 
-            // 2. 指示大模型结合机主人设的 NPC 生成其他好友
+            // 2. 指示大模型结合机主人设的 NPC 生成其他好友（严格禁写恋人和多余的 user 身份）
             const sysPrompt = `你现在是手机取证专家，正在搜查角色[${targetName}]的手机。
 【手机主人人设】：${targetPersona}
 【手机里的联系人限制】：
-请虚构 5 位[${targetName}]手机里的其他联系人。请仔细阅读手机主人的人设，优先将人设文本里提到过的具体 NPC 人物（如师父、仇人、同事、暗恋对象、家人等）作为这 5 位联系人的名字。严禁出现名字为[${userName}]的联系人。
+请虚构 5 位[${targetName}]手机里的其他联系人（例如：同事、同学、仇人、师父、奶奶、合作伙伴等NPC）。
+重要警告：
+1. 绝对不要虚构任何代表机主恋爱对象的联系人（如“恋人”、“情侣”、“情侣关系”、“老婆”、“老公”、“暗恋对象”等）。
+2. 绝对不能出现名字为[${userName}]的联系人，也不能出现任何代表用户、玩家分身或小号的联系人。
+3. 请优先将人设文本里提到过的具体 NPC 人物（如师父、仇人、同事、家人等）作为这 5 位联系人的名字。
 
 【取证内容要求】：
-与其他人的对话：体现机主的真实社会关系（如工作交接、仇人对线、暗恋互动、朋友邀约、家人唠叨等）。每句对话的语气、称呼、话题必须极度符合[${targetName}]的人设以及他们与对应联系人之间的社会关系。
+与其他人的对话：体现机主的真实社会关系（如工作交接、仇人对线、朋友邀约、家人唠叨等）。每句对话的语气、称呼、话题必须极度符合[${targetName}]的人设以及他们与对应联系人之间的社会关系。
 
 【输出格式强制要求】：
 联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6|联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6
@@ -888,13 +892,23 @@ async function triggerAI() {
                 text: m.text
             }));
 
-            // 4. 解析 AI 生成的其他路人好友
+            // 4. 解析 AI 生成的其他路人好友，并在代码层加入过滤防御
             const items = rawData.split('|').filter(i => i.includes(':'));
+            
+            // 定义需要被过滤掉的禁用词
+            const forbiddenRelations = ["恋人", "情侣", "伴侣", "老婆", "老公", "小号", "置顶", "我", "自己", "对象", "暗恋"];
+            
             items.forEach(item => {
                 const parts = item.split(':');
                 if (parts.length >= 3) {
                     const name = parts[0].trim();
                     const relation = parts[1].trim();
+                    
+                    // 防御过滤：如果名字重复匹配到了 userName，或者关系描述包含了禁用词，则直接跳过，不加入联系人列表
+                    if (name === userName || forbiddenRelations.some(r => relation.includes(r))) {
+                        return; 
+                    }
+                    
                     const msgs = parts.slice(2).join(':').split('#').filter(m => m.trim());
                     currentQQFriends.push({ name, relation });
                     qqChatHistories[name] = msgs.map((text, idx) => ({
