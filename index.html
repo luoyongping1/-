@@ -1755,20 +1755,86 @@ document.getElementById('swiper-container').addEventListener('touchend', (e) => 
     }
 });
 
+// 新增的辅助函数：从本地数据库获取头像文件
+function getSelectorAvatarBlob(id) {
+    return new Promise((resolve) => {
+        const DB_NAME = 'WeChatAIPlusDB';
+        const request = indexedDB.open(DB_NAME);
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('userPersonaAvatars')) {
+                db.close();
+                resolve(null);
+                return;
+            }
+            try {
+                const transaction = db.transaction(['userPersonaAvatars'], 'readonly');
+                const store = transaction.objectStore('userPersonaAvatars');
+                const getReq = store.get(id);
+                getReq.onsuccess = () => {
+                    db.close();
+                    resolve(getReq.result ? getReq.result.image : null);
+                };
+                getReq.onerror = () => {
+                    db.close();
+                    resolve(null);
+                };
+            } catch (e) {
+                db.close();
+                resolve(null);
+            }
+        };
+        request.onerror = () => {
+            resolve(null);
+        };
+    });
+}
+
+// 新增的辅助函数：异步加载并填入数据库图像
+async function loadSelectorAvatars() {
+    const imgs = document.querySelectorAll('.selector-db-avatar');
+    for (const img of imgs) {
+        const dbid = img.getAttribute('data-dbid');
+        if (dbid && !img.src) {
+            const blob = await getSelectorAvatarBlob(dbid);
+            if (blob) {
+                img.src = URL.createObjectURL(blob);
+            }
+        }
+    }
+}
+
+// 修改后的选择好友函数
 function showFriendSelector() {
     const friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
     const container = document.getElementById('friend-list-for-check');
     if (friends.length === 0) {
         container.innerHTML = '<p style="text-align:center;color:#666;padding:20px;">QQ里还没有好友哦，请先去QQ添加好友</p>';
     } else {
-        container.innerHTML = friends.map(f => `
-            <div onclick="startCheckPhone('${f.name}')" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:10px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center;">
-                <div style="width:30px; height:30px; border-radius:50%; background:#ccc; margin-right:10px; overflow:hidden;">
-                    ${f.avatarUrl ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}
+        container.innerHTML = friends.map(f => {
+            let avatarInner = "";
+            if (f.avatarUrl) {
+                if (f.avatarUrl.startsWith('indexeddb-')) {
+                    avatarInner = `<img class="selector-db-avatar" data-dbid="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    avatarInner = `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                }
+            } else {
+                avatarInner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#bcae97;color:white;font-size:12px;font-weight:bold;">${f.initial || f.name[0]}</div>`;
+            }
+
+            return `
+                <div onclick="startCheckPhone('${f.name}')" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:10px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center;">
+                    <div style="width:30px; height:30px; border-radius:50%; background:#ccc; margin-right:10px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                        ${avatarInner}
+                    </div>
+                    <b style="color:#333;">${f.name}</b>
                 </div>
-                <b style="color:#333;">${f.name}</b>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+        
+        // 异步渲染数据库头像
+        loadSelectorAvatars();
     }
     document.getElementById('friend-selector-modal').style.display = 'flex';
 }
