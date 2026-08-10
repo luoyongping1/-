@@ -825,6 +825,18 @@ async function triggerAI() {
     const friendsData = JSON.parse(localStorage.getItem('qq_friends')) || [];
     const targetPersona = (friendsData.find(f => f.name === targetName) || { persona: "普通人" }).persona;
     
+    // 提前在顶层读取 userName，方便所有应用分支（如钱包、购物车等）使用面具名字进行个性化定制
+    const myInfo = await getDBValue('my_info', { name: "我" });
+    let userName = myInfo.name || "我"; // 默认兜底
+    const targetFriend = friendsData.find(f => f.name === targetName);
+    if (targetFriend && targetFriend.userPersonaId) {
+        const userPersonas = await getDBValue('qq_user_personas', []);
+        const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
+        if (matchedPersona && matchedPersona.name) {
+            userName = matchedPersona.name; // 将置顶联系人名字同步为面具名
+        }
+    }
+    
     const btn = document.getElementById('ai-scan-btn');
     const oldBtnHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -834,20 +846,7 @@ async function triggerAI() {
         const headers = { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' };
 
         if (currentAppId === 'qq') {
-            // 核心修改：改用 getDBValue 从数据库中异步读取真实的 my_info
-            const myInfo = await getDBValue('my_info', { name: "我" });
-            let userName = myInfo.name || "我"; // 默认兜底
-
-            // 1. 同步面具名字：判断当前查手机的目标好友是否绑定了面具(userPersonaId)
-            const targetFriend = friendsData.find(f => f.name === targetName);
-            if (targetFriend && targetFriend.userPersonaId) {
-                // 核心修改：改用 getDBValue 从数据库中异步读取真实的 qq_user_personas 列表
-                const userPersonas = await getDBValue('qq_user_personas', []);
-                const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
-                if (matchedPersona && matchedPersona.name) {
-                    userName = matchedPersona.name; // 将置顶联系人名字同步为面具名
-                }
-            }
+            // 此处直接沿用上方已经获取到的 userName，删除多余的重复数据库读取代码
 
             // 2. 指示大模型结合机主人设的 NPC 生成其他好友（严格禁写恋人和多余的 user 身份）
             const sysPrompt = `你现在是手机取证专家，正在搜查角色[${targetName}]的手机。
@@ -1013,13 +1012,15 @@ async function triggerAI() {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ 
                     model: aiConfig.model || "gpt-3.5-turbo", 
-                    messages: [{ role: "user", content: `虚构机主[${targetName}]的流水。人设：${targetPersona}。
-请按照以下特殊分隔符输出，严禁任何代码块：
+                    messages: [{ role: "user", content: `虚构机主[${targetName}]的钱包收支流水。人设背景：${targetPersona}。
+请按照以下特殊分隔符格式输出，严禁任何代码块，严禁任何前导或后导的解释性文字：
 总余额 >>> 项目一 @@@ 金额一 @@@ 时间一 @@@ 内心想法一 ### 项目二 @@@ 金额二 @@@ 时间二 @@@ 内心想法二 ...
+
 核心要求：
-1. “总余额”这一项必须输出为纯数字，可以带两位小数，例如 8848.00。严禁输出任何中文、英文、句子或多余标点符号！严禁输出类似“无限余额”或“我们可以在午后...金额”的文字。
-2. 必须生成至少6条记录。
-3. 内心想法严禁输出数字，必须是基于人设的碎碎念或感悟。` }] 
+1. “总余额”这一项必须输出为纯数字，可以带两位小数，例如 8848.00。严禁输出任何中文、英文、句子或多余标点符号！
+2. 必须生成至少6条近期消费流水。收支的项目名称必须贴近现实恋爱日常与生活（例如：同款定制保温杯、新鲜红富士苹果、定制手工羊毛线、往返机动车票/穿梭机票、吊坠保养加固等生活日用品或送给对方的礼物）。
+3. “内心想法”必须是机主写给/关于[${userName}]的真实恋爱独白与碎碎念。语气要非常温柔、宠溺、深情且家常（例如：“习惯了买成对的，用同款杯子就好像你还在我身边一样”、“特意挑了最脆的给你寄过去，不许偷偷送给别人”、“天冷了，得空快点把围巾织好，可不能冻着我的小姑娘”等）。
+4. 严禁写成消费心理学分析，严禁包含任何第三人称的小说描述或中二背景叙事（比如写超能力威压、结婚证锁抽屉等离奇中二剧情）。必须是温馨、细腻、富有恋爱生活气息的心里话。每条想法字数控制在30至50字左右。` }] 
                 })
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
