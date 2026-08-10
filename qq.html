@@ -1736,10 +1736,27 @@ let stickers = [];
 
 // 从 IndexedDB 加载全部配置数据到内存变量中
 async function loadAllKVData() {
-    friends = await getKV('qq_friends', friends);
+    const localFriends = localStorage.getItem('qq_friends');
+    if (localFriends) {
+        friends = JSON.parse(localFriends);
+        await setKV('qq_friends', friends);
+    } else {
+        friends = await getKV('qq_friends', friends);
+        localStorage.setItem('qq_friends', JSON.stringify(friends));
+    }
+    
     groups = await getKV('qq_groups', groups);
     collapsedGroups = await getKV('qq_collapsed_groups', collapsedGroups);
-    chatHistories = await getKV('qq_history', chatHistories);
+    
+    const localHistory = localStorage.getItem('qq_history');
+    if (localHistory) {
+        chatHistories = JSON.parse(localHistory);
+        await setKV('qq_history', chatHistories);
+    } else {
+        chatHistories = await getKV('qq_history', chatHistories);
+        localStorage.setItem('qq_history', JSON.stringify(chatHistories));
+    }
+    
     groupChats = await getKV('qq_group_chats', groupChats);
     datingHistories = await getKV('qq_dating_history', datingHistories);
     moments = await getKV('qq_moments', moments);
@@ -1914,9 +1931,11 @@ function dataURLtoBlob(dataUrl) {
 async function saveData() {
     try {
         await setKV('qq_friends', friends);
+        localStorage.setItem('qq_friends', JSON.stringify(friends)); // 同时同步到 localStorage，方便其它页面读取好友
         await setKV('qq_groups', groups);
         await setKV('qq_collapsed_groups', collapsedGroups);
         await setKV('qq_history', chatHistories);
+        localStorage.setItem('qq_history', JSON.stringify(chatHistories)); // 同时同步到 localStorage，方便其它页面读取历史
         await setKV('qq_dating_history', datingHistories);
         await setKV('qq_moments', moments);
         
@@ -4860,8 +4879,22 @@ closeChat = function() {
         async function openChat(n) { 
     // 在打开聊天的一瞬间，强制重新读取共享的 IndexedDB 数据库和 localStorage 中的 API 设置
     try {
-        friends = await getKV('qq_friends', friends);
-        chatHistories = await getKV('qq_history', chatHistories);
+        const localFriends = localStorage.getItem('qq_friends');
+        if (localFriends) {
+            friends = JSON.parse(localFriends);
+            await setKV('qq_friends', friends);
+        } else {
+            friends = await getKV('qq_friends', friends);
+        }
+
+        const localHistory = localStorage.getItem('qq_history');
+        if (localHistory) {
+            chatHistories = JSON.parse(localHistory);
+            await setKV('qq_history', chatHistories);
+        } else {
+            chatHistories = await getKV('qq_history', chatHistories);
+        }
+
         const localConfig = localStorage.getItem('ai_config');
         if (localConfig) {
             aiConfig = JSON.parse(localConfig);
