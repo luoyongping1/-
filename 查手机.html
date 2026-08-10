@@ -799,17 +799,27 @@ async function triggerAI() {
         const headers = { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' };
 
         if (currentAppId === 'qq') {
-            const myInfo = JSON.parse(localStorage.getItem('my_info') || '{"name":"弥酒"}');
-            const userName = myInfo.name;
+            const myInfo = JSON.parse(localStorage.getItem('my_info') || '{"name":"我"}');
+            let userName = myInfo.name || "我"; // 默认兜底
 
-            // 获取 AI 生成的其他 5 个路人联系人
+            // 1. 同步面具名字：判断当前查手机的目标好友是否绑定了面具(userPersonaId)
+            const targetFriend = friendsData.find(f => f.name === targetName);
+            if (targetFriend && targetFriend.userPersonaId) {
+                const userPersonas = JSON.parse(localStorage.getItem('qq_user_personas') || '[]');
+                const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
+                if (matchedPersona && matchedPersona.name) {
+                    userName = matchedPersona.name; // 将置顶联系人名字同步为面具名
+                }
+            }
+
+            // 2. 指示大模型结合机主人设的 NPC 生成其他好友
             const sysPrompt = `你现在是手机取证专家，正在搜查角色[${targetName}]的手机。
 【手机主人人设】：${targetPersona}
 【手机里的联系人限制】：
-请虚构 5 位[${targetName}]手机里的其他联系人。这 5 位联系人必须严格根据【手机主人人设】中提到的社交圈、同事、朋友、仇人或家人来虚构。严禁出现[${userName}]。
+请虚构 5 位[${targetName}]手机里的其他联系人。请仔细阅读手机主人的人设，优先将人设文本里提到过的具体 NPC 人物（如师父、仇人、同事、暗恋对象、家人等）作为这 5 位联系人的名字。严禁出现名字为[${userName}]的联系人。
 
 【取证内容要求】：
-与其他人的对话：体现机主的真实社会关系（如工作交接、朋友邀约、家人唠叨等）。每句对话的语气必须完全符合[${targetName}]的人设。
+与其他人的对话：体现机主的真实社会关系（如工作交接、仇人对线、暗恋互动、朋友邀约、家人唠叨等）。每句对话的语气、称呼、话题必须极度符合[${targetName}]的人设以及他们与对应联系人之间的社会关系。
 
 【输出格式强制要求】：
 联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6|联系人名字:关系:对话1#对话2#对话3#对话4#对话5#对话6
@@ -829,7 +839,7 @@ async function triggerAI() {
             currentQQFriends = [];
             qqChatHistories = {};
 
-            // 1. 强制插入【你与角色】的真实记录
+            // 3. 强制插入【置顶联系人（你）】，只读取本地真实主线聊天记录，100%不经过大模型虚构
             const realHistory = JSON.parse(localStorage.getItem('qq_history') || '{}')[targetName] || [];
             currentQQFriends.push({ name: userName, relation: "置顶联系人" });
             
@@ -841,25 +851,25 @@ async function triggerAI() {
                 text: m.text
             }));
 
-                            // 2. 解析 AI 生成的其他路人
-                const items = rawData.split('|').filter(i => i.includes(':'));
-                items.forEach(item => {
-                    const parts = item.split(':');
-                    if (parts.length >= 3) {
-                        const name = parts[0].trim();
-                        const relation = parts[1].trim();
-                        const msgs = parts.slice(2).join(':').split('#').filter(m => m.trim());
-                        currentQQFriends.push({ name, relation });
-                        qqChatHistories[name] = msgs.map((text, idx) => ({
-                            type: idx % 2 === 0 ? 'friend' : 'self', text: text.trim()
-                        }));
-                    }
-                });
-                // 将取证出来的新数据永久写入浏览器缓存
-                localStorage.setItem('qq_check_friends', JSON.stringify(currentQQFriends));
-                localStorage.setItem('qq_check_history', JSON.stringify(qqChatHistories));
-                renderQQList();
-            } else if (currentAppId === 'browser') {
+            // 4. 解析 AI 生成的其他路人好友
+            const items = rawData.split('|').filter(i => i.includes(':'));
+            items.forEach(item => {
+                const parts = item.split(':');
+                if (parts.length >= 3) {
+                    const name = parts[0].trim();
+                    const relation = parts[1].trim();
+                    const msgs = parts.slice(2).join(':').split('#').filter(m => m.trim());
+                    currentQQFriends.push({ name, relation });
+                    qqChatHistories[name] = msgs.map((text, idx) => ({
+                        type: idx % 2 === 0 ? 'friend' : 'self', text: text.trim()
+                    }));
+                }
+            });
+            // 将取证出来的新数据永久写入浏览器缓存
+            localStorage.setItem('qq_check_friends', JSON.stringify(currentQQFriends));
+            localStorage.setItem('qq_check_history', JSON.stringify(qqChatHistories));
+            renderQQList();
+        } else if (currentAppId === 'browser') {
             const res = await fetch(url, {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `暴露隐私：虚构8条[${targetName}]的搜索记录。人设：${targetPersona}。格式：标题|网址|时间。用#隔开。不要代码块！` }] })
@@ -955,9 +965,10 @@ async function triggerAI() {
                     messages: [{ role: "user", content: `虚构机主[${targetName}]的流水。人设：${targetPersona}。
 请按照以下特殊分隔符输出，严禁任何代码块：
 总余额 >>> 项目一 @@@ 金额一 @@@ 时间一 @@@ 内心想法一 ### 项目二 @@@ 金额二 @@@ 时间二 @@@ 内心想法二 ...
-要求：
-1. 必须生成至少6条记录。
-2. 内心想法严禁输出数字，必须是基于人设的碎碎念或感悟。` }] 
+核心要求：
+1. “总余额”这一项必须输出为纯数字，可以带两位小数，例如 8848.00。严禁输出任何中文、英文、句子或多余标点符号！严禁输出类似“无限余额”或“我们可以在午后...金额”的文字。
+2. 必须生成至少6条记录。
+3. 内心想法严禁输出数字，必须是基于人设的碎碎念或感悟。` }] 
                 })
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
@@ -965,11 +976,20 @@ async function triggerAI() {
             const content = (data.choices?.[0]?.message?.content || data.content || "").replace(/^```.*$/gm, '').replace(/```/g, '').trim();
             
             const parts = content.split('>>>');
-            const balance = (parts[0] || "0.00").trim();
+            const balanceRaw = (parts[0] || "0.00").trim();
+            
+            // 防御式解析：利用正则表达式过滤掉所有非数字和非小数点的杂乱字符
+            let cleanBalance = balanceRaw.replace(/[^\d.]/g, '');
+            if (!cleanBalance || isNaN(parseFloat(cleanBalance))) {
+                cleanBalance = "0.00";
+            } else {
+                cleanBalance = parseFloat(cleanBalance).toFixed(2);
+            }
+            
             const items = (parts[1] || "").split('###').filter(i => i.trim());
 
             walletHistory = { 
-                balance: balance, 
+                balance: cleanBalance, 
                 list: items.map(str => {
                     const fields = str.split('@@@').map(f => f.trim());
                     return { 
