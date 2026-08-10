@@ -1012,15 +1012,19 @@ async function triggerAI() {
                 method: 'POST', headers: headers,
                 body: JSON.stringify({ 
                     model: aiConfig.model || "gpt-3.5-turbo", 
-                    messages: [{ role: "user", content: `虚构机主[${targetName}]的钱包收支流水。人设背景：${targetPersona}。
+                    messages: [{ role: "user", content: `虚构机主[${targetName}]的钱包近期收支流水明细。人设背景：${targetPersona}。
 请按照以下特殊分隔符格式输出，严禁任何代码块，严禁任何前导或后导的解释性文字：
 总余额 >>> 项目一 @@@ 金额一 @@@ 时间一 @@@ 内心想法一 ### 项目二 @@@ 金额二 @@@ 时间二 @@@ 内心想法二 ...
 
 核心要求：
 1. “总余额”这一项必须输出为纯数字，可以带两位小数，例如 8848.00。严禁输出任何中文、英文、句子或多余标点符号！
-2. 必须生成至少6条近期消费流水。收支的项目名称必须贴近现实恋爱日常与生活（例如：同款定制保温杯、新鲜红富士苹果、定制手工羊毛线、往返机动车票/穿梭机票、吊坠保养加固等生活日用品或送给对方的礼物）。
-3. “内心想法”必须是机主写给/关于[${userName}]的真实恋爱独白与碎碎念。语气要非常温柔、宠溺、深情且家常（例如：“习惯了买成对的，用同款杯子就好像你还在我身边一样”、“特意挑了最脆的给你寄过去，不许偷偷送给别人”、“天冷了，得空快点把围巾织好，可不能冻着我的小姑娘”等）。
-4. 严禁写成消费心理学分析，严禁包含任何第三人称的小说描述或中二背景叙事（比如写超能力威压、结婚证锁抽屉等离奇中二剧情）。必须是温馨、细腻、富有恋爱生活气息的心里话。每条想法字数控制在30至50字左右。` }] 
+2. 必须生成至少 6 条记录，并且必须采用【收支穿插】的形式（至少包含 3 条收入记录和 3 条支出记录）。
+3. 【金额正负号严格限制】：
+   - 支出项目（如购买保温杯、苹果、织羊毛线等消费或送礼行为）：金额前面必须带负号，格式如“ -150.00 ”。
+   - 收入项目（如收到零花钱、发奖金、兼职报酬、理财返现等）：金额前面必须带正号，格式如“ +3000.00 ”。
+4. 账目项目名称要贴近现实恋爱生活。
+5. “内心想法”必须是机主关于[${userName}]的恋爱独白或生活随笔。语气要非常温柔、宠溺、深情且家常。每条想法字数控制在 30 至 50 字左右。
+6. 严禁写成消费心理学分析，严禁包含任何第三人称的小说描述或中二背景叙事。` }] 
                 })
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
@@ -1107,12 +1111,23 @@ function togglePhoto(i) { albumData[i].flipped = !albumData[i].flipped; renderPh
 function renderWallet() {
     if(!walletHistory) return;
     const listHtml = walletHistory.list.map(t => {
-        const isIncome = !t.price.includes('-');
+        // 安全清理金额字符串中多余字符，只保留数字、小数点及可能存在的加减号
+        let priceClean = t.price.replace(/[^\d.+-]/g, '');
+        
+        // 判断是收入还是支出（包含 "+" 算收入，否则算支出）
+        const isIncome = priceClean.includes('+');
+        
+        // 格式化输出：如果既没有加号也没有减号，默认算支出加上减号
+        let displayPrice = priceClean;
+        if (!priceClean.startsWith('+') && !priceClean.startsWith('-')) {
+            displayPrice = '-' + priceClean;
+        }
+
         return `
             <div class="trans-item">
                 <div class="trans-main">
                     <span class="trans-title">${t.title}</span>
-                    <span class="trans-price ${isIncome ? 'income' : ''}">${t.price.includes('-') ? t.price : '+' + t.price}</span>
+                    <span class="trans-price ${isIncome ? 'income' : ''}">${displayPrice}</span>
                 </div>
                 <div class="trans-time">${t.time}</div>
                 <div class="trans-comment">
