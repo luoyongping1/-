@@ -1755,11 +1755,12 @@ document.getElementById('swiper-container').addEventListener('touchend', (e) => 
     }
 });
 
-// 新增的辅助函数：从本地数据库获取头像文件
+// 新增：从本地 IndexedDB 数据库中读取头像数据的工具函数
 function getSelectorAvatarBlob(id) {
     return new Promise((resolve) => {
         const DB_NAME = 'WeChatAIPlusDB';
-        const request = indexedDB.open(DB_NAME);
+        // 尝试以第3版打开数据库（与qq.html一致）
+        const request = indexedDB.open(DB_NAME, 3);
         request.onsuccess = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains('userPersonaAvatars')) {
@@ -1785,26 +1786,58 @@ function getSelectorAvatarBlob(id) {
             }
         };
         request.onerror = () => {
-            resolve(null);
+            // 如果版本不匹配报错，降级不指定版本打开
+            const fallbackRequest = indexedDB.open(DB_NAME);
+            fallbackRequest.onsuccess = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('userPersonaAvatars')) {
+                    db.close();
+                    resolve(null);
+                    return;
+                }
+                try {
+                    const transaction = db.transaction(['userPersonaAvatars'], 'readonly');
+                    const store = transaction.objectStore('userPersonaAvatars');
+                    const getReq = store.get(id);
+                    getReq.onsuccess = () => {
+                        db.close();
+                        resolve(getReq.result ? getReq.result.image : null);
+                    };
+                    getReq.onerror = () => {
+                        db.close();
+                        resolve(null);
+                    };
+                } catch (e) {
+                    db.close();
+                    resolve(null);
+                }
+            };
+            fallbackRequest.onerror = () => {
+                resolve(null);
+            };
         };
     });
 }
 
-// 新增的辅助函数：异步加载并填入数据库图像
+// 新增：异步加载并填入数据库图像的工具函数
 async function loadSelectorAvatars() {
     const imgs = document.querySelectorAll('.selector-db-avatar');
     for (const img of imgs) {
         const dbid = img.getAttribute('data-dbid');
         if (dbid && !img.src) {
-            const blob = await getSelectorAvatarBlob(dbid);
-            if (blob) {
-                img.src = URL.createObjectURL(blob);
+            try {
+                const blob = await getSelectorAvatarBlob(dbid);
+                if (blob) {
+                    img.src = URL.createObjectURL(blob);
+                }
+            } catch (e) {
+                console.error("Failed to load selector avatar:", e);
             }
         }
     }
 }
 
-// 修改后的选择好友函数
+// 修改后的选择好友展示函数
 function showFriendSelector() {
     const friends = JSON.parse(localStorage.getItem('qq_friends')) || [];
     const container = document.getElementById('friend-list-for-check');
@@ -1812,28 +1845,30 @@ function showFriendSelector() {
         container.innerHTML = '<p style="text-align:center;color:#666;padding:20px;">QQ里还没有好友哦，请先去QQ添加好友</p>';
     } else {
         container.innerHTML = friends.map(f => {
-            let avatarInner = "";
+            let avatarHtml = "";
             if (f.avatarUrl) {
+                // 如果是本地上传的数据库头像，渲染占位图并添加标记
                 if (f.avatarUrl.startsWith('indexeddb-')) {
-                    avatarInner = `<img class="selector-db-avatar" data-dbid="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                    avatarHtml = `<img class="selector-db-avatar" data-dbid="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
                 } else {
-                    avatarInner = `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                    avatarHtml = `<img src="${f.avatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
                 }
             } else {
-                avatarInner = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#bcae97;color:white;font-size:12px;font-weight:bold;">${f.initial || f.name[0]}</div>`;
+                // 如果没有设置头像，显示莫兰迪色系首字母圆圈
+                avatarHtml = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#bcae97;color:white;font-size:12px;font-weight:bold;">${f.initial || f.name[0]}</div>`;
             }
 
             return `
                 <div onclick="startCheckPhone('${f.name}')" style="padding:15px; background:rgba(0,0,0,0.05); border-radius:10px; margin-bottom:10px; cursor:pointer; display:flex; align-items:center;">
                     <div style="width:30px; height:30px; border-radius:50%; background:#ccc; margin-right:10px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
-                        ${avatarInner}
+                        ${avatarHtml}
                     </div>
                     <b style="color:#333;">${f.name}</b>
                 </div>
             `;
         }).join('');
         
-        // 异步渲染数据库头像
+        // 渲染完结构后，立即触发异步读取数据库填图
         loadSelectorAvatars();
     }
     document.getElementById('friend-selector-modal').style.display = 'flex';
