@@ -462,6 +462,61 @@
 </div>
 
 <script>
+ // 新增：全局头像缓存与数据库读取逻辑，确保能读取 IndexedDB 中的相册头像
+ window.blobUrlCache = {};
+ function getAvatarBlob(id) {
+     return new Promise((resolve) => {
+         const DB_NAME = 'WeChatAIPlusDB';
+         const request = indexedDB.open(DB_NAME);
+         request.onsuccess = (event) => {
+             const db = event.target.result;
+             if (!db.objectStoreNames.contains('userPersonaAvatars')) {
+                 db.close();
+                 resolve(null);
+                 return;
+             }
+             try {
+                 const transaction = db.transaction(['userPersonaAvatars'], 'readonly');
+                 const store = transaction.objectStore('userPersonaAvatars');
+                 const getReq = store.get(id);
+                 getReq.onsuccess = () => {
+                     db.close();
+                     resolve(getReq.result ? getReq.result.image : null);
+                 };
+                 getReq.onerror = () => {
+                     db.close();
+                     resolve(null);
+                 };
+             } catch (e) {
+                 db.close();
+                 resolve(null);
+             }
+         };
+         request.onerror = () => {
+             resolve(null);
+         };
+     });
+ }
+
+ async function loadAllDatabaseImages() {
+     const loaders = document.querySelectorAll('.db-img-loader');
+     for (const img of loaders) {
+         const dbid = img.getAttribute('data-dbid');
+         if (dbid && !img.src) {
+             if (window.blobUrlCache[dbid]) {
+                 img.src = window.blobUrlCache[dbid];
+             } else {
+                 const blob = await getAvatarBlob(dbid);
+                 if (blob) {
+                     const url = URL.createObjectURL(blob);
+                     window.blobUrlCache[dbid] = url;
+                     img.src = url;
+                 }
+             }
+         }
+     }
+ }
+
  let layout = [
     { id: 'banner', type: 'w', name: 'Banner' },
     { id: 'qq', type: 'a', name: 'QQ', icon: 'far fa-comment-dots' },
@@ -710,18 +765,70 @@ function renderQQList() {
         return;
     }
 
+    // 读取主线聊天相关的基础配置数据
+    const storedFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+    const myInfo = JSON.parse(localStorage.getItem('my_info') || '{}');
+    const userPersonas = JSON.parse(localStorage.getItem('qq_user_personas') || '[]');
+    const targetName = localStorage.getItem('target_check_name') || "机主";
+
+    // 计算置顶联系人名字（即当前面具名）
+    let userName = myInfo.name || "我";
+    const targetFriend = storedFriends.find(sf => sf.name === targetName);
+    if (targetFriend && targetFriend.userPersonaId) {
+        const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
+        if (matchedPersona && matchedPersona.name) {
+            userName = matchedPersona.name;
+        }
+    }
+
     content.innerHTML = currentQQFriends.map(f => {
         const history = qqChatHistories[f.name] || [];
         const lastMsg = history.length > 0 ? history[history.length-1].text : "无消息";
+
+        // 识别每个人的头像数据位置
+        let avatarUrl = "";
+        if (f.name === userName) {
+            // 用户自己（置顶联系人）：优先读取面具头像，其次读取我的头像
+            if (targetFriend && targetFriend.userPersonaId) {
+                const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
+                if (matchedPersona && matchedPersona.avatar) {
+                    avatarUrl = matchedPersona.avatar;
+                }
+            }
+            if (!avatarUrl && myInfo.avatar) {
+                avatarUrl = myInfo.avatar;
+            }
+        } else {
+            // 其它NPC联系人：从主线qq_friends查找对应头像
+            const matchedFriend = storedFriends.find(sf => sf.name === f.name);
+            if (matchedFriend && matchedFriend.avatarUrl) {
+                avatarUrl = matchedFriend.avatarUrl;
+            }
+        }
+
+        // 根据头像格式生成 HTML
+        let avatarHtml = "";
+        if (avatarUrl) {
+            if (avatarUrl.startsWith('indexeddb-')) {
+                avatarHtml = `<img class="db-img-loader" data-dbid="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;">`;
+            } else {
+                avatarHtml = `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;">`;
+            }
+        } else {
+            avatarHtml = f.name[0];
+        }
+
         return `
             <div class="qq-list-item" onclick="openQQChat('${f.name}')">
-                <div class="qq-avatar">${f.name[0]}</div>
+                <div class="qq-avatar" style="overflow:hidden; display:flex; align-items:center; justify-content:center;">${avatarHtml}</div>
                 <div class="qq-info">
                     <div class="qq-name">${f.name}</div>
                     <div class="qq-msg-preview">${f.relation}：${lastMsg}</div>
                 </div>
             </div>`;
     }).join('');
+
+    loadAllDatabaseImages(); // 异步载入并渲染数据库中的真实头像
 }
 
 function openQQChat(name) {
@@ -1271,12 +1378,28 @@ function openForwardModal() {
     if (friendsList.length === 0) {
         listContainer.innerHTML = '<div style="text-align:center; color:#8c8273; font-size:13px; padding: 20px;">未发现微信或QQ的通讯录联系人，请先到聊天页面创建或加载好友。</div>';
     } else {
-        listContainer.innerHTML = friendsList.map(f => `
-            <div onclick="selectForwardTarget('${f.name}')" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid rgba(230, 222, 209, 0.4); border-radius: 12px; cursor: pointer; background: white; transition: background 0.2s;">
-                <div style="width: 32px; height: 32px; border-radius: 50%; background: #bcae97; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">${f.name[0]}</div>
-                <span style="font-size: 14px; color: #5a5144; font-weight: 500;">${f.name}</span>
-            </div>
-        `).join('');
+        listContainer.innerHTML = friendsList.map(f => {
+            // 根据头像数据类型决定显示相册图、网络图还是首字母
+            let avatarHtml = "";
+            if (f.avatarUrl) {
+                if (f.avatarUrl.startsWith('indexeddb-')) {
+                    avatarHtml = `<img class="db-img-loader" data-dbid="${f.avatarUrl}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;">`;
+                } else {
+                    avatarHtml = `<img src="${f.avatarUrl}" style="width:100%; height:100%; object-fit:cover; display:block; border-radius:50%;">`;
+                }
+            } else {
+                avatarHtml = f.name[0];
+            }
+
+            return `
+                <div onclick="selectForwardTarget('${f.name}')" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid rgba(230, 222, 209, 0.4); border-radius: 12px; cursor: pointer; background: white; transition: background 0.2s;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #bcae97; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; overflow: hidden; flex-shrink: 0;">${avatarHtml}</div>
+                    <span style="font-size: 14px; color: #5a5144; font-weight: 500;">${f.name}</span>
+                </div>
+            `;
+        }).join('');
+        
+        loadAllDatabaseImages(); // 异步载入并渲染数据库中的真实头像
     }
     modal.style.display = 'flex';
 }
