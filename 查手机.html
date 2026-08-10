@@ -781,6 +781,41 @@ async function sendQQMsg() {
     }
 }
 
+// 新增：从共享 IndexedDB 数据库读取数据的辅助函数，用来读取面具列表和用户信息
+function getDBValue(key, defaultValue = null) {
+    return new Promise((resolve) => {
+        const DB_NAME = 'WeChatAIPlusDB';
+        const request = indexedDB.open(DB_NAME);
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('app_kv_store')) {
+                db.close();
+                resolve(defaultValue);
+                return;
+            }
+            try {
+                const transaction = db.transaction(['app_kv_store'], 'readonly');
+                const store = transaction.objectStore('app_kv_store');
+                const getReq = store.get(key);
+                getReq.onsuccess = () => {
+                    db.close();
+                    resolve(getReq.result ? getReq.result.value : defaultValue);
+                };
+                getReq.onerror = () => {
+                    db.close();
+                    resolve(defaultValue);
+                };
+            } catch (e) {
+                db.close();
+                resolve(defaultValue);
+            }
+        };
+        request.onerror = () => {
+            resolve(defaultValue);
+        };
+    });
+}
+
 /* ================= 核心分析逻辑 (triggerAI) ================= */
 async function triggerAI() {
     const aiConfig = JSON.parse(localStorage.getItem('ai_config') || '{}');
@@ -799,13 +834,15 @@ async function triggerAI() {
         const headers = { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' };
 
         if (currentAppId === 'qq') {
-            const myInfo = JSON.parse(localStorage.getItem('my_info') || '{"name":"我"}');
+            // 核心修改：改用 getDBValue 从数据库中异步读取真实的 my_info
+            const myInfo = await getDBValue('my_info', { name: "我" });
             let userName = myInfo.name || "我"; // 默认兜底
 
             // 1. 同步面具名字：判断当前查手机的目标好友是否绑定了面具(userPersonaId)
             const targetFriend = friendsData.find(f => f.name === targetName);
             if (targetFriend && targetFriend.userPersonaId) {
-                const userPersonas = JSON.parse(localStorage.getItem('qq_user_personas') || '[]');
+                // 核心修改：改用 getDBValue 从数据库中异步读取真实的 qq_user_personas 列表
+                const userPersonas = await getDBValue('qq_user_personas', []);
                 const matchedPersona = userPersonas.find(p => p.id === targetFriend.userPersonaId);
                 if (matchedPersona && matchedPersona.name) {
                     userName = matchedPersona.name; // 将置顶联系人名字同步为面具名
