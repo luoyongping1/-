@@ -381,10 +381,11 @@
             };
         }
 
-        // 钱包余额
-        let userWallet = {
-            balance: parseFloat(localStorage.getItem('walletBalance')) || 200.00
-        };
+// 钱包余额
+// 新增：默认与 qq.html 的余额规则对齐，如果本地存储无记录则默认显示 0.00 元
+let userWallet = {
+    balance: localStorage.getItem('walletBalance') !== null ? parseFloat(localStorage.getItem('walletBalance')) : 0.00
+};
 
         // 页面切换
         function switchPage(page) {
@@ -395,13 +396,18 @@
             const nav = document.getElementById('nav-' + page);
             if(nav) nav.classList.add('nav-active');
             
-            currentPage = page;
-            if(page === 'setting') {
-                document.getElementById('user-balance-display').innerText = userWallet.balance.toFixed(2);
-                document.getElementById('user-nickname-display').innerText = userNickname;
-                document.getElementById('user-avatar-display').src = userAvatar;
-                updateBadges();
-            }
+currentPage = page;
+if(page === 'setting') {
+    // 新增：每次切换到“我的”页面，都重新从本地存储加载最新余额
+    const localBalance = localStorage.getItem('walletBalance');
+    if (localBalance !== null) {
+        userWallet.balance = parseFloat(localBalance);
+    }
+    document.getElementById('user-balance-display').innerText = userWallet.balance.toFixed(2);
+    document.getElementById('user-nickname-display').innerText = userNickname;
+    document.getElementById('user-avatar-display').src = userAvatar;
+    updateBadges();
+}
             if(page === 'coupons') renderCoupons();
             if(page === 'cart') renderCart();
         }
@@ -1039,26 +1045,37 @@
             switchPage('setting');
         }
 
-        window.onload = function() {
-            // 【新增】初始化时检测超时订单
-            checkUnpaidTimeout();
+window.onload = function() {
+    // 【新增】初始化时检测超时订单
+    checkUnpaidTimeout();
 
-            document.getElementById('api-url').value = apiConfig.url;
-            document.getElementById('api-key').value = apiConfig.key;
-            const select = document.getElementById('ai-model');
-            if(apiConfig.model && apiConfig.model !== 'gpt-3.5-turbo') {
-                const opt = document.createElement('option');
-                opt.value = apiConfig.model; opt.innerText = apiConfig.model;
-                opt.selected = true; select.appendChild(opt);
-            }
-            
-            // 初始化个人头像与昵称显示
-            document.getElementById('user-nickname-display').innerText = userNickname;
-            document.getElementById('user-avatar-display').src = userAvatar;
+    // 新增：页面加载时，强制重新读取 localStorage 中的最新余额
+    const localBalance = localStorage.getItem('walletBalance');
+    if (localBalance !== null) {
+        userWallet.balance = parseFloat(localBalance);
+    }
 
-            renderCart();
-            updateBadges();
-        }
+    document.getElementById('api-url').value = apiConfig.url;
+    document.getElementById('api-key').value = apiConfig.key;
+    const select = document.getElementById('ai-model');
+    if(apiConfig.model && apiConfig.model !== 'gpt-3.5-turbo') {
+        const opt = document.createElement('option');
+        opt.value = apiConfig.model; opt.innerText = apiConfig.model;
+        opt.selected = true; select.appendChild(opt);
+    }
+    
+    // 初始化个人头像与昵称显示
+    document.getElementById('user-nickname-display').innerText = userNickname;
+    document.getElementById('user-avatar-display').src = userAvatar;
+    // 新增：确保渲染最新的余额到页面上
+    const balanceDisplay = document.getElementById('user-balance-display');
+    if (balanceDisplay) {
+        balanceDisplay.innerText = userWallet.balance.toFixed(2);
+    }
+
+    renderCart();
+    updateBadges();
+}
     </script>
 </body>
 </html>

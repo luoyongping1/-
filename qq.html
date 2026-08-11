@@ -1776,6 +1776,13 @@ async function loadAllKVData() {
     
     myInfo = await getKV('my_info', myInfo);
     walletData = await getKV('wallet_data', walletData);
+    // 新增：如果本地有最新的购物商城余额，优先同步过来；如果没有，则初始化写入
+    const localBalance = localStorage.getItem('walletBalance');
+    if (localBalance !== null) {
+        walletData.balance = parseFloat(localBalance);
+    } else {
+        localStorage.setItem('walletBalance', walletData.balance);
+    }
     favorites = await getKV('qq_favorites_list', favorites);
     stickers = await getKV('qq_stickers', stickers);
 }
@@ -1943,12 +1950,14 @@ async function saveData() {
         localStorage.setItem('ai_config', JSON.stringify(aiConfig));
         await setKV('ai_config', aiConfig);
         
-        await setKV('my_info', myInfo);
-        await setKV('wallet_data', walletData);
-        await setKV('qq_favorites_list', favorites);
-        await setKV('qq_stickers', stickers);
-        await setKV('qq_group_chats', groupChats);
-        await setKV('qq_user_personas', userPersonas);
+await setKV('my_info', myInfo);
+await setKV('wallet_data', walletData);
+// 新增：同步余额到 localStorage，供购物商城使用
+localStorage.setItem('walletBalance', walletData.balance);
+await setKV('qq_favorites_list', favorites);
+await setKV('qq_stickers', stickers);
+await setKV('qq_group_chats', groupChats);
+await setKV('qq_user_personas', userPersonas);
 
         // --- 同步数据到云服务器 ---
         const subRaw = await getKV('web_push_subscription');
@@ -4182,7 +4191,12 @@ function deleteFavorite(id) {
 }
         function openWallet() { document.getElementById('wallet-page').classList.add('active'); updateWalletUI(); }
         function closeWallet() { document.getElementById('wallet-page').classList.remove('active'); }
-        function updateWalletUI() { document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`; saveData(); }
+        function updateWalletUI() { 
+    document.getElementById('wallet-balance').innerText = `￥${walletData.balance.toFixed(2)}`; 
+    // 新增：每次更新钱包界面时，同步写入 localStorage
+    localStorage.setItem('walletBalance', walletData.balance);
+    saveData(); 
+}
         function openWalletHistory() { document.getElementById('wallet-history-list').innerHTML = walletData.history.slice().reverse().map(h => `<div class="list-item"><div class="info"><div>${h.title}</div><div style="font-size:12px;">${h.time}</div></div><b>${h.amount}</b></div>`).join(''); document.getElementById('wallet-history-page').classList.add('active'); }
         function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
         function selfRecharge() { const amt = prompt("金额:"); if(amt && !isNaN(amt)) { walletData.balance += parseFloat(amt); walletData.history.push({ title: '手动充值', amount: '+'+parseFloat(amt).toFixed(2), time: new Date().toLocaleString() }); updateWalletUI(); document.getElementById('recharge-modal').style.display = 'none'; } }
@@ -4876,7 +4890,7 @@ closeChat = function() {
     originalCloseChat();
 };
 
-        async function openChat(n) { 
+async function openChat(n) { 
     // 在打开聊天的一瞬间，强制重新读取共享的 IndexedDB 数据库和 localStorage 中的 API 设置
     try {
         const localFriends = localStorage.getItem('qq_friends');
@@ -4898,6 +4912,13 @@ closeChat = function() {
         const localConfig = localStorage.getItem('ai_config');
         if (localConfig) {
             aiConfig = JSON.parse(localConfig);
+        }
+
+        // 新增：打开聊天时，强制同步一次 localStorage 里的最新余额到 IndexedDB
+        const localBalance = localStorage.getItem('walletBalance');
+        if (localBalance !== null) {
+            walletData.balance = parseFloat(localBalance);
+            await setKV('wallet_data', walletData);
         }
     } catch (e) {
         console.warn("重新加载数据失败", e);
