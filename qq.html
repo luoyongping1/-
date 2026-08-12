@@ -1783,9 +1783,24 @@ async function loadAllKVData() {
     } else {
         localStorage.setItem('walletBalance', walletData.balance);
     }
-    favorites = await getKV('qq_favorites_list', favorites);
-    stickers = await getKV('qq_stickers', stickers);
-}
+        favorites = await getKV('qq_favorites_list', favorites);
+        stickers = await getKV('qq_stickers', stickers);
+        
+        // 初始化聊天消息追踪器，防止加载时把旧聊天全部刷新成当前时间
+        window.lastMsgTracker = {};
+        friends.forEach(f => {
+            if (f.lastMsg) {
+                window.lastMsgTracker[f.name] = f.lastMsg;
+                if (!f.lastMsgTime) f.lastMsgTime = 0;
+            }
+        });
+        groupChats.forEach(g => {
+            if (g.lastMsg) {
+                window.lastMsgTracker[g.id] = g.lastMsg;
+                if (!g.lastMsgTime) g.lastMsgTime = 0;
+            }
+        });
+    }
 
 // 自动应用来自主页面的全局美化样式
 async function applyGlobalStyles() {
@@ -1935,10 +1950,25 @@ function dataURLtoBlob(dataUrl) {
 // --- IndexedDB 相关代码结束 ---
 
 // 在 saveData 函数里也要加上这一行
-async function saveData() {
-    try {
-        await setKV('qq_friends', friends);
-        localStorage.setItem('qq_friends', JSON.stringify(friends)); // 同时同步到 localStorage，方便其它页面读取好友
+    async function saveData() {
+        try {
+            // 更新聊天最后活跃时间戳，用于排序置顶
+            window.lastMsgTracker = window.lastMsgTracker || {};
+            friends.forEach(f => {
+                if (f.lastMsg && window.lastMsgTracker[f.name] !== f.lastMsg) {
+                    f.lastMsgTime = Date.now();
+                    window.lastMsgTracker[f.name] = f.lastMsg;
+                }
+            });
+            groupChats.forEach(g => {
+                if (g.lastMsg && window.lastMsgTracker[g.id] !== g.lastMsg) {
+                    g.lastMsgTime = Date.now();
+                    window.lastMsgTracker[g.id] = g.lastMsg;
+                }
+            });
+
+            await setKV('qq_friends', friends);
+            localStorage.setItem('qq_friends', JSON.stringify(friends)); // 同时同步到 localStorage，方便其它页面读取好友
         await setKV('qq_groups', groups);
         await setKV('qq_collapsed_groups', collapsedGroups);
         await setKV('qq_history', chatHistories);
@@ -2330,8 +2360,11 @@ if (m.isShoppingPay) {
         </div>`;
     useBubble = false;
 } else if (m.isRedPacket) {
+    // 检查当前用户是否已经在此红包的领取记录中
+    let hasUserClaimed = m.claims && m.claims.some(c => c.name === myInfo.name);
+    let isOpened = m.rpOpened || hasUserClaimed;
     contentHtml = `
-        <div class="redpacket-bubble ${m.rpOpened ? 'opened' : ''}" ${!m.rpOpened && m.type === 'friend' ? `onclick="openRedPacket(${realIndex})"` : ''}>
+        <div class="redpacket-bubble ${isOpened ? 'opened' : ''}" onclick="handleRedPacketClick(${realIndex})">
             <div class="rp-top">
                 <div class="rp-icon">🧧</div>
                 <div class="rp-info">
@@ -2339,7 +2372,7 @@ if (m.isShoppingPay) {
                     <div class="rp-amount">￥${parseFloat(m.text).toFixed(2)}${m.rpTarget ? ' · 指定给'+m.rpTarget : ''}</div>
                 </div>
             </div>
-            <div class="rp-footer">${m.rpOpened ? '红包已被领取' : '微信红包'}</div>
+            <div class="rp-footer">${isOpened ? '红包已被领取' : '微信红包'}</div>
         </div>`;
     useBubble = false;
 } else if (m.isForwardedCard || m.isMomentForwardCard) {
@@ -2658,13 +2691,16 @@ const history = (chatHistories[currentFriendName] || []).slice(-10).map(m => {
     } else if (m.isDescribeCard) {
         contentText = `[发送了图片描述: ${m.text}]`;
     } else if (m.isMomentForwardCard) {
-    const isUserSelf = m.momentAuthor === myInfo.name;
-    const authorDesc = isUserSelf ? `当前与你对话的用户自己（即 ${m.momentAuthor}）` : `好友“${m.momentAuthor}”`;
-    contentText = `[系统通知：用户向你分享转发了一条朋友圈动态（注意：这只是普通的朋友圈图文内容分享，并不是给你发送了视频链接或外部链接，请勿误会）。该朋友圈发布者是：${authorDesc}，朋友圈的正文内容是：“${m.momentText || ''}”${m.momentImagesCount ? `，附带了 ${m.momentImagesCount} 张图片` : ''}。请结合此朋友圈内容，以聊天形式与对方直接开展交流互动。]`;
-} else if (m.isShoppingPay) {
+        const isUserSelf = m.momentAuthor === myInfo.name;
+        const authorDesc = isUserSelf ? `当前与你对话的用户自己（即 ${m.momentAuthor}）` : `好友“${m.momentAuthor}”`;
+        contentText = `[系统通知：用户向你分享转发了一条朋友圈动态（注意：这只是普通的朋友圈图文内容分享，并不是给你发送了视频链接或外部链接，请勿误会）。该朋友圈发布者是：${authorDesc}，朋友圈的正文内容是：“${m.momentText || ''}”${m.momentImagesCount ? `，附带了 ${m.momentImagesCount} 张图片` : ''}。请结合此朋友圈内容，以聊天形式与对方直接开展交流互动。]`;
+    } else if (m.isShoppingPay) {
         contentText = `[发送了代付请求卡片：代付商品是“${m.payItems}”，金额为 ￥${m.text} 元，等待你支付。如果你同意付钱，请在回复末尾带上 [PAY_SUCCESS] 标签；如果你决定拒绝支付，请在回复末尾带上 [PAY_REFUSED] 标签。]`;
     } else if (m.isShoppingPayResponse) {
         contentText = `[已发送代付处理结果卡片：商品为“${m.payItems}”，金额为 ￥${m.text} 元，处理状态为：${m.payStatus === 'paid' ? '已完成支付' : '已拒绝代付'}。]`;
+    } else if (m.isRedPacket) {
+        // 让私聊中的 AI 感知到收到了红包
+        contentText = `[发送了微信红包：金额为 ￥${m.text} 元，备注为：“${m.rpNote || '恭喜发财'}”。如果你想领红包，请在回复的开头加上 [RED_PACKET_ACTION]RECEIVE 标签。如果你不写这个标签，则无法领取该红包。]`;
     }
     return {
         role: m.type === 'self' ? 'user' : 'assistant',
@@ -3024,10 +3060,17 @@ if (rawContent.includes("[PAY_SUCCESS]")) {
     rawContent = rawContent.replace("[PAY_REFUSED]", "今天额度不够啦，才不要帮你付呢，自己买！");
 }
 
-// 解析转账动作
+// 解析转账动作并生成提示卡片
 const transferMsg = chatHistories[currentFriendName].find(m => m.isTransfer && !m.status);
 if (rawContent.includes("[MONEY_ACTION]RECEIVE")) {
-    if (transferMsg) transferMsg.status = 'received';
+    if (transferMsg) {
+        transferMsg.status = 'received';
+        chatHistories[currentFriendName].push({
+            type: 'system',
+            text: `${currentFriendName}已收钱`,
+            isSystemNotice: true
+        });
+    }
     rawContent = rawContent.replace("[MONEY_ACTION]RECEIVE", "");
 } else if (rawContent.includes("[MONEY_ACTION]REFUND")) {
     if (transferMsg) {
@@ -3040,8 +3083,22 @@ if (rawContent.includes("[MONEY_ACTION]RECEIVE")) {
             time: new Date().toLocaleString()
         });
         updateWalletUI();
+        chatHistories[currentFriendName].push({
+            type: 'system',
+            text: `${currentFriendName}已退还转账`,
+            isSystemNotice: true
+        });
     }
     rawContent = rawContent.replace("[MONEY_ACTION]REFUND", "");
+}
+
+// 新增私聊红包动作解析
+const rpMsgIndex = chatHistories[currentFriendName].findIndex(m => m.isRedPacket && !m.rpOpened);
+if (rawContent.includes("[RED_PACKET_ACTION]RECEIVE")) {
+    if (rpMsgIndex !== -1) {
+        claimRedPacket(rpMsgIndex, currentFriendName);
+    }
+    rawContent = rawContent.replace("[RED_PACKET_ACTION]RECEIVE", "");
 }
 
 // 清洗Markdown和干扰符
@@ -3436,26 +3493,96 @@ function selectForwardMomentTarget(friendName, momentIdx) {
 function renderChatList() {
     const list = document.getElementById('chat-session-list');
     const kw = document.getElementById('chat-search-input')?.value.toLowerCase() || '';
-    list.innerHTML = friends.filter(f => f.lastMsg && f.name.toLowerCase().includes(kw)).map(f => {
-        let avHtml = "";
-        if (f.avatarUrl) {
-            if (f.avatarUrl.startsWith('indexeddb-')) {
-                avHtml = `<img class="db-img-loader" data-dbid="${f.avatarUrl}" decoding="async">`;
-            } else {
-                avHtml = `<img src="${f.avatarUrl}" decoding="async">`;
-            }
-        } else {
-            avHtml = f.initial;
+    
+    const combined = [];
+    
+    // 1. 筛选私聊好友
+    friends.forEach(f => {
+        if (f.lastMsg && f.name.toLowerCase().includes(kw)) {
+            combined.push({
+                id: f.name,
+                name: f.name,
+                lastMsg: f.lastMsg,
+                lastMsgTime: f.lastMsgTime || 0,
+                isPinned: f.isPinned || false,
+                isGroup: false,
+                avatarUrl: f.avatarUrl,
+                initial: f.initial
+            });
         }
+    });
+    
+    // 2. 筛选群聊
+    groupChats.forEach(g => {
+        if (g.lastMsg && g.name.toLowerCase().includes(kw)) {
+            combined.push({
+                id: g.id,
+                name: g.name,
+                lastMsg: g.lastMsg,
+                lastMsgTime: g.lastMsgTime || 0,
+                isPinned: g.isPinned || false,
+                isGroup: true,
+                avatarUrl: g.avatarUrl || '',
+                initial: '👥'
+            });
+        }
+    });
+    
+    // 3. 排序逻辑：置顶的聊天永远在最顶上，其余按最后活跃时间倒序排列
+    combined.sort((a, b) => {
+        const pinA = a.isPinned ? 1 : 0;
+        const pinB = b.isPinned ? 1 : 0;
+        if (pinA !== pinB) {
+            return pinB - pinA;
+        }
+        return (b.lastMsgTime || 0) - (a.lastMsgTime || 0);
+    });
+    
+    // 4. 渲染列表
+    list.innerHTML = combined.map(item => {
+        let avHtml = "";
+        let clickAttr = "";
+        
+        if (item.isGroup) {
+            if (item.avatarUrl) {
+                if (item.avatarUrl.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${item.avatarUrl}" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${item.avatarUrl}" decoding="async">`;
+                }
+            } else {
+                avHtml = `<div style="background:#ddd; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">👥</div>`;
+            }
+            clickAttr = `onclick="openGroupChat('${item.id}')"`;
+        } else {
+            if (item.avatarUrl) {
+                if (item.avatarUrl.startsWith('indexeddb-')) {
+                    avHtml = `<img class="db-img-loader" data-dbid="${item.avatarUrl}" decoding="async">`;
+                } else {
+                    avHtml = `<img src="${item.avatarUrl}" decoding="async">`;
+                }
+            } else {
+                avHtml = item.initial;
+            }
+            clickAttr = `onclick="openChat('${item.name}')"`;
+        }
+        
+        // 如果是置顶联系人，背景变成浅灰色
+        const pinnedStyle = item.isPinned ? 'style="background: #fafafa;"' : '';
+        
         return `
-        <div class="wechat-chat-item" onclick="openChat('${f.name}')">
+        <div class="wechat-chat-item" ${pinnedStyle} ${clickAttr}>
             <div class="chat-avatar">${avHtml}</div>
             <div class="chat-body">
-                <div class="chat-top"><div class="chat-nickname">${f.name}</div><div class="chat-time">刚刚</div></div>
-                <div class="chat-preview">${f.lastMsg}</div>
+                <div class="chat-top">
+                    <div class="chat-nickname">${item.name}</div>
+                    <div class="chat-time">刚刚</div>
+                </div>
+                <div class="chat-preview">${item.lastMsg}</div>
             </div>
         </div>`;
     }).join('');
+    
     loadAllDatabaseImages(); // 渲染后加载数据库头像
 }
 function renderContactList() {
@@ -3885,9 +4012,16 @@ await getAiReply(true);
         function changeMyName() { const n=prompt("名字:"); if(n){myInfo.name=n; saveData(); renderMePage();}}
         function changeMyWxid() { const n=prompt("微信号:"); if(n){myInfo.wxid=n; saveData(); renderMePage();}}
 
-        let avatarTarget = 'friend'; // 'me' or 'friend'
+        let avatarTarget = 'friend'; // 'me' or 'friend' or 'group'
         function changeMyAvatar() { avatarTarget = 'me'; document.getElementById('avatar-choice-modal').style.display = 'flex'; }
-        function changeAvatar() { avatarTarget = 'friend'; document.getElementById('avatar-choice-modal').style.display = 'flex'; }
+        function changeAvatar() { 
+            if (isGroupMode) {
+                avatarTarget = 'group';
+            } else {
+                avatarTarget = 'friend';
+            }
+            document.getElementById('avatar-choice-modal').style.display = 'flex'; 
+        }
         function closeAvatarChoiceModal() { document.getElementById('avatar-choice-modal').style.display = 'none'; }
         function triggerAvatarUpload() {
             if (avatarTarget === 'me') document.getElementById('my-avatar-upload').click();
@@ -3902,6 +4036,14 @@ function openAvatarUrlInput() {
             renderMePage(); // 刷新我的页面
             renderMessages(); // 刷新聊天气泡
             renderMoments(); // 刷新朋友圈头像
+        } else if (avatarTarget === 'group') {
+            const group = groupChats.find(g => g.id === currentFriendName);
+            if (group) {
+                group.avatarUrl = u;
+                openSettings(); // 刷新设置面板内的头像
+                renderMessages(); // 刷新聊天气泡的头像
+                renderChatList(); // 刷新消息列表的头像
+            }
         } else {
             const friend = friends.find(f => f.name === currentFriendName);
             if (friend) {
@@ -3979,32 +4121,59 @@ document.getElementById('avatar-upload').onchange = function() {
         const inputElement = this; // 缓存 input 节点以方便清空
         reader.onload = function(e) {
             compressImage(e.target.result, 300, function(compressedData) {
-                const friend = friends.find(f => f.name === currentFriendName);
-                if (friend) {
-                    const uniqueId = `indexeddb-friend-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    const blob = dataURLtoBlob(compressedData);
-                    saveAvatarBlob(uniqueId, blob).then(() => {
-                        // 若有旧的数据库头像，先将其清理掉释放数据库内存
-                        if (friend.avatarUrl && friend.avatarUrl.startsWith('indexeddb-')) {
-                            deleteAvatarBlob(friend.avatarUrl).catch(err => console.warn(err));
-                        }
-                        friend.avatarUrl = uniqueId;
-                        saveData(); // 保存头像数据并同步云端
-                        openSettings(); // 刷新设置面板内的头像
-                        renderMessages(); // 核心修复：立即刷新聊天气泡的头像
-                        renderChatList(); // 核心修复：立即刷新消息列表中该好友的头像
-                        renderContactList(); // 核心修复：立即刷新通讯录列表里该好友的头像
-                        alert("好友头像保存成功（已安全存入本地数据库）");
-                    }).catch(err => {
-                        console.error("保存头像到数据库失败:", err);
-                        friend.avatarUrl = compressedData; // 备用方案：存入 Base64 字符串
-                        saveData();
-                        openSettings();
-                        renderMessages();
-                        renderChatList();
-                        renderContactList();
-                        alert("好友头像保存成功（已使用备用本地存储）");
-                    });
+                if (avatarTarget === 'group') {
+                    const group = groupChats.find(g => g.id === currentFriendName);
+                    if (group) {
+                        const uniqueId = `indexeddb-group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                        const blob = dataURLtoBlob(compressedData);
+                        saveAvatarBlob(uniqueId, blob).then(() => {
+                            if (group.avatarUrl && group.avatarUrl.startsWith('indexeddb-')) {
+                                deleteAvatarBlob(group.avatarUrl).catch(err => console.warn(err));
+                            }
+                            group.avatarUrl = uniqueId;
+                            saveData();
+                            openSettings();
+                            renderMessages();
+                            renderChatList();
+                            alert("群聊头像保存成功（已安全存入本地数据库）");
+                        }).catch(err => {
+                            console.error("保存群头像到数据库失败:", err);
+                            group.avatarUrl = compressedData;
+                            saveData();
+                            openSettings();
+                            renderMessages();
+                            renderChatList();
+                            alert("群聊头像保存成功（已使用备用本地存储）");
+                        });
+                    }
+                } else {
+                    const friend = friends.find(f => f.name === currentFriendName);
+                    if (friend) {
+                        const uniqueId = `indexeddb-friend-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                        const blob = dataURLtoBlob(compressedData);
+                        saveAvatarBlob(uniqueId, blob).then(() => {
+                            // 若有旧的数据库头像，先将其清理掉释放数据库内存
+                            if (friend.avatarUrl && friend.avatarUrl.startsWith('indexeddb-')) {
+                                deleteAvatarBlob(friend.avatarUrl).catch(err => console.warn(err));
+                            }
+                            friend.avatarUrl = uniqueId;
+                            saveData(); // 保存头像数据并同步云端
+                            openSettings(); // 刷新设置面板内的头像
+                            renderMessages(); // 核心修复：立即刷新聊天气泡的头像
+                            renderChatList(); // 核心修复：立即刷新消息列表中该好友的头像
+                            renderContactList(); // 核心修复：立即刷新通讯录列表里该好友的头像
+                            alert("好友头像保存成功（已安全存入本地数据库）");
+                        }).catch(err => {
+                            console.error("保存头像到数据库失败:", err);
+                            friend.avatarUrl = compressedData; // 备用方案：存入 Base64 字符串
+                            saveData();
+                            openSettings();
+                            renderMessages();
+                            renderChatList();
+                            renderContactList();
+                            alert("好友头像保存成功（已使用备用本地存储）");
+                        });
+                    }
                 }
                 inputElement.value = ''; // 核心修复：清空选择，防止连续选择相同图片时失效
             });
@@ -4316,7 +4485,7 @@ function executeTransfer() {
             const group = groupChats.find(g => g.id === currentFriendName);
             if (!group) return;
 
-            // 获取群内所有 AI 成员的名字和人设，组合到 prompt 中
+            // 获取群内所有 AI 成员的名字 and 人设，组合到 prompt 中
             let membersPersonas = "";
             group.members.forEach(memberName => {
                 const friend = friends.find(f => f.name === memberName);
@@ -4363,7 +4532,7 @@ ${membersPersonas}
 
 ## 模拟发言规则（严格遵守）：
 1. 根据当前的群聊对话历史，模拟接下来这群角色的互动回复。
-2. 此时此刻并不需要所有人都必须说话，根据话题相关度，让想表达、或者被提及的AI角色发言即可。每次总发言人数控制在 1 到 3 人之间。
+2. 【强制规则】：群里的每一个AI角色都必须在这一次回复中发言一次，不能遗漏任何一个人，且每个人只生成一个发言块。请以符合逻辑的先后顺序，一次性生成群里所有人（共 ${group.members.length} 位 AI 角色）的发言。
 3. 请以角色的口吻回复，避免任何AI客套腔调，要生动、口语化。
 4. 每一个开口模拟发言的角色，都必须完整输出包含回复、动作、心里活动、情绪、醋意值这5大属性的结构化信息数据块。
 
@@ -4482,32 +4651,40 @@ ${membersPersonas}
                             }, '*');
                         }
 
-                        // 表情包机制（50%概率发送）
-                        if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
-                            await new Promise(r => setTimeout(r, 800));
-                            const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
-                            chatHistories[currentFriendName].push({
-                                type: 'friend',
-                                text: randomSticker.url,
-                                isSticker: true,
-                                stickerDesc: randomSticker.desc || "表情",
-                                sender: targetFriend.name,
-                                initial: targetFriend.initial || targetFriend.name[0],
-                                action: actionPart,
-                                thoughts: thoughtsPart
-                            });
-                            group.lastMsg = `${targetFriend.name}: [表情]`;
-                            saveData();
-                            renderMessages();
-                        }
-                    }
+                // 表情包机制（50%概率发送）
+                if (group.allowStickers && stickers.length > 0 && Math.random() > 0.5) {
+                    await new Promise(r => setTimeout(r, 800));
+                    const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+                    chatHistories[currentFriendName].push({
+                        type: 'friend',
+                        text: randomSticker.url,
+                        isSticker: true,
+                        stickerDesc: randomSticker.desc || "表情",
+                        sender: targetFriend.name,
+                        initial: targetFriend.initial || targetFriend.name[0],
+                        action: actionPart,
+                        thoughts: thoughtsPart
+                    });
+                    group.lastMsg = `${targetFriend.name}: [表情]`;
+                    saveData();
+                    renderMessages();
                 }
-            } catch (e) {
-                console.error("【群聊单次合并调用错误】", e);
-            } finally {
-                typingEl.style.display = 'none';
             }
         }
+        
+        // 【新增：一并生成红包领取记录】
+        // 在所有的群成员发言块都解析与气泡渲染完毕后，检测有没有未抢完的群红包
+        const rpIndex = chatHistories[currentFriendName].findIndex(m => m.isRedPacket && m.claims && m.claims.length < m.rpTotalCount);
+        if (rpIndex !== -1) {
+            triggerAiGroupClaims(rpIndex);
+        }
+        
+    } catch (e) {
+        console.error("【群聊单次合并调用错误】", e);
+    } finally {
+        typingEl.style.display = 'none';
+    }
+}
         
 function toggleGlobalDelay(val) {
     myInfo.replyDelay = val;
@@ -4808,14 +4985,27 @@ function renderGroupList() {
         list.innerHTML = '<div style="text-align:center;color:#999;margin-top:50px;">暂无群聊，点击右上角创建</div>';
         return;
     }
-    list.innerHTML = groupChats.map(g => `
+    list.innerHTML = groupChats.map(g => {
+        let avHtml = "";
+        if (g.avatarUrl) {
+            if (g.avatarUrl.startsWith('indexeddb-')) {
+                avHtml = `<img class="db-img-loader" data-dbid="${g.avatarUrl}" decoding="async">`;
+            } else {
+                avHtml = `<img src="${g.avatarUrl}" decoding="async">`;
+            }
+        } else {
+            avHtml = `👥`;
+        }
+        return `
         <div class="wechat-chat-item" onclick="openGroupChat('${g.id}')">
-            <div class="chat-avatar" style="background:#ddd">👥</div>
+            <div class="chat-avatar" style="background:#ddd">${avHtml}</div>
             <div class="chat-body">
                 <div class="chat-top"><div class="chat-nickname">${g.name} (${g.members.length}人)</div></div>
                 <div class="chat-preview">${g.lastMsg || '[新群聊]'}</div>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
+    loadAllDatabaseImages();
 }
 
 // 创建群聊逻辑
@@ -4857,7 +5047,8 @@ function confirmCreateGroup(groupName) {
         id: 'group_' + Date.now(),
         name: groupName,
         members: selectedMembers,
-        lastMsg: '大家快出来聊天吧！'
+        lastMsg: '大家快出来聊天吧！',
+        avatarUrl: ''
     };
 
     groupChats.push(newGroup);
@@ -4875,8 +5066,11 @@ function openGroupChat(groupId) {
     isGroupMode = true; 
     currentFriendName = groupId; 
     
-    // 关键修改：隐藏群聊列表页面
-    document.getElementById('group-list-page').classList.remove('active');
+    // 关键修改：隐藏群聊列表页面（如果存在）
+    const groupPage = document.getElementById('group-list-page');
+    if (groupPage) {
+        groupPage.classList.remove('active');
+    }
     
     document.getElementById('chat-title').innerText = g.name;
     document.getElementById('chat-page').classList.add('active');
@@ -4951,10 +5145,29 @@ function openSettings() {
     
 if (isGroupMode) {
     const g = groupChats.find(x => x.id === currentFriendName);
-    document.getElementById('settings-avatar').innerHTML = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
+    let avHtml = "";
+    if (g.avatarUrl) {
+        if (g.avatarUrl.startsWith('indexeddb-')) {
+            avHtml = `<img class="db-img-loader" data-dbid="${g.avatarUrl}" decoding="async">`;
+        } else {
+            avHtml = `<img src="${g.avatarUrl}" decoding="async">`;
+        }
+    } else {
+        avHtml = `<div style="background:#ddd; width:45px; height:45px; display:flex; align-items:center; justify-content:center; border-radius:6px;">👥</div>`;
+    }
+    document.getElementById('settings-avatar').innerHTML = avHtml;
     document.getElementById('settings-name').innerText = g.name;
     
     listGroup.innerHTML = `
+        <div class="list-group">
+            <div class="list-item">
+                <div class="info">置顶聊天</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="pin-chat-toggle" ${g.isPinned ? 'checked' : ''} onchange="togglePinChat(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
         <div class="list-group">
             <div class="list-item" onclick="renameGroup()">
                 <div class="info">群聊名称</div><div style="color:#888">${g.name}</div>
@@ -5009,6 +5222,13 @@ if (isGroupMode) {
                 <div class="info">时间感知</div>
                 <label class="wx-switch">
                     <input type="checkbox" id="time-awareness-toggle" ${f.timeAwareness ? 'checked' : ''} onchange="toggleTimeAwareness(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="list-item">
+                <div class="info">置顶聊天</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="pin-chat-toggle" ${f.isPinned ? 'checked' : ''} onchange="togglePinChat(this.checked)">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -5070,6 +5290,23 @@ function toggleTimeAwareness(val) {
         f.timeAwareness = val;
         saveData();
     }
+}
+
+// 新增：控制置顶状态的函数
+function togglePinChat(val) {
+    if (isGroupMode) {
+        const g = groupChats.find(x => x.id === currentFriendName);
+        if (g) {
+            g.isPinned = val;
+        }
+    } else {
+        const f = friends.find(f => f.name === currentFriendName);
+        if (f) {
+            f.isPinned = val;
+        }
+    }
+    saveData();
+    renderChatList();
 }
         function closeSettings() { document.getElementById('settings-page').classList.remove('active'); }
         function toggleDescribeCard(index, event) {
@@ -5512,7 +5749,14 @@ function receiveAiTransfer(msgIndex) {
         time: new Date().toLocaleString()
     });
 
-    // 4. 更新钱包界面、保存数据并刷新聊天框
+    // 4. 在聊天中生成“已收钱系统提示”
+    chatHistories[currentFriendName].push({
+        type: 'system',
+        text: `你领取了 ${currentFriendName} 的转账`,
+        isSystemNotice: true
+    });
+
+    // 5. 更新钱包界面、保存数据并刷新聊天框
     updateWalletUI();
     saveData();
     renderMessages();
@@ -5576,6 +5820,9 @@ function openRedPacketModal() {
     document.getElementById('tool-box').style.display = 'none';
     const select = document.getElementById('redpacket-target');
     select.innerHTML = '<option value="">所有人</option>';
+    const countContainer = document.getElementById('redpacket-count-container');
+    const countInput = document.getElementById('redpacket-count-input');
+    
     if (isGroupMode) {
         const group = groupChats.find(g => g.id === currentFriendName);
         if (group) {
@@ -5583,9 +5830,14 @@ function openRedPacketModal() {
                 select.innerHTML += `<option value="${name}">${name}</option>`;
             });
         }
+        countContainer.style.display = 'block';
+        countInput.value = '';
+        countInput.placeholder = "输入红包个数";
     } else {
         const f = friends.find(f => f.name === currentFriendName);
         if (f) select.innerHTML += `<option value="${f.name}">${f.name}</option>`;
+        countContainer.style.display = 'none';
+        countInput.value = '1';
     }
     document.getElementById('redpacket-modal').style.display = 'flex';
 }
@@ -5594,6 +5846,7 @@ function closeRedPacketModal() {
     document.getElementById('redpacket-modal').style.display = 'none';
     document.getElementById('redpacket-amount-input').value = '';
     document.getElementById('redpacket-note-input').value = '';
+    document.getElementById('redpacket-count-input').value = '';
 }
 
 function sendRedPacket() {
@@ -5612,44 +5865,235 @@ function sendRedPacket() {
     });
 
     if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+    
+    // 获取输入的红包个数
+    let count = 1;
+    if (isGroupMode) {
+        const countInputVal = parseInt(document.getElementById('redpacket-count-input').value);
+        count = (!isNaN(countInputVal) && countInputVal > 0) ? countInputVal : 1;
+    }
+    const amountsArray = generateRandomAmounts(amount, count);
+
     chatHistories[currentFriendName].push({
         type: 'self',
         text: amount.toFixed(2),
         isRedPacket: true,
         rpNote: note,
         rpTarget: target,
-        rpOpened: false
+        rpOpened: false,
+        rpTotalCount: count,
+        rpAmounts: amountsArray,
+        claims: [],
+        senderName: myInfo.name
     });
 
     if (isGroupMode) {
         const g = groupChats.find(x => x.id === currentFriendName);
         g.lastMsg = "我: [微信红包]";
-    } else {
-        friends.find(f => f.name === currentFriendName).lastMsg = "[微信红包]";
-    }
-
-    updateWalletUI();
-    saveData();
-    renderMessages();
-    closeRedPacketModal();
-
-    if (isGroupMode) {
+        updateWalletUI();
+        saveData();
+        renderMessages();
+        closeRedPacketModal();
+        
+        // 发送完红包后立刻呼叫群聊API进行回复，不再直接调用自动抢红包
         getGroupAiReply();
     } else {
+        friends.find(f => f.name === currentFriendName).lastMsg = "[微信红包]";
+        updateWalletUI();
+        saveData();
+        renderMessages();
+        closeRedPacketModal();
         getAiReply();
     }
 }
 
-function openRedPacket(msgIndex) {
+//全新的红包核心控制流
+
+// 1. 红包分割算法（二倍均值法，确保各金额相加绝对等于总额）
+function generateRandomAmounts(totalAmount, count) {
+    let remainAmount = totalAmount;
+    let remainCount = count;
+    const amounts = [];
+    for (let i = 0; i < count - 1; i++) {
+        let max = (remainAmount / remainCount) * 2;
+        let amount = Math.random() * max;
+        amount = Math.max(0.01, Math.floor(amount * 100) / 100);
+        if (remainAmount - amount < (remainCount - 1) * 0.01) {
+            amount = remainAmount - (remainCount - 1) * 0.01;
+            amount = Math.floor(amount * 100) / 100;
+        }
+        amounts.push(amount);
+        remainAmount = Math.round((remainAmount - amount) * 100) / 100;
+        remainCount--;
+    }
+    amounts.push(Math.round(remainAmount * 100) / 100);
+    return amounts;
+}
+
+// 2. 点击红包气泡时的分流控制器
+function handleRedPacketClick(msgIndex) {
     const msg = chatHistories[currentFriendName][msgIndex];
-    if (!msg || msg.rpOpened) return;
-    
-    // 指定角色的检查逻辑：如果指定了人，但是当前不是私聊对方拿小号领，我们就不让他领太多复杂性
-    // 这里简单处理：让它直接变成已领取，并退回钱（如果是AI的话）
-    msg.rpOpened = true;
+    if (!msg) return;
+
+    let hasUserClaimed = msg.claims && msg.claims.some(c => c.name === myInfo.name);
+
+    if (msg.type === 'self') {
+        // 如果是自己发的红包
+        if (isGroupMode && !hasUserClaimed && msg.claims.length < msg.rpTotalCount) {
+            claimRedPacket(msgIndex, myInfo.name);
+        } else {
+            showRedPacketDetail(msgIndex);
+        }
+    } else {
+        // 如果是别人发的红包
+        if (!hasUserClaimed && msg.claims.length < msg.rpTotalCount) {
+            claimRedPacket(msgIndex, myInfo.name);
+        } else {
+            showRedPacketDetail(msgIndex);
+        }
+    }
+}
+
+// 3. 执行领取红包功能
+function claimRedPacket(msgIndex, userName) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg) return;
+    if (!msg.claims) msg.claims = [];
+
+    // 防止重复领取
+    if (msg.claims.some(c => c.name === userName)) return;
+
+    let claimedAmount = 0;
+    if (msg.rpAmounts && msg.rpAmounts.length > 0) {
+        claimedAmount = msg.rpAmounts.pop();
+    } else {
+        claimedAmount = parseFloat(msg.text); // 单聊保底
+    }
+
+    const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    msg.claims.push({
+        name: userName,
+        amount: claimedAmount,
+        time: timeStr
+    });
+
+    if (userName === myInfo.name) {
+        // 如果是用户自己领取的红包，加钱到钱包
+        walletData.balance += claimedAmount;
+        walletData.history.push({
+            title: '红包收入-来自' + (msg.senderName || currentFriendName),
+            amount: '+' + claimedAmount.toFixed(2),
+            time: new Date().toLocaleString()
+        });
+        updateWalletUI();
+        msg.rpOpened = true;
+
+        // 在聊天历史中插入“灰色系统消息卡片”
+        let noticeText = "";
+        if (msg.type === 'self') {
+            noticeText = "你领取了自己发的红包";
+        } else {
+            noticeText = `你领取了 ${msg.senderName || currentFriendName} 的红包`;
+        }
+        chatHistories[currentFriendName].push({
+            type: 'system',
+            text: noticeText,
+            isSystemNotice: true
+        });
+    } else {
+        // 如果是 AI 领取的红包，插入“灰色系统消息卡片”
+        let noticeText = "";
+        if (msg.type === 'self') {
+            noticeText = `${userName}领取了你的红包`;
+        } else {
+            noticeText = `${userName}领取了${msg.senderName || currentFriendName}的红包`;
+        }
+        chatHistories[currentFriendName].push({
+            type: 'system',
+            text: noticeText,
+            isSystemNotice: true
+        });
+    }
+
     saveData();
     renderMessages();
-    alert("红包已被成功领取！￥" + msg.text);
+
+    // 如果是当前用户点开领取的，领完直接展示红包详情弹窗
+    if (userName === myInfo.name) {
+        showRedPacketDetail(msgIndex);
+    }
+}
+
+// 4. 用户发红包后自动触发 AI 群成员抢红包的动画效果
+function triggerAiGroupClaims(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg) return;
+    const group = groupChats.find(g => g.id === currentFriendName);
+    if (!group) return;
+
+    // 随机打乱群里AI成员的名单顺序，模拟谁抢得更快
+    const members = [...group.members].sort(() => 0.5 - Math.random());
+    
+    // 计算剩余的可抢名额（红包个数减去已经抢了的次数）
+    let availableSlots = msg.rpTotalCount - (msg.claims ? msg.claims.length : 0);
+    if (availableSlots <= 0) return;
+
+    // 筛选出最多只有“剩余名额”数量的 AI 成员参与抢红包
+    const claimingMembers = members.slice(0, availableSlots);
+
+    claimingMembers.forEach((memberName, index) => {
+        setTimeout(() => {
+            // 在实际调用领取前，二次校验，防止网络多路并发导致抢多
+            const currentMsg = chatHistories[currentFriendName][msgIndex];
+            if (currentMsg.claims.length < currentMsg.rpTotalCount) {
+                claimRedPacket(msgIndex, memberName);
+            }
+        }, 500 + index * 900 + Math.random() * 600);
+    });
+}
+
+// 5. 显示图二的“红包详情弹窗”
+function showRedPacketDetail(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg) return;
+
+    const senderName = msg.senderName || (msg.type === 'self' ? myInfo.name : currentFriendName);
+    document.getElementById('rp-detail-sender-name').innerText = senderName + "发出的红包";
+    document.getElementById('rp-detail-note').innerText = msg.rpNote || "恭喜发财，大吉大利";
+
+    // 检查自己有没有领取过，领过就显示领到了多少钱
+    const myClaim = msg.claims && msg.claims.find(c => c.name === myInfo.name);
+    const amountArea = document.getElementById('rp-detail-amount-area');
+    if (myClaim) {
+        document.getElementById('rp-detail-amount').innerText = myClaim.amount.toFixed(2);
+        amountArea.style.display = 'block';
+    } else {
+        amountArea.style.display = 'none';
+    }
+
+    // 显示“领取进度概要”
+    const totalClaimed = msg.claims.reduce((sum, c) => sum + c.amount, 0);
+    const summaryText = `已领取 ${msg.claims.length}/${msg.rpTotalCount || 1} 个，共 ${totalClaimed.toFixed(2)}/${parseFloat(msg.text).toFixed(2)} 元`;
+    document.getElementById('rp-detail-summary').innerText = summaryText;
+
+    // 渲染领取记录列表
+    const listEl = document.getElementById('rp-detail-list');
+    listEl.innerHTML = msg.claims.map(c => `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #f5f5f5; padding-bottom: 8px;">
+            <div>
+                <div style="font-size: 14px; font-weight: bold; color: #333;">${c.name}</div>
+                <div style="font-size: 11px; color: #b2b2b2; margin-top: 2px;">${c.time}</div>
+            </div>
+            <div style="font-size: 14px; font-weight: bold; color: #333;">${c.amount.toFixed(2)} 元</div>
+        </div>
+    `).join('');
+
+    document.getElementById('redpacket-detail-modal').style.display = 'flex';
+}
+
+// 6. 关闭红包详情页
+function closeRedPacketDetail() {
+    document.getElementById('redpacket-detail-modal').style.display = 'none';
 }
 // === 修罗场功能 ===
 let shuraActive = false;
@@ -7037,6 +7481,28 @@ function applyHeaderAndInputBarStyles(friendName) {
     <div class="dating-send-btn" onclick="sendDatingMsg()">发送</div>
 </div>
 </div>
+<!-- 新增红包详情弹窗 -->
+<div id="redpacket-detail-modal" class="glass-modal" style="z-index: 9100; display: none;">
+    <div class="glass-card" style="width: 320px; max-height: 80%; padding: 0; border-radius: 15px; overflow: hidden; background: #f1f1f1; display: flex; flex-direction: column;">
+        <!-- 头部红色渐变背景 -->
+        <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 30px 20px 20px; text-align: center; position: relative;">
+            <span onclick="closeRedPacketDetail()" style="position: absolute; left: 15px; top: 15px; font-size: 20px; cursor: pointer; color: rgba(255,255,255,0.7);">✕</span>
+            <div id="rp-detail-sender-name" style="font-size: 16px; font-weight: 500; margin-top: 10px;"></div>
+            <div id="rp-detail-note" style="font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 5px;"></div>
+            <div id="rp-detail-amount-area" style="margin-top: 15px; display: none;">
+                <span id="rp-detail-amount" style="font-size: 36px; font-weight: bold;">0.00</span> <span style="font-size: 14px;">元</span>
+            </div>
+        </div>
+        <!-- 领取的成员列表区域 -->
+        <div style="flex: 1; overflow-y: auto; background: white; padding: 15px;">
+            <div id="rp-detail-summary" style="font-size: 12px; color: #999; margin-bottom: 12px; border-bottom: 0.5px solid #eee; padding-bottom: 8px;"></div>
+            <div id="rp-detail-list" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- 这里会动态生成具体每个AI角色领了多少钱 -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 退出约会确认弹窗 -->
 <!-- 聊天背景设置弹窗 -->
 <div id="chat-bg-config-modal" class="glass-modal" style="z-index: 9500;">
@@ -7107,6 +7573,12 @@ function applyHeaderAndInputBarStyles(friendName) {
         <div style="margin-bottom: 15px;">
             <label style="font-size: 12px; color: rgba(255,255,255,0.8);">红包金额</label>
             <input type="number" id="redpacket-amount-input" style="width: 100%; border: none; border-bottom: 1px solid rgba(255,255,255,0.3); padding: 10px 0; font-size: 24px; outline: none; background: transparent; color: white;" placeholder="0.00">
+        </div>
+
+        <!-- 新增的红包个数输入栏目 -->
+        <div style="margin-bottom: 15px;" id="redpacket-count-container">
+            <label style="font-size: 12px; color: rgba(255,255,255,0.8);">红包个数</label>
+            <input type="number" id="redpacket-count-input" style="width: 100%; border: none; border-bottom: 1px solid rgba(255,255,255,0.3); padding: 10px 0; font-size: 18px; outline: none; background: transparent; color: white;" placeholder="1">
         </div>
 
         <div style="margin-bottom: 15px;">
