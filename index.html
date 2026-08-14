@@ -1127,10 +1127,10 @@ input, textarea {
 
                 <!-- 新增：仅管理员可见的邀请码管理区 -->
                 <div id="admin-invite-settings" style="display: none; margin-top:20px; border-top: 1px dashed #ccc; padding-top: 15px;">
-                    <label style="font-weight: bold; color: #e67e22;">新增邀请码 (管理员专享)</label>
-                    <div style="display:flex; gap:10px; margin-bottom: 10px;">
-                        <input type="text" id="new-invite-code" placeholder="输入用户的QQ号作为邀请码" style="flex:1; margin-bottom:0 !important; padding: 8px;">
-                        <button style="padding: 0 15px; border-radius: 10px; border:none; background:#4facfe; color:white; font-size: 12px; cursor: pointer;" onclick="addInviteCode()">添加邀请码</button>
+                    <label style="font-weight: bold; color: #e67e22;">新增邀请码 (支持批量粘贴)</label>
+                    <div style="margin-bottom: 10px;">
+                        <textarea id="new-invite-code" rows="3" placeholder="请输入QQ号。多个QQ请用逗号隔开，或直接换行（一行一个）。可一次性粘贴数百个。" style="width:100%; padding: 10px; box-sizing: border-box; border-radius: 10px; border: 1px solid #ddd; background: #f2f2f7; color: #000; font-size: 14px; outline: none; -webkit-user-select: text !important; user-select: text !important;"></textarea>
+                        <button class="action-btn" style="background:#4facfe; margin-top: 8px;" onclick="addInviteCode()">批量添加邀请码</button>
                     </div>
                     <label>现有邀请码列表 (使用状态)：</label>
                     <div id="invite-code-list" style="max-height: 120px; overflow-y: auto; background: #f2f2f7; border-radius: 10px; padding: 10px; font-size: 12px; color: #333; margin-bottom: 15px;"></div>
@@ -3180,40 +3180,69 @@ function handleAdminLogin() {
     }
 }
 
-// 管理员功能：添加白名单QQ注册邀请码到云端
+// 管理员功能：批量添加白名单QQ注册邀请码到 Supabase 云端 (自动排重)
 async function addInviteCode() {
-    const newCode = document.getElementById('new-invite-code').value.trim();
-    if (!newCode) {
-        alert('请输入邀请QQ号！');
+    const rawText = document.getElementById('new-invite-code').value.trim();
+    if (!rawText) {
+        alert('请输入至少一个QQ邀请码！');
+        return;
+    }
+
+    // 支持通过换行符、逗号、中文逗号或空格拆分所有的QQ号，并清除多余的空格字符
+    const codes = rawText.split(/[\n,，\s]+/)
+                         .map(c => c.trim())
+                         .filter(c => c.length > 0);
+
+    if (codes.length === 0) {
+        alert('未检测到有效的QQ号码，请检查输入格式！');
         return;
     }
 
     try {
-        // 在云端检查是否添加过这个QQ
-        const { data: codeCheck, error: checkErr } = await _supabase
+        // 1. 从云端调取目前数据库里已有的邀请码，用于在本地对比过滤，防止引发主键唯一冲突
+        const { data: existingData, error: fetchErr } = await _supabase
             .from('invite_codes')
-            .select('code')
-            .eq('code', newCode);
+            .select('code');
 
-        if (checkErr) {
-            alert('查询数据异常: ' + checkErr.message);
+        if (fetchErr) {
+            alert('获取云端数据失败: ' + fetchErr.message);
             return;
         }
 
-        if (codeCheck && codeCheck.length > 0) {
-            alert('该QQ邀请码已在列表中，无需重复添加！');
+        const existingCodes = new Set(existingData.map(d => d.code));
+
+        // 2. 本地过滤：过滤掉云端已经存在的邀请码，同时也过滤掉你本次输入里重复的号码
+        const uniqueNewCodes = [...new Set(codes)].filter(code => !existingCodes.has(code));
+
+        if (uniqueNewCodes.length === 0) {
+            alert('您输入的邀请码在云端数据库中均已存在，无需重复添加！');
             return;
         }
 
-        // 插入到 Supabase 云端
+        // 3. 构建批量插入的数据数组格式
+        const insertData = uniqueNewCodes.map(code => ({
+            code: code,
+            used: false
+        }));
+
+        // 4. 一次性批量打包上传写入 Supabase
         const { error: insertErr } = await _supabase
             .from('invite_codes')
-            .insert([{ code: newCode, used: false }]);
+            .insert(insertData);
 
         if (insertErr) {
-            alert('添加邀请码失败: ' + insertErr.message);
+            alert('批量导入失败: ' + insertErr.message);
             return;
         }
+
+        document.getElementById('new-invite-code').value = '';
+        alert(`成功添加 ${uniqueNewCodes.length} 个新邀请码！` + (codes.length > uniqueNewCodes.length ? ` (已自动过滤 ${codes.length - uniqueNewCodes.length} 个重复或已存在的邀请码)` : ''));
+        renderInviteCodes();
+    } catch (err) {
+        console.error(err);
+        alert('添加邀请码时发生网络故障，请稍后重试！');
+    }
+}
 
         document.getElementById('new-invite-code').value = '';
         alert('邀请码已成功添加到云端数据库！');
