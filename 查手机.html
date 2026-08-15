@@ -1007,7 +1007,7 @@ async function triggerAI() {
 } else if (currentAppId === 'photo') {
     const res = await fetch(url, {
         method: 'POST', headers: headers,
-        body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `根据人设：${targetPersona}，虚构6张手机相册里的日常生活纪念照片或风景照片的画面文字描述。格式：描述1#描述2#描述3#描述4#描述5#描述6。请直接输出，并用#号隔开，不要有任何解释，不要代码块！【严格限制】：每一项描述必须是且只能是纯粹的画面视觉描写（例如：“木质餐桌上并排摆放着两杯温水，旁边落着一枚黑色发卡”、“黄昏的落日余晖洒在窗台上”）。绝对不能出现“昵称：”、“个性签名：”、“夏以昼：”等任何前缀标签，绝对不能包含聊天对话内容、角色台词或社交平台文案。直接从第一张相片具体的视觉画面内容开始写，用#隔开！` }] })
+        body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `请为一位生活背景风格为“${targetPersona}”的虚拟人物，创作6条他在日常生活中拍摄的风景、静物或生活角落的照片画面视觉描写。每条描述仅描绘画面本身（例如：“木质餐桌上放着两杯温水，旁边落着一枚黑色发卡”、“黄昏的落日余晖洒在窗台上”）。格式要求：直接输出这6个画面描述，并用#号隔开（即：描述1#描述2#描述3#描述4#描述5#描述6），不要有任何开头介绍、不要包含角色名字、不要写聊天对话、不要写“照片一：”等标签，也不要使用代码块。` }] })
     });
     if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
     const data = await res.json();
