@@ -2154,6 +2154,14 @@ let chatTitle = "";
         const group = groupChats.find(g => g.id === currentFriendName);
         if (!group) return;
         chatTitle = group.name;
+        
+        // 核心补救逻辑：如果老群聊的历史消息中没有 m.sender 发送人，默认补全为该群聊的第一个AI角色，防止头像变“匿”
+        const currentHistory = chatHistories[currentFriendName] || [];
+        currentHistory.forEach(m => {
+            if (m.type === 'friend' && !m.sender && !m.isSystemNotice) {
+                m.sender = group.members[0] || 'AI 小助手';
+            }
+        });
 } else {
     const friend = friends.find(f => f.name === currentFriendName);
     if (!friend) return;
@@ -2344,18 +2352,23 @@ if (m.isShoppingPay) {
     let iconText = "¥";
     let clickAction = ""; // 点击动作
     
+    // 如果设置了指定接收人，先显示目标接收人的信息
+    if (m.transferTarget) {
+        footerText = `转账给 ${m.transferTarget}`;
+    }
+
     if (m.status === 'received') {
         statusClass = "received";
-        footerText = "已收钱";
+        footerText = m.receiverName ? `已被 ${m.receiverName} 领取` : "已收钱";
         iconText = "✓";
     } else if (m.status === 'refunded') {
         statusClass = "refunded";
         footerText = "已退还";
         iconText = "↩";
-    } else if (m.type === 'friend' && (!m.status || m.status === 'unclaimed')) {
-        // 如果是AI发的且没领
-        footerText = "点击领取";
-        clickAction = `onclick="receiveAiTransfer(${realIndex})" style="cursor:pointer;"`;
+    } else {
+        // 统一所有转账卡片的领取点击事件到新函数中
+        footerText = m.transferTarget ? `转账给 ${m.transferTarget} (点击领取)` : "微信转账 (点击领取)";
+        clickAction = `onclick="receiveTransfer(${realIndex})" style="cursor:pointer;"`;
     }
 
     contentHtml = `
@@ -4381,8 +4394,40 @@ function deleteFavorite(id) {
         function showRechargeOptions() { document.getElementById('recharge-modal').style.display = 'flex'; }
         function selfRecharge() { const amt = prompt("金额:"); if(amt && !isNaN(amt)) { walletData.balance += parseFloat(amt); walletData.history.push({ title: '手动充值', amount: '+'+parseFloat(amt).toFixed(2), time: new Date().toLocaleString() }); updateWalletUI(); document.getElementById('recharge-modal').style.display = 'none'; } }
         function askFriendRecharge() { const amt = prompt("金额:"); if(amt) { window.pendingRecharge = parseFloat(amt); document.getElementById('recharge-modal').style.display='none'; closeWallet(); switchTab('tab-chat', document.querySelector('.tab-item')); alert("选择好友"); } }
-        // 打开转账弹窗
+// 打开转账弹窗
 function openTransferModal() {
+    const modal = document.getElementById('transfer-modal');
+    const card = modal.querySelector('.glass-card');
+    
+    // 动态查找或创建一个专门存放群成员下拉选择器的容器
+    let targetContainer = document.getElementById('transfer-target-container');
+    if (!targetContainer) {
+        targetContainer = document.createElement('div');
+        targetContainer.id = 'transfer-target-container';
+        targetContainer.style.marginBottom = '20px';
+        const btnGroup = card.querySelector('div:last-child');
+        card.insertBefore(targetContainer, btnGroup);
+    }
+    
+    if (isGroupMode) {
+        const group = groupChats.find(g => g.id === currentFriendName);
+        let options = '<option value="">所有人</option>';
+        if (group) {
+            group.members.forEach(name => {
+                options += `<option value="${name}">${name}</option>`;
+            });
+        }
+        targetContainer.innerHTML = `
+            <label style="font-size: 12px; color: #888; display: block; margin-bottom: 5px; text-align: left;">指定接收人</label>
+            <select id="transfer-target-select" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd; outline: none; font-size: 14px;">
+                ${options}
+            </select>
+        `;
+        targetContainer.style.display = 'block';
+    } else {
+        targetContainer.style.display = 'none';
+    }
+    
     document.getElementById('transfer-modal').style.display = 'flex';
     document.getElementById('tool-box').style.display = 'none';
 }
@@ -4409,10 +4454,14 @@ function executeTransfer() {
         return alert("钱包余额不足，当前余额：￥" + walletData.balance.toFixed(2));
     }
 
+    // 获取选择的指定人（仅在群聊模式下生效）
+    const targetSelect = document.getElementById('transfer-target-select');
+    const targetVal = targetSelect ? targetSelect.value : "";
+
     // 扣钱
     walletData.balance -= amount;
     walletData.history.push({
-        title: '转账-给' + currentFriendName,
+        title: '转账-给' + (isGroupMode ? (targetVal ? targetVal : '群聊') : currentFriendName),
         amount: '-' + amount.toFixed(2),
         time: new Date().toLocaleString()
     });
@@ -4423,10 +4472,13 @@ function executeTransfer() {
         type: 'self',
         text: amount.toFixed(2),
         isTransfer: true,
-        transferNote: note
+        transferNote: note,
+        transferTarget: targetVal, // 保存指定的人
+        senderName: myInfo.name,
+        status: 'unclaimed' // 初始化为未领取
     });
 
-        if (isGroupMode) {
+    if (isGroupMode) {
         const g = groupChats.find(x => x.id === currentFriendName);
         g.lastMsg = "我: [微信转账] ￥" + amount.toFixed(2);
     } else {
@@ -4440,6 +4492,10 @@ function executeTransfer() {
     
     if (isGroupMode) {
         getGroupAiReply();
+        // 1.5秒后自动触发AI在群里领取这笔钱
+        setTimeout(() => {
+            triggerAiGroupTransferClaims(chatHistories[currentFriendName].length - 1);
+        }, 1500);
     } else {
         getAiReply();
     }
@@ -8679,6 +8735,92 @@ function applyInputbarPreset(name) {
     });
 }
 <!-- ===== MCP工具相关代码结束 ===== -->
+// 统一的领取转账控制器（供私聊/群聊，人类/AI领取共用）
+function receiveTransfer(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg || msg.status === 'received' || msg.status === 'refunded') return;
+
+    // 1. 校验：自己发出的不能自己领
+    if (msg.type === 'self') {
+        alert("这是你发出的转账，需等对方领取哦。");
+        return;
+    }
+
+    // 2. 校验：指定对象的转账非本人不能领
+    if (isGroupMode && msg.transferTarget && msg.transferTarget !== myInfo.name) {
+        alert(`这笔转账是指定给 ${msg.transferTarget} 的，你无法领取。`);
+        return;
+    }
+
+    const amount = parseFloat(msg.text);
+    
+    // 修改状态
+    msg.status = 'received';
+    msg.receiverName = myInfo.name;
+
+    // 账户金额变动
+    walletData.balance += amount;
+    walletData.history.push({
+        title: '转账收入-来自' + (msg.senderName || currentFriendName),
+        amount: '+' + amount.toFixed(2),
+        time: new Date().toLocaleString()
+    });
+
+    // 插入灰色通知气泡
+    let noticeText = isGroupMode ? `你领取了 ${msg.senderName || '群成员'} 的转账` : `你领取了 ${currentFriendName} 的转账`;
+    chatHistories[currentFriendName].push({
+        type: 'system',
+        text: noticeText,
+        isSystemNotice: true
+    });
+
+    updateWalletUI();
+    saveData();
+    renderMessages();
+    
+    alert("已成功接收转账 ￥" + amount.toFixed(2));
+}
+
+// 自动触发AI群成员领取群转账卡片的动画与数据变动
+function triggerAiGroupTransferClaims(msgIndex) {
+    const msg = chatHistories[currentFriendName][msgIndex];
+    if (!msg || !msg.isTransfer || msg.status !== 'unclaimed') return;
+    const group = groupChats.find(g => g.id === currentFriendName);
+    if (!group) return;
+
+    // 如果指定了特定人，领取人就必须是指定的人；如果没有指定，随机抽取一个群内AI角色
+    let claimer = "";
+    if (msg.transferTarget) {
+        if (msg.transferTarget === myInfo.name) return; // 指定给人类用户的，AI不能代抢
+        claimer = msg.transferTarget;
+    } else {
+        // 随机一个群成员AI抢钱
+        claimer = group.members[Math.floor(Math.random() * group.members.length)];
+    }
+
+    setTimeout(() => {
+        const freshMsg = chatHistories[currentFriendName][msgIndex];
+        if (freshMsg && freshMsg.status === 'unclaimed') {
+            freshMsg.status = 'received';
+            freshMsg.receiverName = claimer;
+
+            // 插入灰色领取转账系统气泡通知
+            chatHistories[currentFriendName].push({
+                type: 'system',
+                text: `"${claimer}" 领取了你的转账`,
+                isSystemNotice: true
+            });
+
+            saveData();
+            renderMessages();
+
+            // 引导领取了转账的 AI 成员在群里发消息道谢
+            setTimeout(() => {
+                getGroupAiReply();
+            }, 800);
+        }
+    }, 1500 + Math.random() * 1000);
+}
 </script>
 
 
