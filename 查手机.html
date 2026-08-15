@@ -1007,7 +1007,7 @@ async function triggerAI() {
 } else if (currentAppId === 'photo') {
     const res = await fetch(url, {
         method: 'POST', headers: headers,
-        body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `根据人设：${targetPersona}，虚构6张手机相册里的日常生活纪念照片或风景照片的画面文字描述。格式：描述1#描述2#描述3#描述4#描述5#描述6。请直接输出，并用#号隔开，不要有任何解释，不要代码块！` }] })
+        body: JSON.stringify({ model: aiConfig.model || "gpt-3.5-turbo", messages: [{ role: "user", content: `根据人设：${targetPersona}，虚构6张手机相册里的日常生活纪念照片或风景照片的画面文字描述。格式：描述1#描述2#描述3#描述4#描述5#描述6。请直接输出，并用#号隔开，不要有任何解释，不要代码块！特别注意：每一项必须是纯粹的画面视觉场景描写，绝对不能包含角色名字前缀、角色对话口吻、聊天气泡记录、社交平台文案或任何非画面描述的解释性开场白，直接从第一张照片的具体画面内容开始输出！` }] })
     });
     if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP错误 ${res.status}`); }
     const data = await res.json();
