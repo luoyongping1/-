@@ -1108,6 +1108,15 @@ input:checked + .slider:before {
                     <span class="slider"></span>
                 </label>
             </div>
+            <!-- 新增自动回复栏目 -->
+            <div class="me-card-item" style="cursor: default;">
+                <div class="me-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <div class="me-item-title">自动回复</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="global-autoreply-toggle" onchange="toggleGlobalAutoReply(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
     </div>
 </div>
@@ -2248,19 +2257,21 @@ for(let i = 0; i < displayHistory.length; i++){
                 avHtml = '我';
             }
         }
-    } else {
-        if (isGroupMode) {
-            const senderObj = friends.find(f => f.name === m.sender);
-            if (senderObj && senderObj.avatarUrl) {
-                if (senderObj.avatarUrl.startsWith('indexeddb-')) {
-                    avHtml = getSyncAvatarHtml(senderObj.avatarUrl);
-                } else {
-                    avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
-                }
+} else {
+    if (isGroupMode) {
+        const senderObj = friends.find(f => f.name === m.sender);
+        if (senderObj && senderObj.avatarUrl) {
+            if (senderObj.avatarUrl.startsWith('indexeddb-')) {
+                avHtml = getSyncAvatarHtml(senderObj.avatarUrl);
             } else {
-                avHtml = `<div>${m.initial || '匿'}</div>`;
+                avHtml = `<img src="${senderObj.avatarUrl}" decoding="async">`;
             }
         } else {
+            // 如果能找到发件人，优先使用发件人的首字，而不是直接显示“匿”字
+            const fallbackInitial = senderObj ? (senderObj.initial || senderObj.name[0]) : (m.initial || '匿');
+            avHtml = `<div>${fallbackInitial}</div>`;
+        }
+    } else {
             const friend = friends.find(f => f.name === currentFriendName);
             if (friend.avatarUrl) {
                 if (friend.avatarUrl.startsWith('indexeddb-')) {
@@ -4459,6 +4470,10 @@ function executeTransfer() {
     clearQuote(); 
     saveData(); 
     renderMessages(); 
+    // 发送消息后，如果开启了自动回复，启动5秒倒计时
+    if (myInfo.autoReply) {
+        startAutoReplyTimer();
+    }
 }
 
         // 2. 新增：专门处理小话筒点击的函数
@@ -4582,15 +4597,16 @@ ${membersPersonas}
                 let rawReply = data.choices[0].message.content.trim();
                 
                 // 按 [SPEAKER] 标签切分，分割成不同角色的回复块
-                let blocks = rawReply.split(/\[SPEAKER\]/i).filter(b => b.trim() !== '');
+let blocks = rawReply.split(/\[SPEAKER\]/i).filter(b => b.trim() !== '');
 
-                for (let block of blocks) {
-                    let lines = block.split('\n');
-                    let senderName = lines[0].trim();
-                    let blockContent = lines.slice(1).join('\n').trim();
+for (let block of blocks) {
+    let lines = block.split('\n');
+    // 过滤名字中可能夹杂的 Markdown 加粗符号（如 **小狸**）或多余的冒号，防止 AI 格式不规范导致匹配失败
+    let senderName = lines[0].trim().replace(/[*_#:`"“”']/g, '');
+    let blockContent = lines.slice(1).join('\n').trim();
 
-                    // 验证解析出来的名字是不是在群组里的角色
-                    const targetFriend = friends.find(f => f.name === senderName && group.members.includes(senderName));
+    // 验证解析出来的名字是不是在群组里的角色
+    const targetFriend = friends.find(f => f.name === senderName && group.members.includes(senderName));
                     if (targetFriend) {
                         // 正则匹配提取属性值
                         let replyPart = blockContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/i)?.[1]?.trim() || "";
@@ -4691,6 +4707,35 @@ function toggleGlobalDelay(val) {
     saveData();
 }
 
+// 全局自动回复开关控制
+function toggleGlobalAutoReply(val) {
+    myInfo.autoReply = val;
+    saveData();
+    if (!val) {
+        clearTimeout(autoReplyTimer);
+    }
+}
+
+// 自动回复定时器与打字检测
+let autoReplyTimer = null;
+function startAutoReplyTimer() {
+    if (!myInfo.autoReply) return;
+    clearTimeout(autoReplyTimer);
+    autoReplyTimer = setTimeout(() => {
+        const inputVal = document.getElementById('msg-input').value.trim();
+        // 如果输入框内有字（用户正在打字中），则不发送，并重新等待5秒
+        if (inputVal !== "") {
+            startAutoReplyTimer();
+        } else {
+            if (isGroupMode) {
+                getGroupAiReply();
+            } else {
+                getAiReply();
+            }
+        }
+    }, 5000);
+}
+
 function renderMePage() {
     // 设置名字和微信号
     document.getElementById('my-name-display').innerText = myInfo.name;
@@ -4713,8 +4758,13 @@ function renderMePage() {
     if (delayToggle) {
         delayToggle.checked = !!myInfo.replyDelay;
     }
+    // 更新全局自动回复开关状态
+    const autoReplyToggle = document.getElementById('global-autoreply-toggle');
+    if (autoReplyToggle) {
+        autoReplyToggle.checked = !!myInfo.autoReply;
+    }
     
-    loadAllDatabaseImages(); // 渲染后加载数据库图片
+    loadAllDatabaseImages(); // 更新头像
 }
         // --- 约会功能逻辑 ---
 
@@ -5085,6 +5135,7 @@ closeChat = function() {
 };
 
 async function openChat(n) { 
+    isGroupMode = false; // 重置群聊状态，防止私聊中错误套用群聊渲染模板导致头像变成“匿”
     // 在打开聊天的一瞬间，强制重新读取共享的 IndexedDB 数据库和 localStorage 中的 API 设置
     try {
         const localFriends = localStorage.getItem('qq_friends');
@@ -5134,7 +5185,19 @@ async function openChat(n) {
     } 
     setTimeout(renderMessages, 50); 
 }
-        function closeChat() { document.getElementById('chat-typing').style.display = 'none'; document.getElementById('chat-page').classList.remove('active'); cancelMultiSelect(); const container = document.getElementById('message-container'); container.innerHTML = ''; container.style.backgroundImage = 'none'; container.removeAttribute('data-loaded-bg-friend'); setTimeout(renderChatList, 10); }
+function closeChat() { 
+    if (window.chatDisplayCount && window.chatDisplayCount[currentFriendName]) {
+        window.chatDisplayCount[currentFriendName] = 20; // 退出当前聊天时，重置当前好友的已加载消息数
+    }
+    document.getElementById('chat-typing').style.display = 'none'; 
+    document.getElementById('chat-page').classList.remove('active'); 
+    cancelMultiSelect(); 
+    const container = document.getElementById('message-container'); 
+    container.innerHTML = ''; 
+    container.style.backgroundImage = 'none'; 
+    container.removeAttribute('data-loaded-bg-friend'); 
+    setTimeout(renderChatList, 10); 
+}
 function openSettings() {
     const listGroup = document.querySelector('#settings-page .list-group:nth-child(2)');
     
@@ -5353,18 +5416,33 @@ function togglePinChat(val) {
     }
 }
 
-        document.getElementById('real-image-upload').onchange = function() {
-            if (this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-                    chatHistories[currentFriendName].push({ type: 'self', text: e.target.result, isRealImage: true });
-                    friends.find(f => f.name === currentFriendName).lastMsg = "[图片]";
-                    saveData(); renderMessages(); getAiReply();
-                };
-                reader.readAsDataURL(this.files[0]);
+document.getElementById('real-image-upload').onchange = function() {
+    if (this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
+            chatHistories[currentFriendName].push({ type: 'self', text: e.target.result, isRealImage: true });
+            
+            if (isGroupMode) {
+                const g = groupChats.find(x => x.id === currentFriendName);
+                if (g) g.lastMsg = "我: [图片]";
+            } else {
+                const friend = friends.find(f => f.name === currentFriendName);
+                if (friend) friend.lastMsg = "[图片]";
+            }
+            
+            saveData(); 
+            renderMessages(); 
+            
+            if (isGroupMode) {
+                getGroupAiReply();
+            } else {
+                getAiReply();
             }
         };
+        reader.readAsDataURL(this.files[0]);
+    }
+};
 
         // 表情管理相关逻辑
         let isStickerDeleteMode = false;
@@ -5483,6 +5561,17 @@ function togglePinChat(val) {
     renderChatList(); 
     renderContactList(); 
     renderMePage(); 
+    
+    // 监听输入框输入事件，打字时重置/延迟自动回复定时器
+    const msgInputEl = document.getElementById('msg-input');
+    if (msgInputEl) {
+        msgInputEl.addEventListener('input', () => {
+            if (myInfo.autoReply && autoReplyTimer) {
+                clearTimeout(autoReplyTimer);
+                startAutoReplyTimer();
+            }
+        });
+    }
         
     const momentsBg = await getKV('moments_bg_url');
     if (momentsBg) { 
@@ -6548,12 +6637,19 @@ async function loadAllDatabaseImages() {
 // 修改原有的 画消息函数 结尾，让它画完之后执行填图
 const oldRenderMessages = renderMessages;
 renderMessages = function(isLoadMore = false) {
+    const container = document.getElementById('message-container');
+    // 在老消息载入并撑开头像高度前，先记录当前滚动条距离底部的距离
+    const distanceFromBottom = container ? (container.scrollHeight - container.scrollTop) : 0;
+
     oldRenderMessages(isLoadMore);
+    
     loadAllDatabaseImages().then(() => {
-        // 在所有数据库头像图片异步加载并渲染出来后，再次强制向下滚动到底部，防止图片撑开高度导致新消息出屏
-        if (!isLoadMore) {
-            const container = document.getElementById('message-container');
-            if (container) {
+        if (container) {
+            if (isLoadMore) {
+                // 如果是加载更多消息：在异步头像图片全部加载完毕撑开高度后，重新恢复相对滚动位置，避免错位
+                container.scrollTop = container.scrollHeight - distanceFromBottom;
+            } else {
+                // 如果是进入聊天或发送新消息：滚动到最底部
                 container.scrollTop = container.scrollHeight;
             }
         }
