@@ -2699,9 +2699,6 @@ function saveAllWidgets() {
 }
 
 window.onload = function() {
-    // 优先检查登录授权状态，未登录则拦截
-    checkAuthState();
-
     const savedGrid1 = localStorage.getItem('saved_grid_page_1');
     if (savedGrid1) { document.getElementById('main-grid').innerHTML = savedGrid1; }
     const savedGrid2 = localStorage.getItem('saved_grid_page_2');
@@ -3325,6 +3322,9 @@ function handleLogout() {
         location.reload(); 
     }
 }
+
+// 立即执行登录状态检查，防止页面闪烁
+checkAuthState();
 
 // ================= 账密与邀请码系统逻辑代码结束 =================
     </script>
