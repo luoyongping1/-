@@ -2879,24 +2879,25 @@ ${toolList}
 `;
 }
 
-            // 新增：多语种及中文翻译指令
-            let languageInstruction = "";
-            const currentLang = friend.language || 'zh-CN';
-            if (currentLang !== 'zh-CN') {
-                const langNames = {
-                    'en-US': 'English',
-                    'ja-JP': 'Japanese',
-                    'ko-KR': 'Korean',
-                    'fr-FR': 'French',
-                    'de-DE': 'German'
-                };
-                languageInstruction = `\n【Important Language Rule】: You must reply entirely in the ${langNames[currentLang] || 'English'} language. Do not mix any Chinese in your conversation reply.`;
-            }
+// 新增：多语种及中文翻译指令
+let languageInstruction = "";
+const currentLang = friend.language || 'zh-CN';
+if (currentLang !== 'zh-CN') {
+    const langNames = {
+        'en-US': 'English',
+        'ja-JP': 'Japanese',
+        'ko-KR': 'Korean',
+        'fr-FR': 'French',
+        'de-DE': 'German',
+        'zh-HK': 'Cantonese (authentic colloquial Hong Kong/Guangdong Cantonese dialect, written in Traditional Chinese characters like 係, 咗, 嘢, 唔, 佢, 哋, 嗰)'
+    };
+    languageInstruction = `\n【Important Language Rule】: You must reply entirely in the ${langNames[currentLang] || 'English'} language. Do not mix Mandarin or Simplified Chinese in your conversation reply.`;
+}
 
-            let translationFormatInstruction = "";
-            if (currentLang !== 'zh-CN') {
-                translationFormatInstruction = `\n[TRANSLATION] of your conversation reply (Put the exact simplified Chinese translation of your reply content here, do not translate actions or thoughts)`;
-            }
+let translationFormatInstruction = "";
+if (currentLang !== 'zh-CN') {
+    translationFormatInstruction = `\n[TRANSLATION] of your conversation reply. IMPORTANT: You must translate LINE-BY-LINE corresponding exactly to [REPLY] (do not translate actions or thoughts). If [REPLY] has 2 lines, [TRANSLATION] must have exactly 2 lines of matching simplified Chinese translation. Do not write everything in one single block or repeat the full translation on every line.`;
+}
 
 let sys = `# Role
 你现在化身为[${friend.persona}]。${languageInstruction}${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}${userPersonaPrompt}${mcpToolsPrompt}
@@ -4604,27 +4605,9 @@ function executeTransfer() {
             group.members.forEach(memberName => {
                 const friend = friends.find(f => f.name === memberName);
                 if (friend) {
-                    membersPersonas += `- 【${friend.name}】 人设/性格特点：${friend.persona}\n`;
+                    let languageLabel = getLanguageName(friend.language || 'zh-CN');
+                    membersPersonas += `- 【${friend.name}】 人设/性格特点：${friend.persona} (回复语种: ${languageLabel})\n`;
                 }
-            });
-
-            // 预处理群聊历史
-            const freshHistory = (chatHistories[currentFriendName] || []).slice(-20).map(m => {
-                const prefixName = m.type === 'self' ? myInfo.name : (m.sender || '某人');
-                let contentText = m.text;
-                if (m.isSticker) {
-                    contentText = `[发送了表情包: ${m.stickerDesc || '表情'}]`;
-                } else if (m.isRealImage) {
-                    contentText = `[发送了图片]`;
-                } else if (m.isDescribeCard) {
-                    contentText = `[发送了图片描述: ${m.text}]`;
-                } else if (m.isMomentForwardCard) {
-                    contentText = `[分享了朋友圈: ${m.momentText || ''}]`;
-                }
-                return {
-                    role: 'user',
-                    content: `${prefixName}: ${contentText}`
-                };
             });
 
             const typingEl = document.getElementById('chat-typing');
@@ -4648,7 +4631,8 @@ ${membersPersonas}
 1. 根据当前的群聊对话历史，模拟接下来这群角色的互动回复。
 2. 【强制规则】：群里的每一个AI角色都必须在这一次回复中发言一次，不能遗漏任何一个人，且每个人只生成一个发言块。请以符合逻辑的先后顺序，一次性生成群里所有人（共 ${group.members.length} 位 AI 角色）的发言。
 3. 请以角色的口吻回复，避免任何AI客套腔调，要生动、口语化。
-4. 每一个开口模拟发言的角色，都必须完整输出包含回复、动作、心里活动、情绪、醋意值这5大属性的结构化信息数据块。
+4. 【多语种规则】：每一个开口模拟发言的角色，如果他的“回复语种”不是简体中文，请完全以他设定的语言进行回复。如果他的语言是“粤语”，请完全使用地道香港/广东粤语口语和繁体字，如“係”、“咗”、“唔”、“嘢”等，严禁混合普通话或简体字。
+5. 每一个开口模拟发言的角色，都必须完整输出包含回复、动作、心里活动、情绪、醋意值、翻译这6大属性的结构化信息数据块。
 
 ## 输出格式（极其重要）：
 必须使用以下特定的格式标签输出每个发言人的数据。每个人的发言块以 [SPEAKER] 开始。输出中切勿含有额外的废话、剧场分析或Markdown代码块：
@@ -4659,6 +4643,7 @@ ${membersPersonas}
 [THOUGHTS] 角色的心里活动
 [EMOTION] 当前的情绪状态描述
 [JEALOUSY] 0-100的醋意数值
+[TRANSLATION] 此角色的发言简体中文翻译 (如果该角色不使用普通话简体中文交流，请务必在此提供该回复的简体中文翻译。极其重要：必须【逐行对应】[REPLY]中的回复，[REPLY]有几行，[TRANSLATION]也必须正好有几行。如果角色交流语言就是简体中文，则此项留空或不写)
 
 例如：
 [SPEAKER] ${group.members[0] || '角色A'}
@@ -4668,13 +4653,15 @@ ${membersPersonas}
 [THOUGHTS] 真是少见，他居然主动在这个时间群发信息了。
 [EMOTION] 开心
 [JEALOUSY] 5
+[TRANSLATION] 
 
 [SPEAKER] ${group.members[1] || '角色B'}
-[REPLY] 哼，一出现就在这嘘寒问暖的。
+[REPLY] Hey! I have been waiting for you for so long.
 [ACTION] 双手插兜，眼神有点赌气
 [THOUGHTS] 真是让人不爽，刚才还跟我私聊呢，转头又在群里这么热闹。
 [EMOTION] 吃醋
-[JEALOUSY] 65${shuraPrompt}`;
+[JEALOUSY] 65
+[TRANSLATION] 嘿！我已经等你等得太久了。${shuraPrompt}`;
 
             try {
                 const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
@@ -8887,7 +8874,8 @@ function getLanguageName(code) {
         'ja-JP': '日语 (日本語)',
         'ko-KR': '韩语 (한국어)',
         'fr-FR': '法语 (Français)',
-        'de-DE': '德语 (Deutsch)'
+        'de-DE': '德语 (Deutsch)',
+        'zh-HK': '粤语 (廣東話)'
     };
     return langs[code] || '中文 (简体)';
 }
@@ -8902,6 +8890,7 @@ function changeFriendLanguage() {
             <h3 style="margin-top:0;font-size:16px;text-align:center;">选择角色语种</h3>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:15px;">
                 <button onclick="confirmFriendLanguage('zh-CN')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">中文 (简体)</button>
+                <button onclick="confirmFriendLanguage('zh-HK')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">粤语 (廣東話)</button>
                 <button onclick="confirmFriendLanguage('en-US')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">英语 (English)</button>
                 <button onclick="confirmFriendLanguage('ja-JP')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">日语 (日本語)</button>
                 <button onclick="confirmFriendLanguage('ko-KR')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">韩语 (한국어)</button>
