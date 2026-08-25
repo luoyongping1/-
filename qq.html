@@ -1723,7 +1723,7 @@ function removeKV(key) {
 
 // --- 数据定义 ---
 let currentFriendName = "";
-let friends = [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '' }];
+let friends = [{ name: 'AI 小助手', initial: 'AI', lastMsg: '', persona: '可爱、开朗', freq: 0, lastMoment: 0, avatarUrl: '', mountedBooks: [], group: '我的好友', memoryFreq: 20, lastSummaryIdx: 0, longMemory: '', language: 'zh-CN', autoTranslate: false }];
 let groups = ['我的好友'];
 let collapsedGroups = [];
 let chatHistories = {};
@@ -2459,18 +2459,35 @@ htmlArr.push(`
         </div>
     </div>`);
 } else {
-htmlArr.push(`
-    <div class="msg ${m.type} ${groupClass} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
-        <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
-        <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
-        <div class="${useBubble ? 'bubble' : ''}" style="position:relative;">
-            ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
-            <!-- 气泡文字区域，增加了用来控制编辑的ID和样式 -->
-            <div id="chat-text-${realIndex}" class="chat-editable-text">${contentHtml}</div>
-            <!-- 编辑确认按钮，平时隐藏 -->
-            <button id="chat-save-btn-${realIndex}" style="display:none; margin-top:8px; background:#07c160; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px;" onclick="finishChatMsgEdit(${realIndex})">保存修改</button>
-        </div>
-    </div>`);
+    // 渲染翻译按钮和框的逻辑
+    let translationHtml = "";
+    if (!isSelf && m.translation) {
+        const friend = friends.find(f => f.name === currentFriendName);
+        const isAutoTrans = friend ? !!friend.autoTranslate : false;
+        
+        translationHtml = `
+            <div class="translate-trigger" style="margin-top: 4px; font-size: 11px; color: var(--blue-link); cursor: pointer;" onclick="document.getElementById('trans-${realIndex}').classList.toggle('active')">翻译</div>
+            <div id="trans-${realIndex}" class="translated-content ${isAutoTrans ? 'active' : ''}" style="display: none; background: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #333; margin-top: 5px; max-width: 200px; word-break: break-all; border: 0.5px solid #ddd;">
+                ${m.translation}
+            </div>
+        `;
+    }
+
+    htmlArr.push(`
+        <div class="msg ${m.type} ${groupClass} ${isMultiSelecting ? 'is-multi-selecting' : ''}">
+            <input type="checkbox" class="multi-select-checkbox" ${m.selected?'checked':''} onchange="toggleSelect(${realIndex})">
+            <div class="avatar" style="width:35px;height:35px;font-size:12px;background:${isSelf?'#07c160':'#ccc'}">${avHtml}</div>
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <div class="${useBubble ? 'bubble' : ''}" style="position:relative;">
+                    ${m.quoted ? `<div style="font-size:11px; color:#888; border-bottom:1px solid #ddd; margin-bottom:4px; padding-bottom:2px;">「${m.quoted}」</div>` : ''}
+                    <!-- 气泡文字区域，增加了用来控制编辑的ID和样式 -->
+                    <div id="chat-text-${realIndex}" class="chat-editable-text">${contentHtml}</div>
+                    <!-- 编辑确认按钮，平时隐藏 -->
+                    <button id="chat-save-btn-${realIndex}" style="display:none; margin-top:8px; background:#07c160; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px;" onclick="finishChatMsgEdit(${realIndex})">保存修改</button>
+                </div>
+                ${translationHtml}
+            </div>
+        </div>`);
                 }
             }
 const oldScrollHeight = container.scrollHeight;
@@ -2862,13 +2879,32 @@ ${toolList}
 `;
 }
 
+            // 新增：多语种及中文翻译指令
+            let languageInstruction = "";
+            const currentLang = friend.language || 'zh-CN';
+            if (currentLang !== 'zh-CN') {
+                const langNames = {
+                    'en-US': 'English',
+                    'ja-JP': 'Japanese',
+                    'ko-KR': 'Korean',
+                    'fr-FR': 'French',
+                    'de-DE': 'German'
+                };
+                languageInstruction = `\n【Important Language Rule】: You must reply entirely in the ${langNames[currentLang] || 'English'} language. Do not mix any Chinese in your conversation reply.`;
+            }
+
+            let translationFormatInstruction = "";
+            if (currentLang !== 'zh-CN') {
+                translationFormatInstruction = `\n[TRANSLATION] of your conversation reply (Put the exact simplified Chinese translation of your reply content here, do not translate actions or thoughts)`;
+            }
+
 let sys = `# Role
-你现在化身为[${friend.persona}]。${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}${userPersonaPrompt}${mcpToolsPrompt}
+你现在化身为[${friend.persona}]。${languageInstruction}${timePrompt}${moneyPrompt}${watchPrompt}${shuraPromptDM}${proactivePrompt}${userPersonaPrompt}${mcpToolsPrompt}
 
 【找我代付指令】：
 如果用户向你发送了代付请求卡片，你可以看到他买了什么（payItems）和金额。
 1. 如果你决定帮他付钱，请务必在回复文字的最后加上标签：[PAY_SUCCESS]。系统会自动生成你代付成功的卡片。
-2. 如果你决定拒绝帮他付钱，请务必在回复文字的最后加上标签：[PAY_REFUSED]。系统会自动生成你拒绝代付的卡片。
+2. 如果你决定拒绝帮他付钱，请务必在回复文字的最后加上标签：[PAY_REFUSED]。系统会自动生成 you 拒绝代付的卡片。
 
 【转账特殊指令】：如果你想主动给用户转账或发零花钱，请务必在回复文字的最后加上标签：[SEND_MONEY]金额|备注（例如：[SEND_MONEY]50.00|拿去买奶茶）。注意：金额必须是数字。
 
@@ -2892,7 +2928,7 @@ ${worldBookPrompt}
 [ACTION]动作
 [THOUGHTS]内心
 [EMOTION]情绪
-[JEALOUSY]0-100
+[JEALOUSY]0-100${translationFormatInstruction}
 
 ${longMemoryPrompt}`;
 
@@ -3130,22 +3166,24 @@ if (rawContent.includes("[RED_PACKET_ACTION]RECEIVE")) {
 
                 // --- 核心修复：更严谨的解析逻辑 ---
 // 1. 提取各个部分内容
-let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
-let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim() || "（...）";
-let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/)?.[1]?.trim() || "平静";
-let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)/)?.[1]?.trim() || "0";
+let actionPart = processedContent.match(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|\[TRANSLATION\]|$)/)?.[1]?.trim() || "他在静静地看着你。";
+let thoughtsPart = processedContent.match(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|\[TRANSLATION\]|$)/)?.[1]?.trim() || "（...）";
+let emotionPart = processedContent.match(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|\[TRANSLATION\]|$)/)?.[1]?.trim() || "平静";
+let jealousyPart = processedContent.match(/\[JEALOUSY\](\d+)(?=\[TRANSLATION\]|$)/)?.[1]?.trim() || "0";
+let translationPart = processedContent.match(/\[TRANSLATION\]([\s\S]*?)$/i)?.[1]?.trim() || "";
 
 // 2. 专门提取回复内容 [REPLY]
 let replyPart = "";
 if (processedContent.includes("[REPLY]")) {
-    replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/)?.[1]?.trim();
+    replyPart = processedContent.match(/\[REPLY\]([\s\S]*?)(?=\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|\[TRANSLATION\]|$)/)?.[1]?.trim();
 } else {
     // 如果AI没写[REPLY]，则通过删除所有其他标签的方式获得纯回复内容
     replyPart = processedContent
-        .replace(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|$)/g, "")
-        .replace(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|$)/g, "")
-        .replace(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|$)/g, "")
+        .replace(/\[ACTION\]([\s\S]*?)(?=\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\]|\[TRANSLATION\]|$)/g, "")
+        .replace(/\[THOUGHTS\]([\s\S]*?)(?=\[EMOTION\]|\[JEALOUSY\]|\[TRANSLATION\]|$)/g, "")
+        .replace(/\[EMOTION\]([\s\S]*?)(?=\[JEALOUSY\]|\[TRANSLATION\]|$)/g, "")
         .replace(/\[JEALOUSY\]\d+/g, "")
+        .replace(/\[TRANSLATION\]([\s\S]*?)$/gi, "")
         .replace(/\[REPLY\]/g, "")
         .trim();
 }
@@ -3178,7 +3216,11 @@ if (/<html|<!DOCTYPE|<body|<div|<style/i.test(replyPart)) {
     msgs = replyPart.split('\n').filter(t => t.trim() !== '').map(t => ({ text: t, isTheater: false }));
 }
 
-for (let mObj of msgs) {
+let transLines = translationPart.split('\n').filter(t => t.trim() !== '');
+for (let k = 0; k < msgs.length; k++) {
+    let mObj = msgs[k];
+    let currentTranslation = transLines[k] || ""; // 获取该句对应的翻译
+    
     // 如果开启了回复延迟，则时间间隔定为 1000毫秒 (1秒)，否则使用默认的 100毫秒
     const delayTime = myInfo.replyDelay ? 1000 : 100;
     await new Promise(r => setTimeout(r, delayTime));
@@ -3186,21 +3228,21 @@ for (let mObj of msgs) {
     if (!rawText) continue;
 
     // 1. 解析转账 (修复了指令残留问题)
-if (rawText.includes("[SEND_MONEY]")) {
-    const moneyMatch = rawText.match(/\[SEND_MONEY\](\d+\.?\d*)\|?([\s\S]*?)(?=\]|$)/);
-    if (moneyMatch) {
-        const amount = moneyMatch[1];
-        const note = moneyMatch[2] || "微信转账";
-        chatHistories[currentFriendName].push({ 
-            type: 'friend', text: amount, isTransfer: true, transferNote: note, status: 'unclaimed' 
-        });
-        friend.lastMsg = "[微信转账] ￥" + amount;
-        saveData(); renderMessages();
-        
-        // 【核心修改】：发完转账卡片后，直接跳过这一行，不让它再生成文字气泡
-        continue; 
+    if (rawText.includes("[SEND_MONEY]")) {
+        const moneyMatch = rawText.match(/\[SEND_MONEY\](\d+\.?\d*)\|?([\s\S]*?)(?=\]|$)/);
+        if (moneyMatch) {
+            const amount = moneyMatch[1];
+            const note = moneyMatch[2] || "微信转账";
+            chatHistories[currentFriendName].push({ 
+                type: 'friend', text: amount, isTransfer: true, transferNote: note, status: 'unclaimed' 
+            });
+            friend.lastMsg = "[微信转账] ￥" + amount;
+            saveData(); renderMessages();
+            
+            // 【核心修改】：发完转账卡片后，直接跳过这一行，不让它再生成文字气泡
+            continue; 
+        }
     }
-}
 
     // 2. 清理系统标签，但暂时保留图片描述标签
     let cleanText = rawText.replace(/\[REPLY\]|\[ACTION\]|\[THOUGHTS\]|\[EMOTION\]|\[JEALOUSY\].*?(\s|$)/g, "").trim();
@@ -3230,7 +3272,8 @@ if (rawText.includes("[SEND_MONEY]")) {
         action: actionPart,
         thoughts: thoughtsPart,
         emotion: emotionPart,
-        jealousy: jealousyPart
+        jealousy: jealousyPart,
+        translation: currentTranslation // 只存本句话对应的翻译
     });
 
     friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
@@ -4688,9 +4731,13 @@ for (let block of blocks) {
                         let replyLimitNum = targetFriend.replyLimit !== undefined ? parseInt(targetFriend.replyLimit) : 0;
                         let finalLimit = replyLimitNum > 0 ? replyLimitNum : 3;
                         let splitLines = replyPart.split('\n').filter(t => t.trim() !== '').slice(0, finalLimit);
+                        let transLines = translationPart.split('\n').filter(t => t.trim() !== ''); // 切分翻译行
 
-                        for (let line of splitLines) {
-                            // 如果开启了回复延迟，时间间隔定为 1000毫秒 (1秒)，否则使用默认的 1000毫秒
+                        for (let idx = 0; idx < splitLines.length; idx++) {
+                            let line = splitLines[idx];
+                            let currentTranslation = transLines[idx] || ""; // 获取该句对应的翻译
+                            
+                            // 如果开启了回复延迟，时间间隔定为 1000毫秒 (1秒)，否则使用默认 of 1000毫秒
                             const delayTime = myInfo.replyDelay ? 1000 : 1000;
                             await new Promise(r => setTimeout(r, delayTime));
                             
@@ -4702,7 +4749,8 @@ for (let block of blocks) {
                                 action: actionPart,
                                 thoughts: thoughtsPart,
                                 emotion: emotionPart,
-                                jealousy: jealousyPart
+                                jealousy: jealousyPart,
+                                translation: currentTranslation // 只存当前分句对应的翻译
                             });
 
                             // 记忆同步
@@ -5355,6 +5403,16 @@ if (isGroupMode) {
         
         <div class="list-group">
             <div class="list-item" onclick="renameCurrentFriend()"><div class="info">备注名</div><div id="settings-nick-display" class="settings-value">${f.name}</div></div>
+            <!-- 新增：角色语种设置栏目 -->
+            <div class="list-item" onclick="changeFriendLanguage()"><div class="info">角色语种</div><div id="settings-lang-display" class="settings-value" style="color: #191919;">${getLanguageName(f.language || 'zh-CN')}</div></div>
+            <!-- 新增：自动翻译开关 -->
+            <div class="list-item" style="cursor: default;">
+                <div class="info">自动翻译</div>
+                <label class="wx-switch">
+                    <input type="checkbox" id="auto-translate-toggle" ${f.autoTranslate ? 'checked' : ''} onchange="toggleAutoTranslate(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
             <!-- 插入回复句数限制栏目 -->
             <div class="list-item" onclick="openReplyLimitModal()"><div class="info">回复句数限制</div><div id="settings-reply-limit-display" class="settings-value" style="color: #191919;">${limitDisplayText}</div></div>
             <div class="list-item" onclick="changeFriendGroup()"><div class="info">好友分组</div><div id="settings-group-display" class="settings-value">${f.group || '我的好友'}</div></div>
@@ -8820,6 +8878,62 @@ function triggerAiGroupTransferClaims(msgIndex) {
             }, 800);
         }
     }, 1500 + Math.random() * 1000);
+}
+// 获取语种的中文名称显示
+function getLanguageName(code) {
+    const langs = {
+        'zh-CN': '中文 (简体)',
+        'en-US': '英语 (English)',
+        'ja-JP': '日语 (日本語)',
+        'ko-KR': '韩语 (한국어)',
+        'fr-FR': '法语 (Français)',
+        'de-DE': '德语 (Deutsch)'
+    };
+    return langs[code] || '中文 (简体)';
+}
+
+// 弹出模态框修改好友语种
+function changeFriendLanguage() {
+    const f = friends.find(f => f.name === currentFriendName);
+    if (!f) return;
+    
+    let html = `<div id="lang-sel-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:white;width:80%;max-height:70%;border-radius:15px;padding:20px;overflow-y:auto;box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <h3 style="margin-top:0;font-size:16px;text-align:center;">选择角色语种</h3>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:15px;">
+                <button onclick="confirmFriendLanguage('zh-CN')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">中文 (简体)</button>
+                <button onclick="confirmFriendLanguage('en-US')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">英语 (English)</button>
+                <button onclick="confirmFriendLanguage('ja-JP')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">日语 (日本語)</button>
+                <button onclick="confirmFriendLanguage('ko-KR')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">韩语 (한국어)</button>
+                <button onclick="confirmFriendLanguage('fr-FR')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">法语 (Français)</button>
+                <button onclick="confirmFriendLanguage('de-DE')" style="background:#f2f2f2;border:none;padding:12px;border-radius:8px;font-size:14px;color:#333;">德语 (Deutsch)</button>
+            </div>
+            <button onclick="document.getElementById('lang-sel-modal').remove()" style="margin-top:15px;width:100%;background:#eee;border:none;padding:10px;border-radius:8px;font-size:14px;color:#666;">取消</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 确认语种选择
+function confirmFriendLanguage(langCode) {
+    const f = friends.find(f => f.name === currentFriendName);
+    if (f) {
+        f.language = langCode;
+        saveData();
+        const display = document.getElementById('settings-lang-display');
+        if (display) display.innerText = getLanguageName(langCode);
+        alert("已将角色交流语种切换为：" + getLanguageName(langCode));
+    }
+    document.getElementById('lang-sel-modal').remove();
+}
+
+// 自动翻译开关控制
+function toggleAutoTranslate(val) {
+    const f = friends.find(f => f.name === currentFriendName);
+    if (f) {
+        f.autoTranslate = val;
+        saveData();
+    }
 }
 </script>
 
