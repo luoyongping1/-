@@ -1133,9 +1133,12 @@ input, textarea {
         <button style="width: 100%; padding: 12px; border-radius: 10px; border:none; background:#4facfe; color:white; font-size: 14px; font-weight: bold; cursor: pointer;" onclick="addInviteCode()">批量添加邀请码</button>
     </div>
     <label>现有邀请码列表 (使用状态)：</label>
-                    <div id="invite-code-list" style="max-height: 120px; overflow-y: auto; background: #f2f2f7; border-radius: 10px; padding: 10px; font-size: 12px; color: #333; margin-bottom: 15px;"></div>
-                    
-                    <label style="font-weight: bold; color: #ee5253;">更改管理员密码</label>
+<div id="invite-code-list" style="max-height: 120px; overflow-y: auto; background: #f2f2f7; border-radius: 10px; padding: 10px; font-size: 12px; color: #333; margin-bottom: 15px;"></div>
+
+<!-- 新增：一键删除已使用邀请码的按钮 -->
+<button style="width: 100%; padding: 10px; border-radius: 10px; border:none; background:#ee5253; color:white; font-size: 13px; font-weight: bold; cursor: pointer; margin-bottom: 20px;" onclick="deleteUsedInviteCodes()">一键删除已使用邀请码</button>
+
+<label style="font-weight: bold; color: #ee5253;">更改管理员密码</label>
                     <div style="display:flex; gap:10px">
                         <input type="password" id="new-admin-password" placeholder="输入新管理员密码" style="flex:1; margin-bottom:0 !important; padding: 8px;">
                         <button style="padding: 0 15px; border-radius: 10px; border:none; background:#ee5253; color:white; font-size: 12px; cursor: pointer;" onclick="changeAdminPassword()">保存密码</button>
@@ -3298,6 +3301,47 @@ async function deleteInviteCode(code) {
     } catch (err) {
         console.error(err);
         alert('删除操作时发生网络故障，请稍后重试！');
+    }
+}
+
+// 管理员功能：从云端彻底删除邀请码
+async function deleteInviteCode(code) {
+    if (!confirm(`确定要从云端删除邀请码QQ： ${code} 吗？`)) return;
+    try {
+        const { error } = await _supabase
+            .from('invite_codes')
+            .delete()
+            .eq('code', code);
+
+        if (error) {
+            alert('删除失败: ' + error.message);
+            return;
+        }
+        renderInviteCodes();
+    } catch (err) {
+        console.error(err);
+        alert('删除操作时发生网络故障，请稍后重试！');
+    }
+}
+
+// 新增：一键清理云端所有已被注册使用的邀请码
+async function deleteUsedInviteCodes() {
+    if (!confirm("确定要一键删除所有【已使用】的邀请码吗？该操作不可撤销！")) return;
+    try {
+        const { error } = await _supabase
+            .from('invite_codes')
+            .delete()
+            .eq('used', true);
+
+        if (error) {
+            alert('清理失败: ' + error.message);
+            return;
+        }
+        alert('已成功清除所有已使用的邀请码！');
+        renderInviteCodes();
+    } catch (err) {
+        console.error(err);
+        alert('清理操作时发生网络故障，请稍后重试！');
     }
 }
 
