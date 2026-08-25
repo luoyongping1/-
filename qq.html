@@ -3088,7 +3088,8 @@ if (rawContent.includes("[PAY_SUCCESS]")) {
         });
         alert(currentFriendName + ' 已为你支付了 ' + payMsg.payItems + ' 的订单！');
     }
-    rawContent = rawContent.replace("[PAY_SUCCESS]", "好啦，已经帮你付完款了！快去看看你的商品吧~");
+    // 修改处：将代付成功的系统回复语改为空，只保留卡片和角色自己说的人设话语
+    rawContent = rawContent.replace("[PAY_SUCCESS]", "");
 } else if (rawContent.includes("[PAY_REFUSED]")) {
     const h = chatHistories[currentFriendName];
     const payMsg = h.find(m => m.isShoppingPay && m.payStatus === 'pending');
@@ -3118,7 +3119,8 @@ if (rawContent.includes("[PAY_SUCCESS]")) {
         });
         alert(currentFriendName + ' 拒绝了你的代付请求');
     }
-    rawContent = rawContent.replace("[PAY_REFUSED]", "今天额度不够啦，才不要帮你付呢，自己买！");
+    // 修改处：将代付拒绝的系统回复语改为空，只保留卡片和角色自己说的人设话语
+    rawContent = rawContent.replace("[PAY_REFUSED]", "");
 }
 
 // 解析转账动作并生成提示卡片
