@@ -751,8 +751,20 @@ if(page === 'setting') {
         }
 
         function showAddModal() {
-            document.getElementById('add-modal').classList.remove('hidden');
-        }
+    // 打开弹窗前先将各个输入框的内容清空
+    document.getElementById('add-name').value = '';
+    document.getElementById('add-price').value = '';
+    document.getElementById('add-desc').value = '';
+    
+    // 默认单选框重置为第一个“商品”
+    const defaultRadio = document.querySelector('input[name="add-type"][value="0"]');
+    if (defaultRadio) {
+        defaultRadio.checked = true;
+    }
+    
+    // 显示弹窗
+    document.getElementById('add-modal').classList.remove('hidden');
+}
         function closeAddModal() {
             document.getElementById('add-modal').classList.add('hidden');
         }
@@ -959,52 +971,57 @@ if(page === 'setting') {
         }
 
         function sendPayRequest(id, name) {
-            const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
-            const itemNames = cartList.map(item => item.name).join('、');
-            
-            // 1. 获取最新的聊天记录
-            let histories = JSON.parse(localStorage.getItem('qq_history') || '{}');
-            if (!histories[name]) histories[name] = [];
-            
-            // 2. 添加代付消息对象
-            const orderId = 'PAY'+Date.now();
-            histories[name].push({
-                type: 'self', 
-                text: finalTotal.toFixed(2),
-                isShoppingPay: true, 
-                payItems: itemNames,
-                payStatus: 'pending',
-                time: new Date().getTime(),
-                orderId: orderId
-            });
-            
-            // 3. 更新好友列表里的“最后一条消息”预览
-            let qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
-            let targetFriend = qqFriends.find(f => f.name === name);
-            if (targetFriend) {
-                targetFriend.lastMsg = "[找你代付] ￥" + finalTotal.toFixed(2);
-            }
+    const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
+    const itemNames = cartList.map(item => item.name).join('、');
+    
+    // 1. 获取最新的聊天记录
+    let histories = JSON.parse(localStorage.getItem('qq_history') || '{}');
+    if (!histories[name]) histories[name] = [];
+    
+    // 2. 添加代付消息对象
+    const orderId = 'PAY'+Date.now();
+    histories[name].push({
+        type: 'self', 
+        text: finalTotal.toFixed(2),
+        isShoppingPay: true, 
+        payItems: itemNames,
+        payStatus: 'pending',
+        time: new Date().getTime(),
+        orderId: orderId
+    });
+    
+    // 3. 更新好友列表里的“最后一条消息”预览
+    let qqFriends = JSON.parse(localStorage.getItem('qq_friends') || '[]');
+    let targetFriend = qqFriends.find(f => f.name === name);
+    if (targetFriend) {
+        targetFriend.lastMsg = "[找你代付] ￥" + finalTotal.toFixed(2);
+    }
 
-            // 4. 立即保存回存储
-            localStorage.setItem('qq_history', JSON.stringify(histories));
-            localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
+    // 4. 立即保存回存储
+    localStorage.setItem('qq_history', JSON.stringify(histories));
+    localStorage.setItem('qq_friends', JSON.stringify(qqFriends));
 
-            // 【新增】保存订单到待付款，并写入当前时间戳以支持超时检测
-            unpaidOrders.push({
-                id: orderId,
-                total: finalTotal,
-                items: [...cartList],
-                time: new Date().toLocaleString(),
-                friendName: name,
-                timestamp: Date.now()
-            });
-            localStorage.setItem('unpaidOrders', JSON.stringify(unpaidOrders));
+    // 【新增】保存订单到待付款，并写入当前时间戳以支持超时检测
+    unpaidOrders.push({
+        id: orderId,
+        total: finalTotal,
+        items: [...cartList],
+        time: new Date().toLocaleString(),
+        friendName: name,
+        timestamp: Date.now()
+    });
+    localStorage.setItem('unpaidOrders', JSON.stringify(unpaidOrders));
 
-            // 5. 提示并跳转
-            closeFriendPay();
-            alert('代付请求已发送给 ' + name + '！请切换到 QQ 窗口查看。');
-            switchPage('home');
-        }
+    // 【此处为新增修改】：代付请求提交成功后，立即清空本地购物车数据并刷新购物车页面
+    cartList = [];
+    localStorage.setItem('cartList', JSON.stringify(cartList));
+    renderCart();
+
+    // 5. 提示并跳转
+    closeFriendPay();
+    alert('代付请求已发送给 ' + name + '！请切换到 QQ 窗口查看。');
+    switchPage('home');
+}
 
         function finishFriendPay() {
             const finalTotal = parseFloat(localStorage.getItem('cartTotal')) || 0;
