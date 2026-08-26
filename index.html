@@ -2831,12 +2831,25 @@ if(savedBallCss) {
 }
 
 // ✨ 新增：开机自动应用用户的全局字体开始
-const savedFont = localStorage.getItem('custom_global_font');
-const isUrl = localStorage.getItem('custom_global_font_is_url') === 'true';
-if (savedFont) {
-    applyGlobalFont(savedFont, isUrl);
-    if (isUrl && document.getElementById('url-font-input')) {
-        document.getElementById('url-font-input').value = savedFont;
+const fontType = localStorage.getItem('custom_global_font_type');
+if (fontType === 'file') {
+    // 如果是上传的文件，去大衣柜（IndexedDB）里取出来应用
+    getFontFromDB().then(blob => {
+        if (blob) {
+            const fontUrl = URL.createObjectURL(blob);
+            applyGlobalFont(fontUrl, false);
+        }
+    }).catch(err => {
+        console.error("从数据库加载字体失败:", err);
+    });
+} else if (fontType === 'url') {
+    // 如果是网络直链，依然直接读取
+    const savedUrlFont = localStorage.getItem('custom_global_font');
+    if (savedUrlFont) {
+        applyGlobalFont(savedUrlFont, true);
+        if (document.getElementById('url-font-input')) {
+            document.getElementById('url-font-input').value = savedUrlFont;
+        }
     }
 }
 // ✨ 新增：开机自动应用用户的全局字体结束
@@ -3009,6 +3022,64 @@ let isEditMode = false;
 let longPressTimer;
 
 // ================= ✨ 新增：全局字体逻辑代码开始 =================
+// 1. 初始化 IndexedDB 数据库（创建或打开大衣柜）
+function getFontDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('GlobalFontDB', 1);
+        request.onupgradeneeded = function(e) {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('fonts')) {
+                db.createObjectStore('fonts');
+            }
+        };
+        request.onsuccess = function(e) {
+            resolve(e.target.result);
+        };
+        request.onerror = function(e) {
+            reject(e.target.error);
+        };
+    });
+}
+
+// 2. 将字体文件保存到大衣柜（IndexedDB）
+function saveFontToDB(fileBlob) {
+    return getFontDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['fonts'], 'readwrite');
+            const store = transaction.objectStore('fonts');
+            const request = store.put(fileBlob, 'custom_font');
+            request.onsuccess = function() { resolve(); };
+            request.onerror = function() { reject(request.error); };
+        });
+    });
+}
+
+// 3. 从大衣柜（IndexedDB）中取出字体文件
+function getFontFromDB() {
+    return getFontDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['fonts'], 'readonly');
+            const store = transaction.objectStore('fonts');
+            const request = store.get('custom_font');
+            request.onsuccess = function() { resolve(request.result); };
+            request.onerror = function() { reject(request.error); };
+        });
+    });
+}
+
+// 4. 从大衣柜（IndexedDB）中删掉字体
+function deleteFontFromDB() {
+    return getFontDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['fonts'], 'readwrite');
+            const store = transaction.objectStore('fonts');
+            const request = store.delete('custom_font');
+            request.onsuccess = function() { resolve(); };
+            request.onerror = function() { reject(request.error); };
+        });
+    });
+}
+
 function switchFontTab(mode) {
     const tabFile = document.getElementById('tab-font-file');
     const tabUrl = document.getElementById('tab-font-url');
@@ -3047,25 +3118,24 @@ function applyGlobalFont(fontSource, isUrl) {
     `;
 }
 
+// 5. 替换：通过数据库无痛存下超大字体
 function previewFontFile(input) {
     const file = input.files[0];
     if (file) {
-        if (file.size > 3 * 1024 * 1024) {
-            alert("⚠️ 字体文件超过 3MB！\n由于浏览器的本地存储容量有限，文件过大可能会导致保存失败。\n强烈建议您使用【网络字体 URL】选项！");
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64Data = e.target.result;
-            try {
-                localStorage.setItem('custom_global_font', base64Data);
-                localStorage.setItem('custom_global_font_is_url', 'false');
-                applyGlobalFont(base64Data, false);
-                alert("🎉 本地字体应用并保存成功！");
-            } catch (err) {
-                alert("❌ 保存失败！由于此字体文件太大（超出了浏览器最大缓存容量），推荐您将此字体文件上传到云储存，然后通过【网络字体 URL】模式粘贴应用。");
-            }
-        };
-        reader.readAsDataURL(file);
+        // 直接将文件存进大衣柜，无需进行体积变大的 Base64 转换
+        saveFontToDB(file).then(() => {
+            localStorage.setItem('custom_global_font_type', 'file');
+            // 清理掉以前残留在 localStorage 里的旧字体，释放空间
+            localStorage.removeItem('custom_global_font'); 
+            
+            // 产生一个临时的、安全的内存阅读地址给浏览器加载
+            const fontUrl = URL.createObjectURL(file);
+            applyGlobalFont(fontUrl, false);
+            alert("🎉 超大字体应用成功！已安全存储到 IndexedDB 数据库中！");
+        }).catch(err => {
+            console.error("字体存入数据库失败: ", err);
+            alert("❌ 字体文件存入数据库失败，请刷新重试！");
+        });
     }
 }
 
@@ -3077,9 +3147,12 @@ function applyUrlFont() {
     }
     try {
         localStorage.setItem('custom_global_font', url);
-        localStorage.setItem('custom_global_font_is_url', 'true');
-        applyGlobalFont(url, true);
-        alert("🎉 网络字体应用成功！");
+        localStorage.setItem('custom_global_font_type', 'url');
+        // 清理本地数据库里的字体，防止冲突
+        deleteFontFromDB().then(() => {
+            applyGlobalFont(url, true);
+            alert("🎉 网络字体链接应用成功！");
+        });
     } catch (err) {
         alert("❌ 应用失败：" + err.message);
     }
@@ -3088,14 +3161,16 @@ function applyUrlFont() {
 function resetGlobalFont() {
     if (confirm("确定要恢复到系统默认字体吗？")) {
         localStorage.removeItem('custom_global_font');
-        localStorage.removeItem('custom_global_font_is_url');
-        const styleTag = document.getElementById('dynamic-global-font-style');
-        if (styleTag) {
-            styleTag.remove();
-        }
-        document.getElementById('font-file-input').value = "";
-        document.getElementById('url-font-input').value = "";
-        alert("已恢复默认字体！");
+        localStorage.removeItem('custom_global_font_type');
+        deleteFontFromDB().then(() => {
+            const styleTag = document.getElementById('dynamic-global-font-style');
+            if (styleTag) {
+                styleTag.remove();
+            }
+            document.getElementById('font-file-input').value = "";
+            document.getElementById('url-font-input').value = "";
+            alert("已恢复默认字体！");
+        });
     }
 }
 // ================= ✨ 新增：全局字体逻辑代码结束 =================
