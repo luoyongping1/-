@@ -808,129 +808,238 @@ input:checked + .slider:before {
             .rp-amount { font-size: 11px; opacity: 0.8; margin-top: 2px; }
             .rp-footer { font-size: 11px; border-top: 0.5px solid rgba(255,255,255,0.3); padding-top: 5px; margin-top: 5px; opacity: 0.7; }
 
-/* 小火人页面样式 - 冬日治愈3D版 */
+/* 小火人页面样式 - 燕麦肉桂手账高级配色优化版 */
 #fire-page {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(180deg, #e0f2ff 0%, #ffffff 100%);
+    background-color: #F8E8D8; /* 温润蜜桃奶油背景色 */
+    background-image: url('https://img2.tofaka.com/autoupload/f/3alms/20260826/oKxY/1084X1445/Screenshot_20260826_193350.jpg/webp'); /* 修改为用户指定的背景图片 */
+    background-size: cover; /* 背景图等比例铺满整个屏幕 */
+    background-position: center; /* 背景图片居中显示 */
+    background-repeat: no-repeat; /* 防止背景图重复平铺 */
     z-index: var(--z-fire-page); display: none; flex-direction: column;
-    color: #576b95; font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #888880; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; /* 温暖木褐字色 */
+    box-sizing: border-box;
+    padding: calc(10px + env(safe-area-inset-top)) 20px calc(15px + env(safe-area-inset-bottom)) 20px;
+    overflow-y: hidden; /* 保持黄金单屏比例 */
 }
-.fire-header {
-    height: calc(60px + env(safe-area-inset-top));
-    display: flex; align-items: flex-end; justify-content: space-between;
-    padding: 0 20px 15px; box-sizing: border-box;
-}
-.fire-header-btn {
-    width: 40px; height: 40px; background: rgba(255,255,255,0.6);
-    backdrop-filter: blur(10px); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer;
-}
-.fire-main-view {
-    flex: 1; display: flex; flex-direction: column; align-items: center; 
-    position: relative; padding-top: 20px;
-}
-/* 两侧功能图标 */
-.side-controls {
-    position: absolute; width: 100%; top: 40%; transform: translateY(-50%);
-    display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box;
-}
-.side-btn {
-    width: 55px; height: 55px; background: #fff; border-radius: 50%;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    box-shadow: 0 8px 15px rgba(173,216,230,0.3); border: 2px solid #f0f8ff;
-}
-.side-btn span { font-size: 20px; }
 
-.fire-pet-container {
-    position: relative; width: 240px; height: 240px;
-    display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+/* 统一手写体质感粗黑边与实体投影 */
+.handdrawn-btn,
+.handdrawn-box {
+    border: 1px solid #888880 !important; /* 修改为 1px 的单线条边框 */
+    box-shadow: none !important; /* 去掉粗黑实体阴影 */
+    background: #fff;
+    transition: transform 0.1s, box-shadow 0.1s;
 }
-/* 顶部动态爱心星星 */
+.handdrawn-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: none !important;
+}
+
+/* 1. 顶部积分与操作条 */
+.fire-top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+.fire-close-btn {
+    width: 38px; height: 38px; border-radius: 50% !important;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; cursor: pointer;
+    color: #888880;
+}
+.fire-settings-btn {
+    width: 38px; height: 38px; border-radius: 50% !important;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; cursor: pointer;
+    color: #888880;
+}
+.fire-points-capsule {
+    background-color: #E8E1D1 !important; /* 燕麦灰胶囊框 */
+    border-radius: 20px 8px 20px 8px/8px 20px 8px 20px !important;
+    padding: 6px 18px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #888880;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 3. 中上部：宠物展示大卡片（弹性拉伸） */
+.fire-pet-showcase {
+    width: 100%;
+    flex: 1; /* 自动撑高高度 */
+    min-height: 220px;
+    background-color: #fff;
+    border-radius: 30px 15px 30px 15px/15px 30px 15px 30px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    border-color: transparent !important; /* 强制边框透明 */
+    box-shadow: none !important; /* 确保去除外阴影 */
+}
+.fire-pet-container {
+    position: relative; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+}
 .pet-deco {
-    position: absolute; top: -20px; font-size: 24px;
+    position: absolute; top: 15px; font-size: 24px;
     animation: float-deco 3s infinite ease-in-out;
 }
 @keyframes float-deco {
     0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
     50% { transform: translateY(-15px) scale(1.2); opacity: 1; }
 }
-
 .fire-pet {
-    width: 160px; height: 160px; border-radius: 40px;
-    background: #fff; box-shadow: 0 20px 40px rgba(173,216,230,0.4);
-    display: flex; align-items: center; justify-content: center; font-size: 80px;
+    font-size: 100px; /* 大头像 */
     animation: fire-bounce 2.5s infinite ease-in-out;
-    border: 4px solid #fff;
 }
 @keyframes fire-bounce {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     50% { transform: translateY(-20px) rotate(2deg); }
 }
 
-.pet-info-card {
-    text-align: center; margin-top: 30px; width: 80%;
+/* 4 & 5. 名字与亲密度控制组 */
+.fire-info-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 12px;
+    flex-shrink: 0;
 }
 .pet-name-tag {
-    background: #fff; padding: 6px 20px; border-radius: 20px;
-    font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    display: inline-block; margin-bottom: 15px; font-size: 16px;
-}
-.intimacy-bar-wrap {
-    width: 100%; height: 14px; background: #e6f2ff;
-    border-radius: 10px; overflow: hidden; position: relative;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); border: 2px solid #fff;
-}
-.intimacy-bar-fill {
-    height: 100%; background: linear-gradient(90deg, #a1c4fd 0%, #c2e9fb 100%);
-    width: 0%; transition: width 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* 底部功能栏 */
-.fire-bottom-nav {
-    padding: 20px; display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 15px; align-items: center; background: rgba(255,255,255,0.7);
-    backdrop-filter: blur(15px); border-radius: 30px 30px 0 0;
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.03);
-}
-.nav-btn {
-    background: #fff; border-radius: 20px; height: 50px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; font-size: 14px; box-shadow: 0 6px 12px rgba(173,216,230,0.2);
+    background-color: #D5B09D !important; /* 燕麦肉桂色标题框 */
+    color: #fff;
+    padding: 3px 20px;
+    font-size: 18px;
+    font-weight: 900;
+    border-radius: 12px 4px 12px 4px/4px 12px 4px 12px !important;
+    margin-bottom: 6px;
+    display: inline-block;
     cursor: pointer;
 }
-.nav-btn.main {
-    height: 65px; background: #576b95; color: #fff; font-size: 16px;
-    box-shadow: 0 10px 20px rgba(87, 107, 149, 0.3);
+.intimacy-bar-wrap {
+    width: 85%; height: 12px; background: #fff !important;
+    border-radius: 10px !important; overflow: hidden; position: relative;
+    border: 3px solid #888880 !important;
+    box-shadow: none !important;
 }
-.full-width-btn {
-    grid-column: span 3; background: #f0f7ff; color: #576b95;
-    height: 45px; margin-top: 5px; border-radius: 15px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 500;
+.intimacy-bar-fill {
+    height: 100%; background: #C0B7B8 !important; /* 雾粉灰填充色 */
+    width: 0%; transition: width 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-right: 3px solid #888880;
+    border-radius: 8px 0 0 8px;
 }
-/* 任务页面专属样式 */
+#intimacy-text {
+    font-size: 11px; font-weight: bold; margin-top: 4px; color: #888880;
+}
+
+/* 6. 中下部：大卡片分栏区 */
+.fire-double-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+.organic-col-card {
+    padding: 8px 10px;
+    text-align: center;
+    border-radius: 12px !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row; /* 左右横向紧凑布局 */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #888880;
+}
+.organic-col-card span:first-child {
+    font-size: 20px;
+    margin-bottom: 0;
+}
+.organic-col-card span:last-child {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 7. 靠下部：三排功能区 */
+.fire-triple-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+.square-func-card {
+    border-radius: 12px !important;
+    padding: 6px 4px;
+    text-align: center;
+    cursor: pointer;
+    color: #888880;
+}
+.square-func-card.highlight-main {
+    background-color: #D5B09D !important; /* 主动投喂/赚点数卡片使用燕麦肉桂橙高亮 */
+    color: #fff !important; /* 字体设为白色提升可读性 */
+}
+.square-func-card .card-emoji {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+.square-func-card .card-label {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* 8. 最下方：更多玩法大长条 */
+.more-gameplay-banner {
+    background-color: #C0B7B8 !important; /* 雾粉灰 Banner */
+    border-radius: 12px !important;
+    padding: 8px;
+    text-align: center;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+.banner-inner {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff; /* 雾粉灰上的文字设为温润奶白 */
+}
+
+/* 任务页面专属手绘风格 */
 #fire-task-page {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: #f0f7ff; z-index: 100; display: none; flex-direction: column;
+    background-color: #F8E8D8; z-index: 100; display: none; flex-direction: column;
 }
 .task-list-container {
     flex: 1; padding: 15px; overflow-y: auto;
 }
 .task-item {
-    background: #fff; border-radius: 18px; padding: 15px; margin-bottom: 12px;
+    background: #fff; border: 3px solid #888880; border-radius: 18px; padding: 15px; margin-bottom: 12px;
     display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 4px 10px rgba(173,216,230,0.15);
+    box-shadow: 4px 4px 0 #888880;
 }
 .task-info { display: flex; flex-direction: column; gap: 4px; }
-.task-name { font-size: 14px; font-weight: bold; color: #576b95; }
-.task-reward { font-size: 12px; color: #ff9a9e; font-weight: bold; }
+.task-name { font-size: 14px; font-weight: bold; color: #888880; }
+.task-reward { font-size: 12px; color: #D5B09D; font-weight: bold; }
 .task-claim-btn {
-    background: #a1c4fd; color: white; padding: 6px 15px; border-radius: 15px;
-    font-size: 12px; font-weight: bold; cursor: pointer; border: none;
+    background: #C0B7B8; color: #fff; padding: 6px 15px; border-radius: 15px;
+    font-size: 12px; font-weight: bold; cursor: pointer; border: 2px solid #888880;
+    box-shadow: 2px 2px 0 #888880;
 }
-.task-claim-btn:active { transform: scale(0.95); opacity: 0.8; }
+.task-claim-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #888880; }
 /* ✨ 新增：加号工具栏的线条图标与毛玻璃样式 */
 .tool-item-new {
     display: flex;
@@ -3276,7 +3385,8 @@ for (let k = 0; k < msgs.length; k++) {
         thoughts: thoughtsPart,
         emotion: emotionPart,
         jealousy: jealousyPart,
-        translation: currentTranslation // 只存本句话对应的翻译
+        translation: currentTranslation, // 只存本句话对应的翻译
+        time: Date.now()
     });
 
     friend.lastMsg = isTheaterMsg ? "[小剧场]" : (isDescribeCard ? "[图片描述便签]" : cleanText);
@@ -3755,7 +3865,8 @@ function sendChosenSticker(url) {
         text: url,
         isSticker: true,
         stickerDesc: desc, // 新增：保存表情包的中文描述（如“开心”、“哭泣”）
-        initial: '我'  // 新增这一行
+        initial: '我',  // 新增这一行
+        time: Date.now()
     });
     
     if (isGroupMode) {
@@ -4521,7 +4632,8 @@ function executeTransfer() {
         transferNote: note,
         transferTarget: targetVal, // 保存指定的人
         senderName: myInfo.name,
-        status: 'unclaimed' // 初始化为未领取
+        status: 'unclaimed', // 初始化为未领取
+        time: Date.now()
     });
 
     if (isGroupMode) {
@@ -4552,7 +4664,7 @@ function executeTransfer() {
     if(!val) return; 
     if(!chatHistories[currentFriendName]) chatHistories[currentFriendName] = []; 
     
-    chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText }); 
+    chatHistories[currentFriendName].push({ type: 'self', text: val, quoted: quotedText, time: Date.now() }); 
     
     if (isGroupMode) {
         const g = groupChats.find(x => x.id === currentFriendName);
@@ -4739,7 +4851,8 @@ for (let block of blocks) {
                                 thoughts: thoughtsPart,
                                 emotion: emotionPart,
                                 jealousy: jealousyPart,
-                                translation: currentTranslation // 只存当前分句对应的翻译
+                                translation: currentTranslation, // 只存当前分句对应的翻译
+                                time: Date.now()
                             });
 
                             // 记忆同步
@@ -5498,7 +5611,7 @@ function togglePinChat(val) {
     const text = document.getElementById('describe-textarea').value.trim();
     if (!text) return;
     if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-    chatHistories[currentFriendName].push({ type: 'self', text: text, isDescribeCard: true, expanded: false });
+    chatHistories[currentFriendName].push({ type: 'self', text: text, isDescribeCard: true, expanded: false, time: Date.now() });
     
     if (isGroupMode) {
         const g = groupChats.find(x => x.id === currentFriendName);
@@ -5524,7 +5637,7 @@ document.getElementById('real-image-upload').onchange = function() {
         const reader = new FileReader();
         reader.onload = e => {
             if (!chatHistories[currentFriendName]) chatHistories[currentFriendName] = [];
-            chatHistories[currentFriendName].push({ type: 'self', text: e.target.result, isRealImage: true });
+            chatHistories[currentFriendName].push({ type: 'self', text: e.target.result, isRealImage: true, time: Date.now() });
             
             if (isGroupMode) {
                 const g = groupChats.find(x => x.id === currentFriendName);
@@ -6621,7 +6734,13 @@ function updateFireOnChat(friend) {
 
 function handleFireEntry() {
     if (isGroupMode) return alert("群聊暂不支持共养小火人哦");
+    if (!currentFriendName) {
+        return alert("请先选择一个好友开始聊天");
+    }
     const friend = friends.find(f => f.name === currentFriendName);
+    if (!friend) {
+        return alert("请先选择一个好友开始聊天");
+    }
     if (!friend.fireData) friend.fireData = { isStarted: false, chatPoints: 0, intimacy: 0, chatDays: 0, lastChatDate: '', lastFeedDate: '' };
     
     if (!friend.fireData.isStarted) {
@@ -6657,9 +6776,30 @@ function renderFirePage(friend) {
     document.getElementById('intimacy-bar-fill').style.width = percent + '%';
     document.getElementById('intimacy-text').innerText = `亲密度: ${data.intimacy || 0} / 2000`;
     
-    // 如果需要显示道具列表，可以在此处修改
+    // 渲染小火人的名字，默认“火灵儿”
+    document.getElementById('fire-pet-name').innerText = data.petName || "火灵儿";
+    
     const shelf = document.getElementById('food-shelf');
-    if(shelf) shelf.style.display = 'none'; // 暂时隐藏旧的简单列表，保持页面整洁
+    if(shelf) shelf.style.display = 'none'; 
+}
+
+// ⚙️ 设置按钮点击事件：修改小火人名字
+function renameFirePet() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    const currentName = data.petName || "火灵儿";
+    const newName = prompt("请修改小火人的名字：", currentName);
+    if (newName !== null) {
+        const cleanName = newName.trim();
+        if (cleanName === "") {
+            alert("小火人名字不能为空哦！");
+            return;
+        }
+        data.petName = cleanName;
+        saveData();
+        document.getElementById('fire-pet-name').innerText = cleanName;
+        alert("小火人名字修改成功！");
+    }
 }
 
 function feedFirePet(idx) {
@@ -6824,21 +6964,127 @@ function changeFriendGroup() {
         alert("该分组不存在，请先在菜单中添加该分组。");
     }
 }
-// 小火人任务领取逻辑
-function claimFireTask(name, points) {
+// 重新设计的动态任务领取逻辑
+function claimFireTask(taskKey, points) {
     if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    
+    // 初始化任务结构体
+    data.tasks = data.tasks || {};
+    data.tasks[taskKey] = data.tasks[taskKey] || { claimed: false };
+
+    if (data.tasks[taskKey].claimed) {
+        alert("该任务奖励已领取过啦！");
+        return;
+    }
+
+    // 标记为已领取
+    data.tasks[taskKey].claimed = true;
     
     // 增加点数
-    currentFireFriend.fireData.chatPoints = (currentFireFriend.fireData.chatPoints || 0) + points;
+    data.chatPoints = (data.chatPoints || 0) + points;
     
-    // 保存数据
     saveData();
     
-    // 刷新主页面的点数显示
-    document.getElementById('fire-chat-points').innerText = `点数: ${currentFireFriend.fireData.chatPoints}`;
+    // 刷新主页面点数显示与任务列表状态
+    document.getElementById('fire-chat-points').innerText = `点数: ${data.chatPoints}`;
+    renderFireTaskList(currentFireFriend);
     
-    // 弹出提示
-    alert(`恭喜领取 [${name}] 奖励：+${points} 星点！`);
+    const taskNames = {
+        sign: '每日签到',
+        firstMsg: '发送首条消息',
+        chatDuration: '聊天时长打卡',
+        msgCount: '发送消息条数',
+        consecutiveLogin: '连续登录奖励',
+        aiReply: '完成一次AI回复'
+    };
+    alert(`恭喜领取 [${taskNames[taskKey] || taskKey}] 奖励：+${points} 星点！`);
+}
+
+// 唤起任务面板并初始化数据
+function openFireTaskPage() {
+    if (!currentFireFriend) return;
+    renderFireTaskList(currentFireFriend);
+    document.getElementById('fire-task-page').style.display = 'flex';
+}
+
+// 动态计算任务达成状态并渲染任务列表
+function renderFireTaskList(friend) {
+    const data = friend.fireData;
+    const todayStart = new Date().setHours(0, 0, 0, 0);
+    
+    // 筛选今天当前聊天好友的历史消息
+    const todayMsgs = (chatHistories[friend.name] || []).filter(m => m.time && m.time >= todayStart);
+    const userMsgsToday = todayMsgs.filter(m => m.type === 'self' && !m.isSystemNotice).length;
+    const aiMsgsToday = todayMsgs.filter(m => m.type === 'friend' && !m.isSystemNotice).length;
+
+    // 数据安全性初始化检查
+    data.tasks = data.tasks || {
+        sign: { claimed: false },
+        firstMsg: { claimed: false },
+        chatDuration: { claimed: false },
+        msgCount: { claimed: false },
+        consecutiveLogin: { claimed: false },
+        aiReply: { claimed: false }
+    };
+
+    // 每日任务跨天重置检测
+    const todayStr = new Date().toLocaleDateString();
+    if (data.lastTaskResetDate !== todayStr) {
+        data.lastTaskResetDate = todayStr;
+        data.tasks = {
+            sign: { claimed: false },
+            firstMsg: { claimed: false },
+            chatDuration: { claimed: false },
+            msgCount: { claimed: false },
+            consecutiveLogin: { claimed: false },
+            aiReply: { claimed: false }
+        };
+        saveData();
+    }
+
+    // 核心任务逻辑定义与判定
+    const taskDefs = [
+        { key: 'sign', name: '每日签到', points: 10, rewardText: '+10 星点', completed: true },
+        { key: 'firstMsg', name: '发送首条消息', points: 5, rewardText: '+5 星点', completed: userMsgsToday > 0 },
+        { key: 'chatDuration', name: '聊天时长打卡', points: 15, rewardText: '+15 星点', completed: userMsgsToday >= 3 },
+        { key: 'msgCount', name: '发送消息条数', points: 10, rewardText: '+10 星点', completed: userMsgsToday >= 5 },
+        { key: 'consecutiveLogin', name: '连续登录奖励', points: 30, rewardText: '+30 星点', completed: (data.chatDays || 0) >= 2 },
+        { key: 'aiReply', name: '完成一次AI回复', points: 8, rewardText: '+8 星点', completed: aiMsgsToday > 0 }
+    ];
+
+    const listEl = document.getElementById('fire-task-list');
+    if (!listEl) return;
+
+    // 动态生成列表按钮的状态样式与动作绑定
+    listEl.innerHTML = taskDefs.map(task => {
+        const isClaimed = data.tasks[task.key]?.claimed;
+        const isCompleted = task.completed;
+
+        let btnText = "未完成";
+        let btnStyle = "background: #ccc; color: white; cursor: not-allowed;";
+        let btnAttr = "disabled";
+
+        if (isClaimed) {
+            btnText = "已领取";
+            btnStyle = "background: #e0e0e0; color: #999; cursor: not-allowed;";
+            btnAttr = "disabled";
+        } else if (isCompleted) {
+            btnText = "领取";
+            btnStyle = "background: #a1c4fd; color: white; cursor: pointer;";
+            btnAttr = `onclick="claimFireTask('${task.key}', ${task.points})"`;
+        }
+
+        return `
+        <div class="task-item">
+            <div class="task-info">
+                <span class="task-name">${task.name}</span>
+                <span class="task-reward">${task.rewardText}</span>
+            </div>
+            <button class="task-claim-btn" style="${btnStyle}" ${btnAttr}>${btnText}</button>
+        </div>
+        `;
+    }).join('');
 }
 // 聊天消息编辑功能
 // 开始行内编辑逻辑
@@ -7948,97 +8194,97 @@ function applyHeaderAndInputBarStyles(friendName) {
 </div>
 
 <!-- 小火人养成APP主页面 -->
-<div id="fire-page">
-    <!-- 任务子页面 -->
+<div id="fire-page" class="handdrawn-theme">
+    <!-- 任务子页面（保留原有功能逻辑，仅做边框美化） -->
     <div id="fire-task-page">
-        <div class="fire-header">
-            <div class="fire-header-btn" onclick="document.getElementById('fire-task-page').style.display='none'">〈</div>
+        <div class="fire-top-section" style="padding: 10px 0;">
+            <div class="fire-close-btn handdrawn-btn" onclick="document.getElementById('fire-task-page').style.display='none'">〈</div>
             <div style="font-size:16px; font-weight:bold;">成长任务</div>
-            <div style="width:40px;"></div>
+            <div style="width:38px;"></div>
         </div>
-        <div class="task-list-container">
-            <div class="task-item">
-                <div class="task-info">
-                    <span class="task-name">每日签到</span>
-                    <span class="task-reward">+10 星点</span>
-                </div>
-                <button class="task-claim-btn" onclick="claimFireTask('每日签到', 10)">领取</button>
-            </div>
-            <div class="task-item">
-                <div class="task-info">
-                    <span class="task-name">发送首条消息</span>
-                    <span class="task-reward">+5 星点</span>
-                </div>
-                <button class="task-claim-btn" onclick="claimFireTask('发送首条消息', 5)">领取</button>
-            </div>
-            <div class="task-item">
-                <div class="task-info">
-                    <span class="task-name">聊天时长打卡</span>
-                    <span class="task-reward">+15 星点</span>
-                </div>
-                <button class="task-claim-btn" onclick="claimFireTask('聊天时长打卡', 15)">领取</button>
-            </div>
-            <div class="task-item">
-                <div class="task-info">
-                    <span class="task-name">发送消息条数</span>
-                    <span class="task-reward">+10 星点</span>
-                </div>
-                <button class="task-claim-btn" onclick="claimFireTask('发送消息条数', 10)">领取</button>
-            </div>
-            <div class="task-item">
-                <div class="task-info">
-                    <span class="task-name">连续登录奖励</span>
-                    <span class="task-reward">+30/80 星点</span>
-                </div>
-                <button class="task-claim-btn" onclick="claimFireTask('连续登录奖励', 30)">领取</button>
-            </div>
-            <div class="task-item">
-                <div class="task-info">
-                    <span class="task-name">完成一次AI回复</span>
-                    <span class="task-reward">+8 星点</span>
-                </div>
-                <button class="task-claim-btn" onclick="claimFireTask('完成一次AI回复', 8)">领取</button>
-            </div>
+        <div class="task-list-container" id="fire-task-list">
+            <!-- 这里将通过 JS 动态渲染生成 -->
         </div>
     </div>
 
-    <!-- 顶部状态栏 -->
-    <div class="fire-header">
-        <div class="fire-header-btn" onclick="closeFirePage()">✕</div>
-        <div id="fire-chat-points" style="font-size:14px; font-weight:bold; background:rgba(255,255,255,0.6); padding:5px 15px; border-radius:20px;">点数: 0</div>
-        <div class="fire-header-btn">⚙️</div>
+    <!-- 1 & 2. 页面最顶端：左右关闭与设置按钮，中间展示点数的小蓝色胶囊 -->
+    <div class="fire-top-section">
+        <!-- 左上角关闭 -->
+        <div class="fire-close-btn handdrawn-btn" onclick="closeFirePage()">✕</div>
+        <!-- 顶端蓝色椭圆积分胶囊 -->
+        <div class="fire-points-capsule handdrawn-box" id="fire-chat-points">点数: 0</div>
+        <!-- 右上角设置 -->
+<div class="fire-settings-btn handdrawn-btn" onclick="renameFirePet()">
+    <svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+</div>
     </div>
 
-    <!-- 中间核心区 -->
-    <div class="fire-main-view">
-        <div class="side-controls">
-            <div class="side-btn" onclick="alert('种子正在发芽中...')"><span>🌱</span></div>
-            <div class="side-btn" onclick="alert('快去聊天赢取投喂道具吧！')"><span>🍲</span></div>
-        </div>
-        
+    <!-- 3. 页面中上大块主视觉区域（宠物展示区，如同手绘主图） -->
+    <div class="fire-pet-showcase handdrawn-box">
         <div class="fire-pet-container">
-            <div class="pet-deco">✨❤️⭐</div>
-            <div class="fire-pet">🐶</div>
-        </div>
-
-        <div class="pet-info-card">
-            <div class="pet-name-tag" id="fire-pet-name">火灵儿</div>
-            <div class="intimacy-bar-wrap">
-                <div class="intimacy-bar-fill" id="intimacy-bar-fill"></div>
-            </div>
-            <div id="intimacy-text" style="font-size:11px; margin-top:8px; opacity:0.7;">亲密度 0 / 2000</div>
+            <img class="fire-pet" src="https://img2.tofaka.com/autoupload/f/3alms/20260826/xDXE/448X409/IMG_20260826_193954.png/webp" style="width: 130px; height: 130px; object-fit: contain;">
         </div>
     </div>
 
-    <!-- 道具投喂区 -->
+    <!-- 4 & 5. 宠物名字大标题 & 亲密度进度条（位于展示区正下方） -->
+    <div class="fire-info-section">
+        <div class="pet-name-tag handdrawn-box" id="fire-pet-name">火灵儿</div>
+        <div class="intimacy-bar-wrap">
+            <div class="intimacy-bar-fill" id="intimacy-bar-fill"></div>
+        </div>
+        <div id="intimacy-text">亲密度 0 / 2000</div>
+    </div>
+
+    <!-- 道具投喂区（隐藏） -->
     <div id="food-shelf" style="display:none;"></div>
 
-    <!-- 底部功能栏 -->
-    <div class="fire-bottom-nav">
-        <div class="nav-btn" onclick="alert('衣柜正在定制中...')">👗 装扮</div>
-        <div class="nav-btn main" onclick="alert('快通过发送消息赚取点数吧！')">🚀 赚点数</div>
-        <div class="nav-btn" onclick="document.getElementById('fire-task-page').style.display='flex'">📝 任务</div>
-        <div class="full-width-btn" onclick="alert('更多趣味玩法即将上线')">更多玩法 ➔</div>
+<!-- 6. 页面中下部：左右大卡片分栏排布（种子发芽与投喂道具） -->
+<div class="fire-double-cards">
+    <div class="organic-col-card handdrawn-box" onclick="alert('种子正在发芽中...')">
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+            <path d="M12 22V12M12 12c0-3 3-5 7-5-1 4-3 5-7 5zm0 0c0-3-3-5-7-5 1 4 3 5 7 5z"></path>
+        </svg>
+        <span>种子发芽</span>
+    </div>
+    <div class="organic-col-card handdrawn-box" onclick="alert('快去聊天赢取投喂道具吧！')">
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+            <path d="M3 12h18M5 12c0 5 3 7 7 7s7-2 7-7M9 7c0-2 1-3 1-3M12 7c0-2 1-3 1-3M15 7c0-2 1-3 1-3"></path>
+        </svg>
+        <span>投喂道具</span>
+    </div>
+</div>
+
+<!-- 7. 页面靠下：三联排方形卡片按钮（装扮、赚点数、任务） -->
+<div class="fire-triple-cards">
+    <div class="square-func-card handdrawn-box" onclick="alert('衣柜正在定制中...')">
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 2px;">
+            <path d="M12 6c1.5 0 2-1 2-2M12 6c-1.5 0-2-1-2-2M12 4V2M6 21l2-11 4-2 4 2 2 11z"></path>
+        </svg>
+        <div class="card-label">装扮</div>
+    </div>
+    <div class="square-func-card handdrawn-box highlight-main" onclick="alert('快通过发送消息赚取点数吧！')">
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 2px;">
+            <path d="M12 2C12 2 16 6 16 11V18H8V11C8 6 12 2 12 2zM8 14H16M6 18H18M10 22h4"></path>
+        </svg>
+        <div class="card-label">赚点数</div>
+    </div>
+    <div class="square-func-card handdrawn-box" onclick="openFireTaskPage()">
+        <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 2px;">
+            <rect x="5" y="3" width="14" height="18" rx="2"></rect>
+            <path d="M9 8h6M9 12h6M9 16h4"></path>
+        </svg>
+        <div class="card-label">任务</div>
+    </div>
+</div>
+
+    <!-- 8. 页面下方长条大卡片（更多玩法按钮） -->
+    <div class="more-gameplay-banner handdrawn-box" onclick="alert('更多趣味玩法即将上线')">
+        <div class="banner-inner">
+            <span>更多玩法 ➔</span>
+        </div>
     </div>
 </div>
 

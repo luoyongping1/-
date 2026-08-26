@@ -1169,15 +1169,37 @@ input, textarea {
 
     <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
         <label>图标美化</label>
-        <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
-    <label>悬浮球 CSS 美化 (代码粘贴区)</label>
-    <textarea id="custom-ball-css" rows="6" placeholder="请在这里粘贴 AI 生成的悬浮球 CSS 代码..."></textarea>
-    <p style="font-size:10px; color:#999; margin-top:5px;">粘贴代码后点击下方保存外观即可生效。</p>
-</div>
-        
-        <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
+    <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <label>悬浮球 CSS 美化 (代码粘贴区)</label>
+        <textarea id="custom-ball-css" rows="6" placeholder="请在这里粘贴 AI 生成的悬浮球 CSS 代码..."></textarea>
+        <p style="font-size:10px; color:#999; margin-top:5px;">粘贴代码后点击下方保存外观即可生效。</p>
     </div>
-    <button class="action-btn" onclick="saveAppearance()">保存外观</button>
+    
+    <!-- ✨ 新增：全局字体设置模块开始 -->
+    <div class="setting-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <label>🔤 全局字体美化</label>
+        <div class="bg-tabs" style="margin-top: 8px;">
+            <div class="bg-tab-btn active" id="tab-font-file" onclick="switchFontTab('file')">本地上传</div>
+            <div class="bg-tab-btn" id="tab-font-url" onclick="switchFontTab('url')">网络字体 URL</div>
+        </div>
+        <div id="content-font-file" class="tab-content active">
+            <input type="file" id="font-file-input" accept=".ttf" onchange="previewFontFile(this)">
+            <p style="font-size:10px; color:#999; margin-top: -5px; margin-bottom: 5px;">* 请上传 .ttf 格式的字体，由于浏览器存储限制，建议小于 3MB。</p>
+        </div>
+        <div id="content-font-url" class="tab-content">
+            <div class="url-input-group">
+                <input type="text" id="url-font-input" placeholder="输入字体直链 URL (含 http/https)">
+                <button class="apply-btn" onclick="applyUrlFont()">确定</button>
+            </div>
+            <p style="font-size:10px; color:#999; margin-top:-5px; margin-bottom: 5px;">* 网络字体不会占用浏览器本地存储空间，更推荐使用！</p>
+        </div>
+        <button class="action-btn" style="background:#ee5253; margin-top: 5px;" onclick="resetGlobalFont()">恢复系统默认字体</button>
+    </div>
+    <!-- ✨ 全局字体设置模块结束 -->
+    
+    <button class="action-btn" style="background: #fbc531;" onclick="showAppListModal()">更换 App 图标</button>
+</div>
+<button class="action-btn" onclick="saveAppearance()">保存外观</button>
 </div>
         </div>
 
@@ -2802,13 +2824,24 @@ window.onload = function() {
     const isNotify = localStorage.getItem('allow_notifications') === 'true';
     document.getElementById('notification-toggle').checked = isNotify;
 
-    const savedBallCss = localStorage.getItem('custom_ball_css');
-    if(savedBallCss) {
-        document.getElementById('custom-ball-css').value = savedBallCss;
-        applyCustomBallCss(savedBallCss);
-    }
+const savedBallCss = localStorage.getItem('custom_ball_css');
+if(savedBallCss) {
+    document.getElementById('custom-ball-css').value = savedBallCss;
+    applyCustomBallCss(savedBallCss);
+}
 
-    setInterval(updateTime, 1000); 
+// ✨ 新增：开机自动应用用户的全局字体开始
+const savedFont = localStorage.getItem('custom_global_font');
+const isUrl = localStorage.getItem('custom_global_font_is_url') === 'true';
+if (savedFont) {
+    applyGlobalFont(savedFont, isUrl);
+    if (isUrl && document.getElementById('url-font-input')) {
+        document.getElementById('url-font-input').value = savedFont;
+    }
+}
+// ✨ 新增：开机自动应用用户的全局字体结束
+
+setInterval(updateTime, 1000); 
     updateTime();
 
     // 初始化悬浮球快捷菜单设置
@@ -2974,6 +3007,98 @@ async function toggleNotifications(enabled) {
 
 let isEditMode = false;
 let longPressTimer;
+
+// ================= ✨ 新增：全局字体逻辑代码开始 =================
+function switchFontTab(mode) {
+    const tabFile = document.getElementById('tab-font-file');
+    const tabUrl = document.getElementById('tab-font-url');
+    const contentFile = document.getElementById('content-font-file');
+    const contentUrl = document.getElementById('content-font-url');
+    if (mode === 'file') {
+        tabFile.classList.add('active');
+        tabUrl.classList.remove('active');
+        contentFile.classList.add('active');
+        contentUrl.classList.remove('active');
+    } else {
+        tabFile.classList.remove('active');
+        tabUrl.classList.add('active');
+        contentFile.classList.remove('active');
+        contentUrl.classList.add('active');
+    }
+}
+
+function applyGlobalFont(fontSource, isUrl) {
+    let styleTag = document.getElementById('dynamic-global-font-style');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'dynamic-global-font-style';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+        @font-face {
+            font-family: 'CustomGlobalFont';
+            src: url('${fontSource}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body, button, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h6, .ios-nickname, .clock-str, .date-str {
+            font-family: 'CustomGlobalFont', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+    `;
+}
+
+function previewFontFile(input) {
+    const file = input.files[0];
+    if (file) {
+        if (file.size > 3 * 1024 * 1024) {
+            alert("⚠️ 字体文件超过 3MB！\n由于浏览器的本地存储容量有限，文件过大可能会导致保存失败。\n强烈建议您使用【网络字体 URL】选项！");
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result;
+            try {
+                localStorage.setItem('custom_global_font', base64Data);
+                localStorage.setItem('custom_global_font_is_url', 'false');
+                applyGlobalFont(base64Data, false);
+                alert("🎉 本地字体应用并保存成功！");
+            } catch (err) {
+                alert("❌ 保存失败！由于此字体文件太大（超出了浏览器最大缓存容量），推荐您将此字体文件上传到云储存，然后通过【网络字体 URL】模式粘贴应用。");
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function applyUrlFont() {
+    const url = document.getElementById('url-font-input').value.trim();
+    if (!url) {
+        alert("请输入有效的字体 URL 链接");
+        return;
+    }
+    try {
+        localStorage.setItem('custom_global_font', url);
+        localStorage.setItem('custom_global_font_is_url', 'true');
+        applyGlobalFont(url, true);
+        alert("🎉 网络字体应用成功！");
+    } catch (err) {
+        alert("❌ 应用失败：" + err.message);
+    }
+}
+
+function resetGlobalFont() {
+    if (confirm("确定要恢复到系统默认字体吗？")) {
+        localStorage.removeItem('custom_global_font');
+        localStorage.removeItem('custom_global_font_is_url');
+        const styleTag = document.getElementById('dynamic-global-font-style');
+        if (styleTag) {
+            styleTag.remove();
+        }
+        document.getElementById('font-file-input').value = "";
+        document.getElementById('url-font-input').value = "";
+        alert("已恢复默认字体！");
+    }
+}
+// ================= ✨ 新增：全局字体逻辑代码结束 =================
 
 function openTimeColorPicker() {
     document.getElementById('time-color-modal').style.display = 'flex';
