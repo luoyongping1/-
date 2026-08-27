@@ -8093,7 +8093,7 @@ function applyHeaderAndInputBarStyles(friendName) {
 
 <!-- ================= 1. 新增：小火人身份关系设置弹窗 ================= -->
 <div id="fire-identity-modal" class="glass-modal" style="z-index: 9900; align-items: center; display: none;">
-    <div class="glass-card" style="width: 290px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
+    <div class="glass-card" onclick="event.stopPropagation()" style="width: 290px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
         <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px; color: #D5B09D;">👪 设定小火人的父母</h3>
         
         <div style="margin-bottom: 15px;">
@@ -8242,14 +8242,14 @@ function applyHeaderAndInputBarStyles(friendName) {
 
 <!-- ================= 2. 新增：三人家园聊天室全屏页面 ================= -->
 <div id="fire-chatroom-page" class="page" style="z-index: 1240; background-color: #F8E8D8; display: none; flex-direction: column; color: #888880; box-sizing: border-box; padding: calc(10px + env(safe-area-inset-top)) 0 calc(10px + env(safe-area-inset-bottom)) 0; height: 100%; width: 100%; position: fixed; top: 0; left: 0;">
-    <!-- 头部操作栏 -->
-    <div class="fire-top-section" style="margin-bottom: 10px; flex-shrink: 0; padding: 0 15px;">
-        <div class="fire-close-btn handdrawn-btn" onclick="closeFireChatroom()">〈</div>
-        <div style="font-size: 16px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
-            <span>🏡 三人家园聊天室</span>
-        </div>
-        <div style="font-size: 12px; color: #D5B09D; font-weight: bold;" id="fire-chatroom-status"></div>
+<!-- 头部操作栏 -->
+<div class="fire-top-section" style="margin-bottom: 10px; flex-shrink: 0; padding: 0 15px; position: relative;">
+    <div class="fire-close-btn handdrawn-btn" onclick="closeFireChatroom()">〈</div>
+    <div style="font-size: 16px; font-weight: bold; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; white-space: nowrap; pointer-events: none;">
+        <span>🏡 三人家园聊天室</span>
     </div>
+    <div style="font-size: 12px; color: #D5B09D; font-weight: bold; min-width: 38px; text-align: right;" id="fire-chatroom-status"></div>
+</div>
 
     <!-- 聊天气泡显示区域：去掉了原先的2px外边框与卡片圆角，完全通铺全屏 -->
     <div id="fire-chatroom-messages" style="flex: 1; overflow-y: auto; background: rgba(255, 255, 255, 0.25); padding: 15px; box-sizing: border-box; margin-bottom: 12px; display: flex; flex-direction: column; gap: 12px; width: 100%;">
@@ -8793,7 +8793,7 @@ function closeReadingSystem() {
 </div>
 <!-- 小火人设置弹窗 -->
 <div id="fire-settings-modal" class="glass-modal" style="z-index: 9850; align-items: flex-end;">
-    <div style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 25px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(25px + env(safe-area-inset-bottom)); border: 2px solid #888880;">
+    <div onclick="event.stopPropagation()" style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 25px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(25px + env(safe-area-inset-bottom)); border: 2px solid #888880;">
         <!-- 关闭按钮 -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <span style="font-size: 18px; color: #888880; cursor: pointer; font-weight: bold;" onclick="closeFireSettingsModal()">〈 返回</span>
@@ -10541,6 +10541,17 @@ function sendFireChatroomMsg() {
 // 呼叫 API：让妈妈/爸爸和小火人角色产生基于人设的连发回复
 async function triggerFireChatroomAiReply() {
     if (!currentFireFriend) return;
+    
+    // 强制同步主页面的最新 API 设置
+    let savedAiConfig = localStorage.getItem('ai_config');
+    if (savedAiConfig) {
+        try {
+            aiConfig = JSON.parse(savedAiConfig);
+        } catch(e) {
+            console.error("同步 ai_config 失败", e);
+        }
+    }
+    
     const data = currentFireFriend.fireData;
     const history = data.chatroomHistory;
 
