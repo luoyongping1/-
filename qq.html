@@ -6741,7 +6741,30 @@ function handleFireEntry() {
     if (!friend) {
         return alert("请先选择一个好友开始聊天");
     }
-    if (!friend.fireData) friend.fireData = { isStarted: false, chatPoints: 0, intimacy: 0, chatDays: 0, lastChatDate: '', lastFeedDate: '' };
+    // 增加 tickets, badges, papa, mama, petPersona, chatroomHistory 的默认值安全结构
+    if (!friend.fireData) {
+        friend.fireData = { 
+            isStarted: false, 
+            chatPoints: 0, 
+            intimacy: 0, 
+            chatDays: 0, 
+            lastChatDate: '', 
+            lastFeedDate: '',
+            tickets: 0,
+            badges: [],
+            papa: 'user',
+            mama: 'char',
+            petPersona: '可爱、贴心、爱撒娇的孩子，说话软软萌萌的，喜欢带~号',
+            chatroomHistory: []
+        };
+    } else {
+        if (friend.fireData.tickets === undefined) friend.fireData.tickets = 0;
+        if (friend.fireData.badges === undefined) friend.fireData.badges = [];
+        if (friend.fireData.papa === undefined) friend.fireData.papa = 'user';
+        if (friend.fireData.mama === undefined) friend.fireData.mama = 'char';
+        if (friend.fireData.petPersona === undefined) friend.fireData.petPersona = '可爱、贴心、爱撒娇的孩子，说话软软萌萌的，喜欢带~号';
+        if (friend.fireData.chatroomHistory === undefined) friend.fireData.chatroomHistory = [];
+    }
     
     if (!friend.fireData.isStarted) {
         if (confirm(`是否要发起和 ${friend.name} 的共养小火人？\n开启后将出现在名字后面，每天聊天可增加天数。`)) {
@@ -6839,6 +6862,54 @@ function renderFirePage(friend) {
     
     // 渲染小火人的名字，默认“火灵儿”
     document.getElementById('fire-pet-name').innerText = data.petName || "火灵儿";
+    
+    // 动态加载小火人装扮背景图
+    const showcase = document.querySelector('.fire-pet-showcase');
+    if (showcase) {
+        if (data.petBgUrl) {
+            if (data.petBgUrl.startsWith('indexeddb-')) {
+                getAvatarBlob(data.petBgUrl).then(blob => {
+                    if (blob) {
+                        const url = URL.createObjectURL(blob);
+                        showcase.style.backgroundImage = `url("${url}")`;
+                        showcase.style.backgroundSize = 'cover';
+                        showcase.style.backgroundPosition = 'center';
+                        showcase.style.backgroundRepeat = 'no-repeat';
+                    }
+                });
+            } else {
+                showcase.style.backgroundImage = `url("${data.petBgUrl}")`;
+                showcase.style.backgroundSize = 'cover';
+                showcase.style.backgroundPosition = 'center';
+                showcase.style.backgroundRepeat = 'no-repeat';
+            }
+        } else {
+            showcase.style.backgroundImage = 'none';
+            showcase.style.backgroundColor = '#fff';
+        }
+    }
+
+    // 动态应用小火人头像尺寸
+    const petImg = document.querySelector('.fire-pet');
+    if (petImg) {
+        const size = data.petSize || 130;
+        petImg.style.width = size + 'px';
+        petImg.style.height = size + 'px';
+    }
+
+    // 刷新显示设置页中的身份文本
+    const idDisplay = document.getElementById('fire-identity-display');
+    if (idDisplay) {
+        const pLabel = (data.papa === 'user') ? '爸爸(我)' : `爸爸(${friend.name})`;
+        const mLabel = (data.mama === 'char') ? `妈妈(${friend.name})` : '妈妈(快来他眼)';
+        idDisplay.innerText = `${pLabel} & ${mLabel}`;
+    }
+
+    // 刷新性格显示
+    const persDisplay = document.getElementById('fire-pet-persona-display');
+    if (persDisplay) {
+        persDisplay.innerText = data.petPersona || "点击设置性格人设";
+    }
     
     const shelf = document.getElementById('food-shelf');
     if(shelf) shelf.style.display = 'none'; 
@@ -8015,8 +8086,183 @@ function applyHeaderAndInputBarStyles(friendName) {
         <p style="font-size: 14px; color: #666; margin-bottom: 25px;">是否需要将本次约会的点滴存入记忆？</p>
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <button class="wx-btn wx-btn-recharge" style="width: 100%; margin-bottom: 0;" onclick="confirmDatingExit(true)">✨ 总结并存入记忆</button>
-            <button class="wx-btn" style="width: 100%; background: rgba(255,255,255,0.8); color: #888;" onclick="confirmDatingExit(false)">不总结，直接退出</button>
+            <button class="wx-btn" style="width: 100%; background: rgba(255, 255, 255, 0.8); color: #888;" onclick="confirmDatingExit(false)">不总结，直接退出</button>
         </div>
+    </div>
+</div>
+
+<!-- ================= 1. 新增：小火人身份关系设置弹窗 ================= -->
+<div id="fire-identity-modal" class="glass-modal" style="z-index: 9900; align-items: center; display: none;">
+    <div class="glass-card" style="width: 290px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
+        <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px; color: #D5B09D;">👪 设定小火人的父母</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">谁是【爸爸】 (Papa)？</label>
+            <select id="fire-identity-papa" style="width: 100%; padding: 8px; border-radius: 8px; border: 2px solid #888880; outline: none; background: #fff; font-size: 13px; color: #555;">
+                <option value="user">我 (User)</option>
+                <option value="char">角色 (Char)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">谁是【妈妈】 (Mama)？</label>
+            <select id="fire-identity-mama" style="width: 100%; padding: 8px; border-radius: 8px; border: 2px solid #888880; outline: none; background: #fff; font-size: 13px; color: #555;">
+                <option value="char">角色 (Char)</option>
+                <option value="user">我 (User)</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; background: #eee; border: 2px solid #888880; color: #666; margin-bottom:0;" onclick="closeFireIdentityModal()">取消</button>
+            <button class="wx-btn" style="flex: 1; background: #D5B09D; border: 2px solid #888880; color: white; margin-bottom:0; font-weight: bold;" onclick="saveFireIdentities()">保存身份</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 2. 新增：小火人游乐场抽奖弹窗 ================= -->
+<div id="lottery-modal" class="glass-modal" style="z-index: 9860; align-items: flex-end; display: none;">
+    <div style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; padding-bottom: calc(20px + env(safe-area-inset-bottom)); border: 2px solid #888880; color: #888880;">
+        <!-- 头部统计信息栏 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span style="font-size: 18px; color: #888880; cursor: pointer; font-weight: bold;" onclick="closeLotteryModal()">〈 返回</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 24px;">🎟️</span>
+                <span style="font-size: 16px; font-weight: bold; color: #D5B09D;">奖票数量: <span id="lottery-ticket-count" style="font-size: 18px;">0</span> 张</span>
+            </div>
+            <span style="width: 40px;"></span>
+        </div>
+
+        <!-- 双版块滑动式或堆叠式选项卡 -->
+        <div style="display: flex; background: rgba(0,0,0,0.05); border-radius: 10px; padding: 4px; margin-bottom: 15px;">
+            <div id="tab-lottery-draw" class="bg-tab-btn active" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px; font-weight: bold;" onclick="switchLotteryTab('draw')">开始抽奖</div>
+            <div id="tab-lottery-get" class="bg-tab-btn" style="flex:1; text-align:center; padding:8px; cursor:pointer; border-radius:8px; font-size: 13px; font-weight: bold;" onclick="switchLotteryTab('get')">获取奖票</div>
+        </div>
+
+        <!-- 版块A：开始抽奖列表 -->
+        <div id="lottery-draw-panel" style="display: block;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 320px; overflow-y: auto; padding-bottom: 10px;">
+                <!-- 奖项一 -->
+                <div style="background: white; border: 2px solid #888880; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer;" onclick="executeLotteryDraw('diary')">
+                    <div style="font-size: 32px; margin-bottom: 5px;">📔</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #888880;">小火人日记</div>
+                    <div style="font-size: 11px; color: #999; margin-top: 4px; min-height: 28px;">抽取孩子视角的心灵记录</div>
+                    <div style="font-size: 11px; background: #D5B09D; color: white; padding: 4px; border-radius: 8px; font-weight: bold; margin-top: 8px;">消耗 1 张奖票</div>
+                </div>
+                <!-- 奖项二 -->
+                <div style="background: white; border: 2px solid #888880; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer;" onclick="executeLotteryDraw('note')">
+                    <div style="font-size: 32px; margin-bottom: 5px;">✉️</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #888880;">小火人便签</div>
+                    <div style="font-size: 11px; color: #999; margin-top: 4px; min-height: 28px;">温情可爱的日常小碎念</div>
+                    <div style="font-size: 11px; background: #D5B09D; color: white; padding: 4px; border-radius: 8px; font-weight: bold; margin-top: 8px;">消耗 1 张奖票</div>
+                </div>
+                <!-- 奖项三 -->
+                <div style="background: white; border: 2px solid #888880; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer;" onclick="executeLotteryDraw('blindbox')">
+                    <div style="font-size: 32px; margin-bottom: 5px;">🎁</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #888880;">盲盒奖票</div>
+                    <div style="font-size: 11px; color: #999; margin-top: 4px; min-height: 28px;">随机抽取另外三种任一形式</div>
+                    <div style="font-size: 11px; background: #D5B09D; color: white; padding: 4px; border-radius: 8px; font-weight: bold; margin-top: 8px;">消耗 1 张奖票</div>
+                </div>
+                <!-- 奖项四 -->
+                <div style="background: white; border: 2px solid #888880; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer;" onclick="executeLotteryDraw('medal')">
+                    <div style="font-size: 32px; margin-bottom: 5px;">🏅</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #888880;">成就勋章</div>
+                    <div style="font-size: 11px; color: #999; margin-top: 4px; min-height: 28px;">根据日常互动生成精美挂章</div>
+                    <div style="font-size: 11px; background: #D5B09D; color: white; padding: 4px; border-radius: 8px; font-weight: bold; margin-top: 8px;">消耗 1 张奖票</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 版块B：获取奖票列表 -->
+        <div id="lottery-get-panel" style="display: none; background: white; border: 2px solid #888880; border-radius: 15px; padding: 15px;">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- 渠道一 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: bold; color: #333;">星点兑换奖票</div>
+                        <div style="font-size: 11px; color: #999; margin-top: 2px;">使用 30 聊天点数直接购买</div>
+                    </div>
+                    <button class="task-claim-btn" style="background: #D5B09D; color: white; border: 2px solid #888880; padding: 6px 12px; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;" onclick="buyTicketWithPoints()">兑换</button>
+                </div>
+                <!-- 渠道二 -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 24px;">🍎</div>
+                    <div>
+                        <div style="font-size: 14px; font-weight: bold; color: #333;">日常喂食掉落</div>
+                        <div style="font-size: 11px; color: #999; margin-top: 2px;">投喂任何食物均有 10% 概率额外赠送奖票</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 3. 新增：抽到日记/便签时的展示框 ================= -->
+<div id="fire-text-result-modal" class="glass-modal" style="z-index: 9950; display: none;">
+    <div class="glass-card" style="width: 85%; max-width: 320px; padding: 25px; border-radius: 20px; background: #FFFDF4; border: 2px solid #888880; color: #5d4037; font-family: 'PingFang SC', sans-serif;">
+        <h3 id="text-result-title" style="text-align: center; margin-top: 0; color: #D5B09D; font-size: 18px;">📔 小火人日记</h3>
+        <!-- 手账本格子背景质感 -->
+        <div style="background-image: radial-gradient(#e5e5e5 1px, transparent 1px); background-size: 15px 15px; background-color: #fffef9; border: 1px solid #ddd; border-radius: 10px; padding: 15px; min-height: 180px; max-height: 280px; overflow-y: auto; font-size: 14px; line-height: 1.6; letter-spacing: 1px; word-break: break-all; margin-bottom: 20px;" id="text-result-content">
+            正在为您提笔书写中...
+        </div>
+        <button class="wx-btn" style="width: 100%; background: #D5B09D; border: 2px solid #888880; color: white; margin-bottom: 0; font-weight: bold;" onclick="closeTextResultModal()">收入记忆库</button>
+    </div>
+</div>
+
+<!-- ================= 4. 新增：勋章墙全屏展示页面 ================= -->
+<div id="medal-wall-page" class="page" style="z-index: 1250; background-color: #F8E8D8; display: none; flex-direction: column; color: #888880; box-sizing: border-box; padding: calc(10px + env(safe-area-inset-top)) 20px calc(15px + env(safe-area-inset-bottom)) 20px;">
+    <!-- 头部栏 -->
+    <div class="fire-top-section">
+        <div class="fire-close-btn handdrawn-btn" onclick="closeMedalWall()">〈</div>
+        <div style="font-size: 18px; font-weight: bold;">⭐ 勋章收集墙</div>
+        <div style="width: 38px;"></div>
+    </div>
+    
+    <!-- 勋章滑动/滚动网格容器 -->
+    <div style="flex: 1; overflow-y: auto; margin-top: 15px; padding-bottom: 20px;" id="medal-wall-list">
+        <!-- 动态渲染已获得的勋章 -->
+    </div>
+</div>
+
+<!-- ================= 1. 新增：小火人性格人设编辑弹窗 ================= -->
+<div id="fire-persona-modal" class="glass-modal" style="z-index: 9910; display: none; align-items: center;">
+    <div class="glass-card" style="width: 300px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
+        <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px; color: #D5B09D;">🧠 设定小火人的性格</h3>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 8px;">在此输入小火人的性格和人设：</label>
+            <textarea id="fire-pet-persona-input" style="width: 100%; height: 120px; border: 2px solid #888880; border-radius: 10px; padding: 10px; font-size: 13px; outline: none; box-sizing: border-box; resize: none; background: #fff; color: #555; line-height: 1.6;" placeholder="例如：性格软萌傲娇、爱吃草莓、喜欢黏着爸爸妈妈、说话时喜欢在句尾带上~ 并且经常会说一些天真可爱的话。"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="wx-btn" style="flex: 1; background: #eee; border: 2px solid #888880; color: #666; margin-bottom: 0;" onclick="closeFirePersonaModal()">取消</button>
+            <button class="wx-btn" style="flex: 1; background: #D5B09D; border: 2px solid #888880; color: white; margin-bottom: 0; font-weight: bold;" onclick="saveFirePersona()">保存人设</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 2. 新增：三人家园聊天室全屏页面 ================= -->
+<div id="fire-chatroom-page" class="page" style="z-index: 1240; background-color: #F8E8D8; display: none; flex-direction: column; color: #888880; box-sizing: border-box; padding: calc(10px + env(safe-area-inset-top)) 0 calc(10px + env(safe-area-inset-bottom)) 0; height: 100%; width: 100%; position: fixed; top: 0; left: 0;">
+    <!-- 头部操作栏 -->
+    <div class="fire-top-section" style="margin-bottom: 10px; flex-shrink: 0; padding: 0 15px;">
+        <div class="fire-close-btn handdrawn-btn" onclick="closeFireChatroom()">〈</div>
+        <div style="font-size: 16px; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+            <span>🏡 三人家园聊天室</span>
+        </div>
+        <div style="font-size: 12px; color: #D5B09D; font-weight: bold;" id="fire-chatroom-status"></div>
+    </div>
+
+    <!-- 聊天气泡显示区域：去掉了原先的2px外边框与卡片圆角，完全通铺全屏 -->
+    <div id="fire-chatroom-messages" style="flex: 1; overflow-y: auto; background: rgba(255, 255, 255, 0.25); padding: 15px; box-sizing: border-box; margin-bottom: 12px; display: flex; flex-direction: column; gap: 12px; width: 100%;">
+        <!-- 对话气泡会动态渲染到这里 -->
+    </div>
+
+    <!-- 底部输入栏：在右侧新增信封重发生成回复按钮，整体手绘风格 -->
+    <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0; width: 100%; box-sizing: border-box; padding: 0 15px;">
+        <input type="text" id="fire-chatroom-input" style="flex: 1; border: 2px solid #888880; border-radius: 25px; padding: 12px 18px; outline: none; font-size: 14px; background: white; color: #333;" placeholder="说点什么，点击右侧信封生成回复吧..." onkeydown="if(event.key==='Enter') sendFireChatroomMsg()">
+        <!-- 发送文字按钮 -->
+        <button class="btn-green" style="background: #FFF; border: 2px solid #888880; border-radius: 20px; padding: 10px 15px; color: #888880; font-weight: bold; height: 44px; box-shadow: none;" onclick="sendFireChatroomMsg()">发送</button>
+        <!-- 新增：信封样式的重发/回复生成按钮 -->
+        <button class="btn-green" style="background: #D5B09D; border: 2px solid #888880; border-radius: 50%; width: 44px; height: 44px; min-width: 44px; padding: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: none; cursor: pointer;" title="让角色和孩子进行回复" onclick="triggerFireChatroomAiReply()">✉️</button>
     </div>
 </div>
 <!-- 转账输入弹窗 -->
@@ -8273,11 +8519,11 @@ function applyHeaderAndInputBarStyles(friendName) {
 
 <!-- 6. 页面中下部：左右大卡片分栏排布（种子发芽与投喂道具） -->
 <div class="fire-double-cards">
-    <div class="organic-col-card handdrawn-box" onclick="alert('种子正在发芽中...')">
+    <div class="organic-col-card handdrawn-box" onclick="openFireChatroom()">
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
-            <path d="M12 22V12M12 12c0-3 3-5 7-5-1 4-3 5-7 5zm0 0c0-3-3-5-7-5 1 4 3 5 7 5z"></path>
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
         </svg>
-        <span>种子发芽</span>
+        <span>聊天</span>
     </div>
     <div class="organic-col-card handdrawn-box" onclick="openFoodShop()">
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
@@ -8289,17 +8535,17 @@ function applyHeaderAndInputBarStyles(friendName) {
 
 <!-- 7. 页面靠下：三联排方形卡片按钮（装扮、赚点数、任务） -->
 <div class="fire-triple-cards">
-    <div class="square-func-card handdrawn-box" onclick="alert('衣柜正在定制中...')">
+    <div class="square-func-card handdrawn-box" onclick="openFireBgChoice()">
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 2px;">
             <path d="M12 6c1.5 0 2-1 2-2M12 6c-1.5 0-2-1-2-2M12 4V2M6 21l2-11 4-2 4 2 2 11z"></path>
         </svg>
         <div class="card-label">装扮</div>
     </div>
-    <div class="square-func-card handdrawn-box highlight-main" onclick="alert('快通过发送消息赚取点数吧！')">
+    <div class="square-func-card handdrawn-box highlight-main" onclick="openLotteryModal()">
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 2px;">
             <path d="M12 2C12 2 16 6 16 11V18H8V11C8 6 12 2 12 2zM8 14H16M6 18H18M10 22h4"></path>
         </svg>
-        <div class="card-label">赚点数</div>
+        <div class="card-label">抽奖</div>
     </div>
     <div class="square-func-card handdrawn-box" onclick="openFireTaskPage()">
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; margin: 0 auto 2px;">
@@ -8311,9 +8557,9 @@ function applyHeaderAndInputBarStyles(friendName) {
 </div>
 
     <!-- 8. 页面下方长条大卡片（更多玩法按钮） -->
-    <div class="more-gameplay-banner handdrawn-box" onclick="alert('更多趣味玩法即将上线')">
+    <div class="more-gameplay-banner handdrawn-box" onclick="openMedalWall()">
         <div class="banner-inner">
-            <span>更多玩法 ➔</span>
+            <span>勋章墙与更多玩法 ➔</span>
         </div>
     </div>
 </div>
@@ -8578,6 +8824,37 @@ function closeReadingSystem() {
                 <div style="font-size: 20px; color: #888880;">〉</div>
             </div>
         </div>
+
+        <!-- 新增：身份角色设置栏 -->
+        <div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; margin-top: 15px; cursor: pointer;" onclick="openFireIdentityModal()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 14px; color: #888880; font-weight: bold; margin-bottom: 6px;">身份关系</div>
+                    <div id="fire-identity-display" style="font-size: 14px; color: #D5B09D; font-weight: bold;">点击设置爸爸妈妈</div>
+                </div>
+                <div style="font-size: 20px; color: #888880;">〉</div>
+            </div>
+        </div>
+
+        <!-- 新增：小火人性格设定栏 -->
+        <div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; margin-top: 15px; cursor: pointer;" onclick="openFirePersonaModal()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 14px; color: #888880; font-weight: bold; margin-bottom: 6px;">小火人性格人设</div>
+                    <div id="fire-pet-persona-display" style="font-size: 14px; color: #D5B09D; font-weight: bold; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">点击设置性格人设</div>
+                </div>
+                <div style="font-size: 20px; color: #888880;">〉</div>
+            </div>
+        </div>
+
+        <!-- 小火人头像尺寸调节栏 -->
+        <div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; margin-top: 15px;">
+            <div style="font-size: 14px; color: #888880; font-weight: bold; margin-bottom: 8px;">小火人头像尺寸</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="range" id="fire-pet-size-slider" min="60" max="240" value="130" style="flex: 1; accent-color: #D5B09D;" oninput="updateFirePetSize(this.value)">
+                <span id="fire-pet-size-display-text" style="font-size: 14px; color: #888880; font-weight: bold; min-width: 45px; text-align: right;">130px</span>
+            </div>
+        </div>
     </div>
 </div>
 <!-- 食物店铺弹窗 -->
@@ -8601,16 +8878,16 @@ function closeReadingSystem() {
         </div>
     </div>
 </div>
-<!-- 小火人形象选择弹窗 -->
-<div id="fire-pet-avatar-choice-modal" class="glass-modal" style="z-index: 9851;">
+<!-- 小火人背景选择弹窗 -->
+<div id="fire-bg-choice-modal" class="glass-modal" style="z-index: 9852;">
     <div class="glass-card" style="width: 280px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880;">
-        <h3 style="text-align: center; margin-bottom: 20px; color: #D5B09D; font-size: 16px; font-weight: bold;">修改小火人形象</h3>
+        <h3 style="text-align: center; margin-bottom: 20px; color: #D5B09D; font-size: 16px; font-weight: bold;">修改装扮背景</h3>
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="triggerFirePetAvatarUpload()">从相册选择</button>
-            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="openFirePetAvatarUrl()">粘贴图片 URL</button>
-            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="resetFirePetAvatar()">恢复默认形象</button>
+            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="triggerFireBgUpload()">从相册选择背景</button>
+            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="openFireBgUrl()">粘贴图片 URL</button>
+            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="resetFireBg()">恢复默认背景</button>
         </div>
-        <div style="text-align: center; margin-top: 15px; cursor: pointer; color: #888880; font-weight: bold;" onclick="closeFirePetAvatarChoiceModal()">取消</div>
+        <div style="text-align: center; margin-top: 15px; cursor: pointer; color: #888880; font-weight: bold;" onclick="closeFireBgChoiceModal()">取消</div>
     </div>
 </div>
     <div style="background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom));">
@@ -9294,6 +9571,11 @@ function openFireSettingsModal() {
         avatarPreview.innerHTML = `<img src="https://img2.tofaka.com/autoupload/f/3alms/20260826/xDXE/448X409/IMG_20260826_193954.png/webp" style="width: 100%; height: 100%; object-fit: cover;">`;
     }
     
+    // 初始化并更新头像尺寸滑块的值
+    const size = data.petSize || 130;
+    document.getElementById('fire-pet-size-slider').value = size;
+    document.getElementById('fire-pet-size-display-text').innerText = size + "px";
+    
     document.getElementById('fire-settings-modal').style.display = 'flex';
 }
 
@@ -9497,8 +9779,6 @@ function feedWithFood(idx) {
         
         // 标记为已领取
         data.foodLog[`free_date_${idx}`] = today;
-        // 第一份免费，从第二份开始扣10点数
-        // 这里不扣点数，因为是免费的
     } else {
         // 付费食物，扣除点数
         data.chatPoints -= food.cost;
@@ -9514,6 +9794,14 @@ function feedWithFood(idx) {
         setTimeout(() => pet.style.animation = 'fire-bounce 0.5s 2 ease-in-out', 10);
     }
     
+    // --- 新增：10%概率掉落奖票核心机制 ---
+    let gotTicket = false;
+    if (Math.random() < 0.1) {
+        data.tickets = (data.tickets || 0) + 1;
+        gotTicket = true;
+    }
+    // ------------------------------------
+
     saveData();
     renderFoodGrid(); // 刷新店铺
     
@@ -9534,11 +9822,834 @@ function feedWithFood(idx) {
     `;
     document.body.appendChild(tip);
     setTimeout(() => tip.remove(), 1000);
+
+    // 如果掉落了奖票，在0.5秒后追加一个获得奖票的趣味飘字
+    if (gotTicket) {
+        setTimeout(() => {
+            const ticketTip = document.createElement('div');
+            ticketTip.innerText = `🎫 获得1张抽奖票！`;
+            ticketTip.style.cssText = `
+                position: fixed; 
+                left: 50%; 
+                top: 45%; 
+                transform: translateX(-50%); 
+                color: #ff9f43; 
+                font-weight: bold; 
+                font-size: 18px; 
+                z-index: 10000; 
+                animation: fade-up 1s forwards;
+                pointer-events: none;
+            `;
+            document.body.appendChild(ticketTip);
+            setTimeout(() => ticketTip.remove(), 1000);
+        }, 500);
+    }
     
     // 更新显示
     document.getElementById('food-shop-points').innerText = `点数: ${data.chatPoints}`;
     
-    alert(`成功投喂${food.name}，小火人获得${food.intimacy}亲密度！`);
+    let baseAlertMsg = `成功投喂${food.name}，小火人获得${food.intimacy}亲密度！`;
+    if (gotTicket) {
+        baseAlertMsg += `\n✨ 太幸运了！额外掉落了一张抽奖票！`;
+    }
+    alert(baseAlertMsg);
+}
+// ===== 新增小火人背景装扮与形象尺寸函数 =====
+
+// 打开背景选择模态框
+function openFireBgChoice() {
+    document.getElementById('fire-bg-choice-modal').style.display = 'flex';
+}
+
+// 关闭背景选择模态框
+function closeFireBgChoiceModal() {
+    document.getElementById('fire-bg-choice-modal').style.display = 'none';
+}
+
+// 唤醒本地相册选择背景
+function triggerFireBgUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function() {
+        if (this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                const uniqueId = `indexeddb-fire-bg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const blob = dataURLtoBlob(base64Data);
+                
+                try {
+                    await saveAvatarBlob(uniqueId, blob);
+                    currentFireFriend.fireData.petBgUrl = uniqueId;
+                    saveData();
+                    closeFireBgChoiceModal();
+                    renderFirePage(currentFireFriend);
+                    alert("小火人装扮背景已成功保存到本地数据库！");
+                } catch (err) {
+                    console.error("背景保存失败", err);
+                    alert("背景图保存失败，请重试");
+                }
+            };
+            reader.readAsDataURL(this.files[0]);
+        }
+    };
+    input.click();
+}
+
+// 粘贴网络图片URL作为背景
+function openFireBgUrl() {
+    const url = prompt("请输入小火人背景图的 URL：");
+    if (url && url.trim() !== "") {
+        currentFireFriend.fireData.petBgUrl = url;
+        saveData();
+        closeFireBgChoiceModal();
+        renderFirePage(currentFireFriend);
+        alert("小火人装扮背景图已成功更新！");
+    }
+}
+
+// 还原默认背景
+function resetFireBg() {
+    if (confirm("确定要清除当前装扮背景，恢复默认吗？")) {
+        currentFireFriend.fireData.petBgUrl = null;
+        saveData();
+        closeFireBgChoiceModal();
+        renderFirePage(currentFireFriend);
+        alert("已恢复默认背景");
+    }
+}
+
+// 滑拽时实时更新小火人头像尺寸并显示数值
+function updateFirePetSize(val) {
+    if (!currentFireFriend) return;
+    const size = parseInt(val);
+    document.getElementById('fire-pet-size-display-text').innerText = size + "px";
+    
+    // 实时预览头像的大小调节
+    const petImg = document.querySelector('.fire-pet');
+    if (petImg) {
+        petImg.style.width = size + 'px';
+        petImg.style.height = size + 'px';
+    }
+    
+    currentFireFriend.fireData.petSize = size;
+    saveData();
+}
+// =========================================================================
+//                   全新小火人父母身份、抽奖系统与勋章收集墙逻辑
+// =========================================================================
+
+// 打开/关闭身份设置弹窗
+function openFireIdentityModal() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    document.getElementById('fire-identity-papa').value = data.papa || 'user';
+    document.getElementById('fire-identity-mama').value = data.mama || 'char';
+    document.getElementById('fire-identity-modal').style.display = 'flex';
+}
+
+function closeFireIdentityModal() {
+    document.getElementById('fire-identity-modal').style.display = 'none';
+}
+
+// 保存父母身份
+function saveFireIdentities() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    data.papa = document.getElementById('fire-identity-papa').value;
+    data.mama = document.getElementById('fire-identity-mama').value;
+    
+    saveData();
+    closeFireIdentityModal();
+    renderFirePage(currentFireFriend); // 刷新显示
+    alert("身份关系已成功保存！日记生成提示词将自动根据此关系调整。");
+}
+
+// 打开/关闭抽奖面板
+function openLotteryModal() {
+    if (!currentFireFriend) return alert("请先从聊天中打开小火人");
+    if (currentFireFriend.fireData.tickets === undefined) {
+        currentFireFriend.fireData.tickets = 0;
+    }
+    document.getElementById('lottery-ticket-count').innerText = currentFireFriend.fireData.tickets;
+    switchLotteryTab('draw');
+    document.getElementById('lottery-modal').style.display = 'flex';
+}
+
+function closeLotteryModal() {
+    document.getElementById('lottery-modal').style.display = 'none';
+    renderFirePage(currentFireFriend); // 刷新主界面数据
+}
+
+// 选项卡切换
+function switchLotteryTab(tab) {
+    document.getElementById('tab-lottery-draw').classList.toggle('active', tab === 'draw');
+    document.getElementById('tab-lottery-get').classList.toggle('active', tab === 'get');
+    document.getElementById('lottery-draw-panel').style.display = tab === 'draw' ? 'block' : 'none';
+    document.getElementById('lottery-get-panel').style.display = tab === 'get' ? 'block' : 'none';
+}
+
+// 消耗点数直接购买奖票
+function buyTicketWithPoints() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    if (data.chatPoints < 30) {
+        alert("兑换失败：当前聊天点数不足 30 点！快去和角色聊天赚取点数吧。");
+        return;
+    }
+    
+    data.chatPoints -= 30;
+    data.tickets = (data.tickets || 0) + 1;
+    saveData();
+    
+    // 更新弹窗与商店数据展示
+    document.getElementById('lottery-ticket-count').innerText = data.tickets;
+    alert("兑换成功：已扣除 30 星点，获得 1 张抽奖票！");
+}
+
+// 关闭结果文本展示框
+function closeTextResultModal() {
+    document.getElementById('fire-text-result-modal').style.display = 'none';
+}
+
+// ================= API 智能生成部分 =================
+
+// 执行具体奖项抽奖逻辑
+async function executeLotteryDraw(type) {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    
+    if (!data.tickets || data.tickets < 1) {
+        alert("抽奖失败：您的奖票数量为 0。请前往 [获取奖票] 版块用星点兑换。");
+        return;
+    }
+
+    // 扣除奖票
+    data.tickets -= 1;
+    document.getElementById('lottery-ticket-count').innerText = data.tickets;
+    saveData();
+
+    // 1. 如果抽到的是盲盒，随机转变为其他三种之一
+    if (type === 'blindbox') {
+        const types = ['diary', 'note', 'medal'];
+        const chosenType = types[Math.floor(Math.random() * types.length)];
+        alert("🎁 抽到了神秘盲盒！正在为你开启...");
+        executeLotteryDraw(chosenType);
+        return;
+    }
+
+    // 展示正在书写的提示框
+    const modal = document.getElementById('fire-text-result-modal');
+    const titleEl = document.getElementById('text-result-title');
+    const contentEl = document.getElementById('text-result-content');
+    
+    modal.style.display = 'flex';
+    contentEl.innerHTML = `<div style="text-align:center; padding-top:40px; color:#999;">⏳ 正在呼叫魔法笔为您书写中...</div>`;
+
+    // 2. 根据身份逻辑组合关系名
+    const papaName = (data.papa === 'user') ? myInfo.name : currentFriendName;
+    const mamaName = (data.mama === 'char') ? currentFriendName : myInfo.name;
+    const petName = data.petName || '火灵儿';
+    
+    // 获取当天的聊天记录，让日记和勋章更有结合感
+    const todayStart = new Date().setHours(0, 0, 0, 0);
+    const todayMsgs = (chatHistories[currentFriendName] || []).filter(m => m.time && m.time >= todayStart);
+    const contextContent = todayMsgs.slice(-10).map(m => `${m.type === 'self' ? '我' : '角色'}: ${m.text}`).join('\n');
+
+    // 3. 开始根据类型分配提示词并调用
+    let sysPrompt = "";
+    let userPrompt = "";
+
+    if (type === 'diary') {
+        titleEl.innerText = `📔 ${petName} 的日记`;
+        sysPrompt = `你现在要扮演一个由人类和AI角色共同抚养的可爱宠物/孩子，它的名字叫[${petName}]。
+人类(User)名字是[${myInfo.name}]，扮演它的[${data.papa === 'user' ? '爸爸' : '妈妈'}]；
+AI角色(Char)名字是[${currentFriendName}]，扮演它的[${data.mama === 'char' ? '妈妈' : '爸爸'}]。
+你要站在[${petName}]的孩子视角，写一篇 150 字至 200 字左右的温情日记。`;
+
+        userPrompt = `请结合今天他们两人之间的最新对话记录内容：
+"""
+${contextContent || '今天他们没有聊太多，但在静静地陪伴彼此。'}
+"""
+写一篇日记。要求：
+1. 语气必须软萌、天真、有孩子气。
+2. 必须在日记中正确称呼[${papaName}]为“爸爸”，称呼[${mamaName}]为“妈妈”。
+3. 既要写小火人今天自己的内心小情绪和小活动，也要写在它视角下观察到的爸爸和妈妈之间今天发生的趣事或甜蜜互动。
+4. 绝对不要带有任何Markdown加粗或代码格式，直接输出纯文本内容。`;
+
+    } else if (type === 'note') {
+        titleEl.innerText = `✉️ ${petName} 的悄悄话便签`;
+        sysPrompt = `你现在扮演小火人孩子[${petName}]。你写了一张温暖的悄悄话纸条，想要塞给[${papaName}爸爸]和[${mamaName}妈妈]。字数在 50 到 80 字之间。`;
+        userPrompt = `请结合今天他们的聊天气氛写一张暖心便签。语气软萌天真，表达对爸爸妈妈的爱与陪伴，字数短小。直接输出便签文字，不需要代码格式。`;
+
+    } else if (type === 'medal') {
+        // 成就勋章特殊处理（由 API 生成其名字和描述后存入本地数据库）
+        titleEl.innerText = `🏅 勋章解锁仪式`;
+        sysPrompt = `你是一个小火人勋章生成专家。你要根据用户与角色的互动背景（如：第一次喂食、连续聊天天数等），为他们生成一个专属成就勋章。`;
+        userPrompt = `请根据他们今天的对话记录和成长状态：
+"""
+聊天天数：${data.chatDays || 1} 天
+当前亲密度：${data.intimacy || 0}
+"""
+生成一个勋章。要求输出固定的 JSON 格式，不要包含任何 Markdown 格式或额外废话，严格按照以下示例格式：
+{
+  "name": "这里写勋章名称（如：资深奶爸、草莓收割者、星河守护者）",
+  "desc": "这里写获得此勋章的具体暖心理由（比如：在今天投喂了美味的草莓，亲密度再次破表！）",
+  "styleId": 1
+}
+(注：styleId 可选 1, 2, 3，代表三种不同的精致边框设计)`;
+    }
+
+    try {
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: aiConfig.model,
+                messages: [
+                    { role: "system", content: sysPrompt },
+                    { role: "user", content: userPrompt }
+                ],
+                temperature: 0.85
+            })
+        });
+        const apiData = await res.json();
+        
+        if (apiData.choices && apiData.choices[0]) {
+            const rawText = apiData.choices[0].message.content.trim();
+            
+            if (type === 'medal') {
+                // 勋章解析逻辑
+                try {
+                    const cleanJsonStr = rawText.replace(/```json|```/gi, "").trim();
+                    const medalObj = JSON.parse(cleanJsonStr);
+                    
+                    // 补全生成时间戳和拥有者名字
+                    medalObj.time = new Date().toLocaleDateString();
+                    medalObj.id = Date.now();
+                    
+                    if (!data.badges) data.badges = [];
+                    data.badges.push(medalObj);
+                    saveData();
+                    
+                    contentEl.innerHTML = `
+                        <div style="text-align:center; padding: 10px 0;">
+                            <div style="font-size:50px; margin-bottom: 10px; animation: fire-bounce 1s infinite ease-in-out;">🏅</div>
+                            <div style="font-size:18px; font-weight:bold; color:#D5B09D; margin-bottom: 8px;">🎉 解锁新勋章！</div>
+                            <div style="font-size:16px; font-weight:bold; color:#5d4037; background:rgba(213, 176, 157, 0.2); display:inline-block; padding:4px 15px; border-radius:12px; margin-bottom:12px;">《${medalObj.name}》</div>
+                            <div style="font-size:13px; color:#888880; line-height:1.6; text-align:left; background:#fff; padding:10px; border-radius:8px; border:1px solid #ddd;">${medalObj.desc}</div>
+                        </div>
+                    `;
+                } catch (jsonErr) {
+                    // 解析失败时的后备安全容错逻辑
+                    const fallbackMedal = {
+                        id: Date.now(),
+                        name: "初级育儿专家",
+                        desc: "与小火人一起开启了奇妙成长之旅！",
+                        styleId: Math.floor(Math.random() * 3) + 1,
+                        time: new Date().toLocaleDateString()
+                    };
+                    if (!data.badges) data.badges = [];
+                    data.badges.push(fallbackMedal);
+                    saveData();
+                    
+                    contentEl.innerHTML = `
+                        <div style="text-align:center;">
+                            <div style="font-size:40px;">🏅</div>
+                            <div style="font-size:16px; font-weight:bold; margin-top:10px;">《${fallbackMedal.name}》</div>
+                            <p style="font-size:12px; color:#666;">${fallbackMedal.desc}</p>
+                        </div>
+                    `;
+                }
+            } else {
+                // 日记/便签直接回显
+                contentEl.innerText = rawText;
+            }
+        } else {
+            throw new Error("接口无应答");
+        }
+    } catch (e) {
+        contentEl.innerHTML = `<div style="text-align:center; padding-top:40px; color:#fa5151;">❌ 提笔失败，原因：${e.message}。已经为您退还了 1 张奖票。</div>`;
+        data.tickets = (data.tickets || 0) + 1;
+        document.getElementById('lottery-ticket-count').innerText = data.tickets;
+        saveData();
+    }
+}
+
+// ================= 5. 勋章墙列表渲染 =================
+
+function openMedalWall() {
+    if (!currentFireFriend) return alert("请从聊天页进入小火人后再开启勋章墙");
+    document.getElementById('medal-wall-page').style.display = 'flex';
+    renderMedalWallList();
+}
+
+function closeMedalWall() {
+    document.getElementById('medal-wall-page').style.display = 'none';
+}
+
+// 渲染勋章墙
+function renderMedalWallList() {
+    const listEl = document.getElementById('medal-wall-list');
+    const data = currentFireFriend.fireData;
+    const badges = data.badges || [];
+
+    if (badges.length === 0) {
+        listEl.innerHTML = `
+            <div style="text-align:center; padding-top:100px; color:#888880;">
+                <div style="font-size:50px; margin-bottom:15px;">🔒</div>
+                <div style="font-size:15px; font-weight:bold;">勋章墙空空如也</div>
+                <p style="font-size:11px; margin-top:5px; color:#999;">去抽奖面板抽取 [成就勋章] 解锁专属荣誉吧！</p>
+            </div>
+        `;
+        return;
+    }
+
+// 三种精美的 SVG 勋章边框手绘样式模板
+const getBadgeStyleSVG = (styleId, name) => {
+    const ribbonText = name ? name.substring(0, 5) : "成就";
+    const ribbonFontSize = ribbonText.length > 3 ? (ribbonText.length > 4 ? 5.5 : 6.5) : 7.5;
+    const randId = Math.random().toString(36).substring(2, 7);
+
+    if (styleId === 1) {
+        // 样式一：蜜桃肉桂
+        return `
+        <svg viewBox="0 0 100 100" style="width:80px; height:80px; display:block; margin:0 auto; filter: drop-shadow(0px 3px 5px rgba(136,136,128,0.15));">
+            <defs>
+                <pattern id="gingham-1-${randId}" width="12" height="12" patternUnits="userSpaceOnUse">
+                    <rect width="12" height="12" fill="#FFFFFF"/>
+                    <rect width="6" height="12" fill="#FCECE6" opacity="0.8"/>
+                    <rect width="12" height="6" fill="#FCECE6" opacity="0.8"/>
+                </pattern>
+                <filter id="glow-1-${randId}" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="0.8" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+            </defs>
+            <circle cx="50" cy="46" r="40" fill="#FCECE6" stroke="#888880" stroke-width="1.5" />
+            <g fill="#D5B09D">
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(0 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(30 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(60 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(90 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(120 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(150 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(180 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(210 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(240 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(270 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(300 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(330 50 46)" />
+            </g>
+            <circle cx="50" cy="46" r="30" fill="url(#gingham-1-${randId})" stroke="#888880" stroke-width="1" />
+            <path d="M 22,35 L 24,37 L 22,39 L 20,37 Z" fill="#FFFFFF" filter="url(#glow-1-${randId})" />
+            <path d="M 78,35 L 80,37 L 78,39 L 76,37 Z" fill="#FFFFFF" filter="url(#glow-1-${randId})" />
+            <path d="M 12,74 L 18,63 L 25,69 L 18,80 Z" fill="#888880" opacity="0.3"/>
+            <path d="M 88,74 L 82,63 L 75,69 L 82,80 Z" fill="#888880" opacity="0.3"/>
+            <path d="M 12,74 L 18,63 L 26,67 L 21,78 Z" fill="#C0B7B8" stroke="#888880" stroke-width="1.2" />
+            <path d="M 88,74 L 82,63 L 74,67 L 79,78 Z" fill="#C0B7B8" stroke="#888880" stroke-width="1.2" />
+            <path d="M 17,67 Q 50,71 83,67 L 80,78 Q 50,82 20,78 Z" fill="#D5B09D" stroke="#888880" stroke-width="1.2" />
+            <text x="50" y="75" font-size="${ribbonFontSize}" font-weight="900" fill="#FFFFFF" text-anchor="middle" font-family="system-ui, sans-serif" letter-spacing="0.3">${ribbonText}</text>
+        </svg>`;
+    } else if (styleId === 2) {
+        // 样式二：雾粉豆沙
+        return `
+        <svg viewBox="0 0 100 100" style="width:80px; height:80px; display:block; margin:0 auto; filter: drop-shadow(0px 3px 5px rgba(136,136,128,0.15));">
+            <defs>
+                <pattern id="gingham-2-${randId}" width="12" height="12" patternUnits="userSpaceOnUse">
+                    <rect width="12" height="12" fill="#FFFFFF"/>
+                    <rect width="6" height="12" fill="#EAE6E8" opacity="0.8"/>
+                    <rect width="12" height="6" fill="#EAE6E8" opacity="0.8"/>
+                </pattern>
+                <filter id="glow-2-${randId}" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="0.8" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+            </defs>
+            <circle cx="50" cy="46" r="40" fill="#EAE6E8" stroke="#888880" stroke-width="1.5" />
+            <g fill="#C0B7B8">
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(0 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(30 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(60 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(90 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(120 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(150 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(180 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(210 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(240 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(270 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(300 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(330 50 46)" />
+            </g>
+            <circle cx="50" cy="46" r="30" fill="url(#gingham-2-${randId})" stroke="#888880" stroke-width="1" />
+            <path d="M 22,35 L 24,37 L 22,39 L 20,37 Z" fill="#FFFFFF" filter="url(#glow-2-${randId})" />
+            <path d="M 78,35 L 80,37 L 78,39 L 76,37 Z" fill="#FFFFFF" filter="url(#glow-2-${randId})" />
+            <path d="M 12,74 L 18,63 L 25,69 L 18,80 Z" fill="#888880" opacity="0.3"/>
+            <path d="M 88,74 L 82,63 L 75,69 L 82,80 Z" fill="#888880" opacity="0.3"/>
+            <path d="M 12,74 L 18,63 L 26,67 L 21,78 Z" fill="#D5B09D" stroke="#888880" stroke-width="1.2" />
+            <path d="M 88,74 L 82,63 L 74,67 L 79,78 Z" fill="#D5B09D" stroke="#888880" stroke-width="1.2" />
+            <path d="M 17,67 Q 50,71 83,67 L 80,78 Q 50,82 20,78 Z" fill="#C0B7B8" stroke="#888880" stroke-width="1.2" />
+            <text x="50" y="75" font-size="${ribbonFontSize}" font-weight="900" fill="#FFFFFF" text-anchor="middle" font-family="system-ui, sans-serif" letter-spacing="0.3">${ribbonText}</text>
+        </svg>`;
+    } else {
+        // 样式三：燕麦奶油
+        return `
+        <svg viewBox="0 0 100 100" style="width:80px; height:80px; display:block; margin:0 auto; filter: drop-shadow(0px 3px 5px rgba(136,136,128,0.15));">
+            <defs>
+                <pattern id="gingham-3-${randId}" width="12" height="12" patternUnits="userSpaceOnUse">
+                    <rect width="12" height="12" fill="#FFFFFF"/>
+                    <rect width="6" height="12" fill="#F1EADF" opacity="0.8"/>
+                    <rect width="12" height="6" fill="#F1EADF" opacity="0.8"/>
+                </pattern>
+                <filter id="glow-3-${randId}" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="0.8" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+            </defs>
+            <circle cx="50" cy="46" r="40" fill="#F1EADF" stroke="#888880" stroke-width="1.5" />
+            <g fill="#E8E1D1">
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(0 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(30 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(60 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(90 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(120 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(150 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(180 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(210 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(240 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(270 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(300 50 46)" />
+                <path d="M 50,11 C 49,9.5 47,9.5 47,11 C 47,12.5 50,14 50,14.5 C 50,14 53,12.5 53,11 C 53,9.5 51,9.5 50,11 Z" transform="rotate(330 50 46)" />
+            </g>
+            <circle cx="50" cy="46" r="30" fill="url(#gingham-3-${randId})" stroke="#888880" stroke-width="1" />
+            <path d="M 22,35 L 24,37 L 22,39 L 20,37 Z" fill="#FFFFFF" filter="url(#glow-3-${randId})" />
+            <path d="M 78,35 L 80,37 L 78,39 L 76,37 Z" fill="#FFFFFF" filter="url(#glow-3-${randId})" />
+            <path d="M 12,74 L 18,63 L 25,69 L 18,80 Z" fill="#888880" opacity="0.3"/>
+            <path d="M 88,74 L 82,63 L 75,69 L 82,80 Z" fill="#888880" opacity="0.3"/>
+            <path d="M 12,74 L 18,63 L 26,67 L 21,78 Z" fill="#C0B7B8" stroke="#888880" stroke-width="1.2" />
+            <path d="M 88,74 L 82,63 L 74,67 L 79,78 Z" fill="#C0B7B8" stroke="#888880" stroke-width="1.2" />
+            <path d="M 17,67 Q 50,71 83,67 L 80,78 Q 50,82 20,78 Z" fill="#E8E1D1" stroke="#888880" stroke-width="1.2" />
+            <text x="50" y="75" font-size="${ribbonFontSize}" font-weight="900" fill="#FFFFFF" text-anchor="middle" font-family="system-ui, sans-serif" letter-spacing="0.3">${ribbonText}</text>
+        </svg>`;
+    }
+};
+
+    listEl.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            ${badges.map(b => `
+                <div style="background: white; border: 2px solid #888880; border-radius: 20px; padding: 15px; text-align: center; box-shadow: none;">
+                    <div style="margin-bottom:10px;">
+                        ${getBadgeStyleSVG(b.styleId || 1, b.name)}
+                    </div>
+                    <div style="font-size: 14px; font-weight: bold; color: #5d4037; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${b.name}</div>
+                    <div style="font-size: 11px; color: #999; line-height: 1.4; text-align: left; min-height: 48px; background: #fafafa; padding: 8px; border-radius: 8px; border: 1px solid #eee; word-break: break-all;">${b.desc}</div>
+                    <div style="font-size: 9px; color: #ccc; margin-top: 8px; text-align: right;">解锁时间: ${b.time || '暂无'}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+// =========================================================================
+//                   小火人聊天室与性格人设编辑核心控制代码
+// =========================================================================
+
+// 打开/关闭小火人性格弹窗
+function openFirePersonaModal() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    document.getElementById('fire-pet-persona-input').value = data.petPersona || '';
+    document.getElementById('fire-persona-modal').style.display = 'flex';
+}
+
+function closeFirePersonaModal() {
+    document.getElementById('fire-persona-modal').style.display = 'none';
+}
+
+// 保存小火人性格
+function saveFirePersona() {
+    if (!currentFireFriend) return;
+    const val = document.getElementById('fire-pet-persona-input').value.trim();
+    if (!val) {
+        alert("性格描述不能为空哦！");
+        return;
+    }
+    currentFireFriend.fireData.petPersona = val;
+    saveData();
+    closeFirePersonaModal();
+    renderFirePage(currentFireFriend); // 刷新显示
+    alert("小火人性格设定保存成功！聊天室里他将以此性格与你交流。");
+}
+
+// 打开/关闭三人家园聊天室
+function openFireChatroom() {
+    if (!currentFireFriend) return alert("请先从聊天中打开小火人");
+    
+    // 初始化聊天室历史记录
+    if (!currentFireFriend.fireData.chatroomHistory) {
+        currentFireFriend.fireData.chatroomHistory = [];
+    }
+    
+    document.getElementById('fire-chatroom-page').style.display = 'flex';
+    document.getElementById('fire-chatroom-status').innerText = "";
+    renderFireChatroomMessages();
+}
+
+function closeFireChatroom() {
+    document.getElementById('fire-chatroom-page').style.display = 'none';
+}
+
+// 渲染家园聊天室的气泡，支持真头像、长按@、及肉桂手账温润双色气泡
+function renderFireChatroomMessages() {
+    const container = document.getElementById('fire-chatroom-messages');
+    const history = currentFireFriend.fireData.chatroomHistory || [];
+    const petName = currentFireFriend.fireData.petName || '小火人';
+    const friendName = currentFireFriend.name;
+    const data = currentFireFriend.fireData;
+
+    // A. 异步载入所有聊天室中待挂载的本地 IndexedDB 数据库头像
+    const getChatroomAvatarImgHtml = (senderType) => {
+        if (senderType === 'user') {
+            if (myInfo.avatar) {
+                if (myInfo.avatar.startsWith('indexeddb-')) {
+                    if (window.blobUrlCache && window.blobUrlCache[myInfo.avatar]) {
+                        return `<img src="${window.blobUrlCache[myInfo.avatar]}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    }
+                    return `<img class="db-img-loader" data-dbid="${myInfo.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                }
+                return `<img src="${myInfo.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            }
+            return '我';
+        } else if (senderType === 'char') {
+            if (currentFireFriend.avatarUrl) {
+                if (currentFireFriend.avatarUrl.startsWith('indexeddb-')) {
+                    if (window.blobUrlCache && window.blobUrlCache[currentFireFriend.avatarUrl]) {
+                        return `<img src="${window.blobUrlCache[currentFireFriend.avatarUrl]}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    }
+                    return `<img class="db-img-loader" data-dbid="${currentFireFriend.avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                }
+                return `<img src="${currentFireFriend.avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            }
+            return currentFireFriend.initial || friendName[0];
+        } else {
+            // 小火人
+            if (data.petAvatarUrl) {
+                if (data.petAvatarUrl.startsWith('indexeddb-')) {
+                    if (window.blobUrlCache && window.blobUrlCache[data.petAvatarUrl]) {
+                        return `<img src="${window.blobUrlCache[data.petAvatarUrl]}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    }
+                    return `<img class="db-img-loader" data-dbid="${data.petAvatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                }
+                return `<img src="${data.petAvatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            }
+            return '🔥';
+        }
+    };
+
+    container.innerHTML = history.map((m, idx) => {
+        let isSelf = (m.sender === 'user');
+        let senderDisplayName = '';
+        let atValue = '';
+
+        if (isSelf) {
+            senderDisplayName = `${myInfo.name} (${(data.papa === 'user') ? '爸爸' : '妈妈'})`;
+            atValue = `@${myInfo.name} `;
+        } else if (m.sender === 'char') {
+            senderDisplayName = `${friendName} (${(data.mama === 'char') ? '妈妈' : '爸爸'})`;
+            atValue = `@${friendName} `;
+        } else {
+            senderDisplayName = petName;
+            atValue = `@${petName} `;
+        }
+
+        // 调制极度契合手账的高级温润感双色气泡
+        // 自己发的使用燕麦肉桂暖橙黄，对方/宠物发的使用奶白灰，均不带边框与实体投影，极为柔和
+        const bubbleStyle = isSelf 
+            ? 'background: #D5B09D; color: white; margin-left: auto; border-radius: 12px 2px 12px 12px;' 
+            : 'background: #FFFFFF; color: #5d4037; border-radius: 2px 12px 12px 12px;';
+        const itemAlign = isSelf ? 'align-self: flex-end; text-align: right;' : 'align-self: flex-start; text-align: left;';
+
+        const avatarHtml = getChatroomAvatarImgHtml(m.sender);
+
+        return `
+            <div style="display: flex; gap: 10px; width: 100%; ${isSelf ? 'flex-direction: row-reverse;' : ''}">
+                <!-- 头像（支持长按注册艾特） -->
+                <div class="chatroom-avatar-node" 
+                     data-atname="${atValue}"
+                     style="width: 38px; height: 38px; border-radius: 50%; background: #FFF; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; flex-shrink: 0; border: 1px solid #888880; overflow:hidden; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                    ${avatarHtml}
+                </div>
+                <!-- 消息内容 -->
+                <div style="max-width: 75%; ${itemAlign}">
+                    <div style="font-size: 11px; color: #888880; margin-bottom: 4px; font-weight: bold;">${senderDisplayName}</div>
+                    <div style="padding: 10px 14px; font-size: 14px; line-height: 1.5; text-align: left; word-break: break-all; border: none !important; box-shadow: 0 1px 4px rgba(0,0,0,0.05); ${bubbleStyle}">
+                        ${m.text}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // 注册所有头像的长按艾特事件监听
+    const avatarNodes = container.querySelectorAll('.chatroom-avatar-node');
+    avatarNodes.forEach(node => {
+        let longPressTimer;
+        const atName = node.getAttribute('data-atname');
+        
+        const triggerAt = () => {
+            const inputField = document.getElementById('fire-chatroom-input');
+            if (inputField) {
+                inputField.value = atName + inputField.value;
+                inputField.focus();
+            }
+        };
+
+        node.onmousedown = () => { longPressTimer = setTimeout(triggerAt, 600); };
+        node.onmouseup = () => { clearTimeout(longPressTimer); };
+        node.ontouchstart = () => { longPressTimer = setTimeout(triggerAt, 600); };
+        node.ontouchend = () => { clearTimeout(longPressTimer); };
+    });
+
+    // 填补数据库头像异步缓存
+    loadAllDatabaseImages();
+
+    // 自动滚动到最底部
+    container.scrollTop = container.scrollHeight;
+}
+
+// 发送聊天室信息（只负责上屏，不自动回复）
+function sendFireChatroomMsg() {
+    const input = document.getElementById('fire-chatroom-input');
+    const val = input.value.trim();
+    if (!val) return;
+
+    const data = currentFireFriend.fireData;
+    const history = data.chatroomHistory;
+
+    // 1. 添加用户发出的消息
+    history.push({
+        sender: 'user',
+        text: val,
+        time: Date.now()
+    });
+    
+    input.value = '';
+    saveData();
+    renderFireChatroomMessages();
+}
+
+// 呼叫 API：让妈妈/爸爸和小火人角色产生基于人设的连发回复
+async function triggerFireChatroomAiReply() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    const history = data.chatroomHistory;
+
+    // 如果里面没有任何消息，无法生成上下文
+    if (history.length === 0) {
+        alert("聊天室中空空如也，请先对小火人和爸爸妈妈说一句话吧！");
+        return;
+    }
+
+    // 1. 显示正在输入状态
+    const statusEl = document.getElementById('fire-chatroom-status');
+    statusEl.innerText = "对方正在输入中...";
+
+    // 2. 调制关系人设前置规则
+    const petName = data.petName || '火灵儿';
+    const charName = currentFireFriend.name;
+    const papaLabel = (data.papa === 'user') ? `[${myInfo.name}] (爸爸)` : `[${charName}] (爸爸)`;
+    const mamaLabel = (data.mama === 'char') ? `[${charName}] (妈妈)` : `[${myInfo.name}] (妈妈)`;
+
+    const contextText = history.slice(-10).map(m => {
+        let roleName = "";
+        if (m.sender === 'user') roleName = (data.papa === 'user') ? '爸爸(我)' : '妈妈(我)';
+        else if (m.sender === 'char') roleName = (data.mama === 'char') ? '妈妈' : '爸爸';
+        else roleName = petName;
+        return `${roleName}: ${m.text}`;
+    }).join('\n');
+
+    const sysPrompt = `# Role
+你现在要同时模拟一个温馨的三人家庭群聊。
+家庭成员关系如下：
+1. 爸爸是：${papaLabel}；
+2. 妈妈是：${mamaLabel}；
+3. 孩子是小火人[${petName}]，它的性格设定是：[${data.petPersona}]。
+4. 妈妈/爸爸[${charName}]性格人设是：[${currentFireFriend.persona}]。
+
+## 模拟发言规则（严格遵守）：
+1. 观察最新的家园对话：
+"""
+${contextText}
+"""
+2. 作为一个充满爱的家庭，针对用户刚才说的话，接下来[${charName}]和[${petName}]要展开温情的互动回复。
+3. 回复格式要求符合人设：
+- 扮演[${charName}]时，必须完全严格尊循她原本的人设《${currentFireFriend.persona}》，用属于她的语气说话，但必须正确认识到自己是[${data.mama === 'char' ? '妈妈' : '爸爸'}]这一身份。
+- 扮演孩子[${petName}]时，完全符合性格《${data.petPersona}》，称呼[${myInfo.name}]为[${data.papa === 'user' ? '爸爸' : '妈妈'}]，称呼[${charName}]为[${data.mama === 'char' ? '妈妈' : '爸爸'}]。
+4. 请以符合逻辑的先后顺序，生成两人的互动发言，每个人物只生成一个发言块。不允许AI礼貌客套腔。
+
+## 输出格式（极其重要）：
+你必须严格按照以下标签格式输出两个发言块。不要带有任何 Markdown 语法符号：
+
+[SPEAKER] ${charName}
+[REPLY] 爸爸/妈妈 说的对话内容。
+
+[SPEAKER] ${petName}
+[REPLY] 小火人说的话。`;
+
+    try {
+        const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: aiConfig.model,
+                messages: [{ role: "system", content: sysPrompt }],
+                temperature: 0.85
+            })
+        });
+        const apiData = await res.json();
+        
+        if (apiData.choices && apiData.choices[0]) {
+            const rawReply = apiData.choices[0].message.content.trim();
+            
+            // 解析双角色发言块
+            const blocks = rawReply.split(/\[SPEAKER\]/i).filter(b => b.trim() !== '');
+            
+            for (let block of blocks) {
+                const lines = block.split('\n');
+                const speakerName = lines[0].trim().replace(/[*_#:`"“”']/g, '');
+                let replyPart = block.match(/\[REPLY\]([\s\S]*?)$/i)?.[1]?.trim() || "";
+
+                if (!replyPart) {
+                    replyPart = lines.slice(1).join('\n').replace(/\[REPLY\]/gi, "").trim();
+                }
+
+                if (!replyPart) continue;
+
+                // 辨别发件人
+                let finalSender = 'pet';
+                if (speakerName.toLowerCase() === charName.toLowerCase()) {
+                    finalSender = 'char';
+                }
+
+                // 依次将回复追加到家园历史中
+                history.push({
+                    sender: finalSender,
+                    text: replyPart,
+                    time: Date.now()
+                });
+                
+                // 每次追加消息时，都产生一个短暂的打字停顿效果，上屏显得更自然
+                await new Promise(r => setTimeout(r, 800));
+                saveData();
+                renderFireChatroomMessages();
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        alert("陪伴聊天室呼叫回复失败，请检查网络或 API 设定");
+    } finally {
+        statusEl.innerText = "";
+    }
 }
 </script>
 
