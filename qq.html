@@ -8091,33 +8091,7 @@ function applyHeaderAndInputBarStyles(friendName) {
     </div>
 </div>
 
-<!-- ================= 1. 新增：小火人身份关系设置弹窗 ================= -->
-<div id="fire-identity-modal" class="glass-modal" style="z-index: 9900; align-items: center; display: none;">
-    <div class="glass-card" style="width: 290px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
-        <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px; color: #D5B09D;">👪 设定小火人的父母</h3>
-        
-        <div style="margin-bottom: 15px;">
-            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">谁是【爸爸】 (Papa)？</label>
-            <select id="fire-identity-papa" style="width: 100%; padding: 8px; border-radius: 8px; border: 2px solid #888880; outline: none; background: #fff; font-size: 13px; color: #555;">
-                <option value="user">我 (User)</option>
-                <option value="char">角色 (Char)</option>
-            </select>
-        </div>
 
-        <div style="margin-bottom: 20px;">
-            <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">谁是【妈妈】 (Mama)？</label>
-            <select id="fire-identity-mama" style="width: 100%; padding: 8px; border-radius: 8px; border: 2px solid #888880; outline: none; background: #fff; font-size: 13px; color: #555;">
-                <option value="char">角色 (Char)</option>
-                <option value="user">我 (User)</option>
-            </select>
-        </div>
-
-        <div style="display: flex; gap: 10px;">
-            <button class="wx-btn" style="flex: 1; background: #eee; border: 2px solid #888880; color: #666; margin-bottom:0;" onclick="closeFireIdentityModal()">取消</button>
-            <button class="wx-btn" style="flex: 1; background: #D5B09D; border: 2px solid #888880; color: white; margin-bottom:0; font-weight: bold;" onclick="saveFireIdentities()">保存身份</button>
-        </div>
-    </div>
-</div>
 
 <!-- ================= 2. 新增：小火人游乐场抽奖弹窗 ================= -->
 <div id="lottery-modal" class="glass-modal" style="z-index: 9860; align-items: flex-end; display: none;">
@@ -8827,16 +8801,21 @@ function closeReadingSystem() {
             </div>
         </div>
 
-        <!-- 新增：身份角色设置栏 -->
-        <div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; margin-top: 15px; cursor: pointer;" onclick="openFireIdentityModal()">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-size: 14px; color: #888880; font-weight: bold; margin-bottom: 6px;">身份关系</div>
-                    <div id="fire-identity-display" style="font-size: 14px; color: #D5B09D; font-weight: bold;">点击设置爸爸妈妈</div>
-                </div>
-                <div style="font-size: 20px; color: #888880;">〉</div>
-            </div>
+<!-- 新增：身份角色设置栏 -->
+<div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; margin-top: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div>
+            <div style="font-size: 14px; color: #888880; font-weight: bold;">爸爸是</div>
         </div>
+        <div id="fire-papa-display" style="font-size: 14px; color: #D5B09D; font-weight: bold; cursor: pointer; padding: 6px 12px; background: #F1EADF; border-radius: 8px;" onclick="toggleFirePapa()">我</div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-size: 14px; color: #888880; font-weight: bold;">妈妈是</div>
+        </div>
+        <div id="fire-mama-display" style="font-size: 14px; color: #D5B09D; font-weight: bold; cursor: pointer; padding: 6px 12px; background: #F1EADF; border-radius: 8px;" onclick="toggleFireMama()">角色</div>
+    </div>
+</div>
 
         <!-- 新增：小火人性格设定栏 -->
         <div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; margin-top: 15px; cursor: pointer;" onclick="openFirePersonaModal()">
@@ -9555,7 +9534,8 @@ function openFireSettingsModal() {
     
     const data = currentFireFriend.fireData;
     document.getElementById('fire-pet-name-display').innerText = data.petName || "火灵儿";
-    
+// 新增：初始化身份显示
+updateFireIdentityDisplay();
     // 更新头像预览
     const avatarPreview = document.getElementById('fire-pet-avatar-preview');
     if (data.petAvatarUrl) {
@@ -9943,53 +9923,62 @@ function updateFirePetSize(val) {
 // =========================================================================
 
 // 打开/关闭身份设置弹窗
-function openFireIdentityModal() {
+// 切换爸爸身份
+function toggleFirePapa() {
     if (!currentFireFriend) return;
     const data = currentFireFriend.fireData;
     
-    // 强制确保变量中有默认字段，防止未初始化时报错
+    // 从 'user' 切换到 'char'，或从 'char' 切换到 'user'
+    data.papa = (data.papa === 'user') ? 'char' : 'user';
+    
+    // 保存数据
+    saveData();
+    
+    // 立即更新显示
+    updateFireIdentityDisplay();
+    
+    // 重新渲染小火人主页
+    renderFirePage(currentFireFriend);
+}
+
+// 切换妈妈身份
+function toggleFireMama() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    
+    // 从 'user' 切换到 'char'，或从 'char' 切换到 'user'
+    data.mama = (data.mama === 'user') ? 'char' : 'user';
+    
+    // 保存数据
+    saveData();
+    
+    // 立即更新显示
+    updateFireIdentityDisplay();
+    
+    // 重新渲染小火人主页
+    renderFirePage(currentFireFriend);
+}
+
+// 更新身份显示
+function updateFireIdentityDisplay() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    
+    // 确保变量初始化
     if (data.papa === undefined) data.papa = 'user';
     if (data.mama === undefined) data.mama = 'char';
     
-    document.getElementById('fire-identity-papa').value = data.papa;
-    document.getElementById('fire-identity-mama').value = data.mama;
-    document.getElementById('fire-identity-modal').style.display = 'flex';
-}
-
-function closeFireIdentityModal() {
-    document.getElementById('fire-identity-modal').style.display = 'none';
-}
-
-// 保存父母身份并立即刷新页面数据
-function saveFireIdentities() {
-    if (!currentFireFriend) return;
-    const data = currentFireFriend.fireData;
-    
-    const selectedPapa = document.getElementById('fire-identity-papa').value;
-    const selectedMama = document.getElementById('fire-identity-mama').value;
-    
-    // 把设置的新数据直接写入数据库结构中
-    data.papa = selectedPapa;
-    data.mama = selectedMama;
-    
-    // 1. 保存到本地存储
-    saveData();
-    
-    // 2. 关闭身份设置小弹窗
-    closeFireIdentityModal();
-    
-    // 3. 同时也重新渲染下层的大设置弹窗，使文字预览立刻刷新
-    const idDisplay = document.getElementById('fire-identity-display');
-    if (idDisplay) {
-        const pLabel = (selectedPapa === 'user') ? '爸爸(我)' : `爸爸(${currentFireFriend.name})`;
-        const mLabel = (selectedMama === 'char') ? `妈妈(${currentFireFriend.name})` : '妈妈(我)';
-        idDisplay.innerText = `${pLabel} & ${mLabel}`;
+    // 更新爸爸显示
+    const papaDisplay = document.getElementById('fire-papa-display');
+    if (papaDisplay) {
+        papaDisplay.innerText = (data.papa === 'user') ? '我' : currentFireFriend.name;
     }
     
-    // 4. 全局重新加载小火人主页数据
-    renderFirePage(currentFireFriend);
-    
-    alert("身份关系已保存！");
+    // 更新妈妈显示
+    const mamaDisplay = document.getElementById('fire-mama-display');
+    if (mamaDisplay) {
+        mamaDisplay.innerText = (data.mama === 'char') ? currentFireFriend.name : '我';
+    }
 }
 
 // 打开/关闭抽奖面板
@@ -10585,7 +10574,14 @@ async function triggerFireChatroomAiReply() {
             console.error("同步 ai_config 失败", e);
         }
     }
-    if (!aiConfig.key) return alert("请先在 [我 - API与模型设置] 中配置并保存您的 API Key");
+    if (!aiConfig.key) {
+        alert("请先在 [我 - API与模型设置] 中配置并保存您的 API Key");
+        return;
+    }
+    if (!aiConfig.url) {
+        alert("请先在 [我 - API与模型设置] 中配置并保存您的 API 地址");
+        return;
+    }
 
     // 1. 显示正在输入状态
     const statusEl = document.getElementById('fire-chatroom-status');
@@ -10594,44 +10590,43 @@ async function triggerFireChatroomAiReply() {
     // 2. 调制关系人设前置规则
     const petName = data.petName || '火灵儿';
     const charName = currentFireFriend.name;
-    const papaLabel = (data.papa === 'user') ? `[${myInfo.name}] (爸爸)` : `[${charName}] (爸爸)`;
-    const mamaLabel = (data.mama === 'char') ? `[${charName}] (妈妈)` : `[${myInfo.name}] (妈妈)`;
+    const papaName = (data.papa === 'user') ? myInfo.name : charName;
+    const mamaName = (data.mama === 'char') ? charName : myInfo.name;
 
     const contextText = history.slice(-10).map(m => {
         let roleName = "";
-        if (m.sender === 'user') roleName = (data.papa === 'user') ? '爸爸(我)' : '妈妈(我)';
+        if (m.sender === 'user') roleName = (data.papa === 'user') ? '爸爸' : '妈妈';
         else if (m.sender === 'char') roleName = (data.mama === 'char') ? '妈妈' : '爸爸';
         else roleName = petName;
         return `${roleName}: ${m.text}`;
     }).join('\n');
 
-    const sysPrompt = `# Role
-你现在要同时模拟一个温馨的三人家庭群聊。
-家庭成员关系如下：
-1. 爸爸是：${papaLabel}；
-2. 妈妈是：${mamaLabel}；
-3. 孩子是小火人[${petName}]，它的性格设定是：[${data.petPersona}]。
-4. 妈妈/爸爸[${charName}]性格人设是：[${currentFireFriend.persona}]。
+    const sysPrompt = `你现在要模拟一个三人家庭的温馨对话。
 
-## 模拟发言规则（严格遵守）：
-1. 观察最新的家园对话：
-"""
+家庭成员信息：
+- 爸爸：${papaName}
+- 妈妈：${mamaName}
+- 孩子：${petName}（性格：${data.petPersona || '可爱、温暖'}）
+- ${charName}的人设：${currentFireFriend.persona}
+
+最近的对话记录：
 ${contextText}
-"""
-2. 作为一个充满爱的家庭，针对用户刚才说的话，接下来[${charName}]和[${petName}]要展开温情的互动回复。
-3. 回复格式要求符合人设：
-- 扮演[${charName}]时，必须完全严格尊循她原本的人设《${currentFireFriend.persona}》，用属于她的语气说话，但必须正确认识到自己是[${data.mama === 'char' ? '妈妈' : '爸爸'}]这一身份。
-- 扮演孩子[${petName}]时，完全符合性格《${data.petPersona}》，称呼[${myInfo.name}]为[${data.papa === 'user' ? '爸爸' : '妈妈'}]，称呼[${charName}]为[${data.mama === 'char' ? '妈妈' : '爸爸'}]。
-4. 请以符合逻辑的先后顺序，生成两人的互动发言，每个人物只生成一个发言块。不允许AI礼貌客套腔。
 
-## 输出格式（极其重要）：
-你必须严格按照以下标签格式输出两个发言块。不要带有任何 Markdown 语法符号：
+你的任务是生成接下来${charName}和${petName}的回复。
 
-[SPEAKER] ${charName}
-[REPLY] 爸爸/妈妈 说的对话内容。
+要求：
+1. ${charName}必须按照"${currentFireFriend.persona}"的人设说话
+2. ${petName}必须按照"${data.petPersona || '可爱、温暖'}"的人设说话
+3. ${petName}称呼${papaName}为"爸爸"，称呼${mamaName}为"妈妈"
+4. ${charName}知道自己是${(data.mama === 'char') ? '妈妈' : '爸爸'}
+5. 不要使用任何Markdown格式，只输出纯文本
+6. 字数在50-100字之间，语气温暖亲切
 
-[SPEAKER] ${petName}
-[REPLY] 小火人说的话。`;
+按照以下格式输出（注意冒号后面要有一个空格）：
+
+${charName}: （这里是${charName}要说的话）
+
+${petName}: （这里是${petName}要说的话）`;
 
     try {
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
@@ -10640,50 +10635,65 @@ ${contextText}
             body: JSON.stringify({
                 model: aiConfig.model,
                 messages: [{ role: "system", content: sysPrompt }],
-                temperature: 0.85
+                temperature: 0.8,
+                max_tokens: 300
             })
         });
+        
         const apiData = await res.json();
         
-        if (apiData.choices && apiData.choices[0]) {
-            const rawReply = apiData.choices[0].message.content.trim();
-            
-            // 解析双角色发言块
-            const blocks = rawReply.split(/\[SPEAKER\]/i).filter(b => b.trim() !== '');
-            
-            for (let block of blocks) {
-                const lines = block.split('\n');
-                const speakerName = lines[0].trim().replace(/[*_#:`"“”']/g, '');
-                let replyPart = block.match(/\[REPLY\]([\s\S]*?)$/i)?.[1]?.trim() || "";
+        if (!apiData.choices || !apiData.choices[0]) {
+            alert("API 未返回有效数据，请检查网络");
+            statusEl.innerText = "";
+            return;
+        }
 
-                if (!replyPart) {
-                    replyPart = lines.slice(1).join('\n').replace(/\[REPLY\]/gi, "").trim();
-                }
+        const rawReply = apiData.choices[0].message.content.trim();
+        
+        // 按两个角色的名字来分割回复
+        const charPattern = new RegExp(`${charName}\\s*[:：]\\s*([^\\n]+)`, 'i');
+        const petPattern = new RegExp(`${petName}\\s*[:：]\\s*([^\\n]+)`, 'i');
+        
+        const charMatch = rawReply.match(charPattern);
+        const petMatch = rawReply.match(petPattern);
 
-                if (!replyPart) continue;
-
-                // 辨别发件人
-                let finalSender = 'pet';
-                if (speakerName.toLowerCase() === charName.toLowerCase()) {
-                    finalSender = 'char';
-                }
-
-                // 依次将回复追加到家园历史中
+        // 先添加角色的回复
+        if (charMatch && charMatch[1]) {
+            const charReply = charMatch[1].trim();
+            if (charReply) {
                 history.push({
-                    sender: finalSender,
-                    text: replyPart,
+                    sender: 'char',
+                    text: charReply,
                     time: Date.now()
                 });
-                
-                // 每次追加消息时，都产生一个短暂的打字停顿效果，上屏显得更自然
-                await new Promise(r => setTimeout(r, 800));
+                saveData();
+                renderFireChatroomMessages();
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+
+        // 再添加小火人的回复
+        if (petMatch && petMatch[1]) {
+            const petReply = petMatch[1].trim();
+            if (petReply) {
+                history.push({
+                    sender: 'pet',
+                    text: petReply,
+                    time: Date.now()
+                });
                 saveData();
                 renderFireChatroomMessages();
             }
         }
+
+        // 如果都没有匹配到，提示用户
+        if (!charMatch && !petMatch) {
+            alert("API 返回的格式不符合要求，请重试。返回内容：\n" + rawReply.substring(0, 100));
+        }
+
     } catch (e) {
-        console.error(e);
-        alert("陪伴聊天室呼叫回复失败，请检查网络或 API 设定");
+        console.error("API 调用错误:", e);
+        alert("陪伴聊天室呼叫回复失败，原因：" + e.message);
     } finally {
         statusEl.innerText = "";
     }
