@@ -6759,10 +6759,71 @@ function handleFireEntry() {
 }
 
 const FOODS = [
-    { name: '小火花', icon: '✨', cost: 10, intimacy: 5 },
-    { name: '爱心便当', icon: '🍱', cost: 50, intimacy: 30 },
-    { name: '火龙果', icon: '🐉', cost: 100, intimacy: 70 },
-    { name: '灿烂星光', icon: '🌟', cost: 200, intimacy: 150 }
+    { 
+        name: '苹果', 
+        icon: '🍎', 
+        cost: 20, 
+        intimacy: 20,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/Tt9w/611X660/IMG_20260827_100706.png/webp',
+        type: 'paid'
+    },
+    { 
+        name: '草莓', 
+        icon: '🍓', 
+        cost: 20, 
+        intimacy: 20,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/cIJI/549X579/IMG_20260827_100753.png/webp',
+        type: 'paid'
+    },
+    { 
+        name: '胡萝卜', 
+        icon: '🥕', 
+        cost: 0, 
+        intimacy: 10,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/Yv7b/683X556/IMG_20260827_100806.png/webp',
+        type: 'free',
+        freeDaily: true
+    },
+    { 
+        name: '蛋糕', 
+        icon: '🎂', 
+        cost: 50, 
+        intimacy: 60,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/Rt9F/721X612/IMG_20260827_100740.png/webp',
+        type: 'premium'
+    },
+    { 
+        name: '巧克力', 
+        icon: '🍫', 
+        cost: 50, 
+        intimacy: 60,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/XjPR/696X655/IMG_20260827_100732.png/webp',
+        type: 'premium'
+    },
+    { 
+        name: '饼干', 
+        icon: '🍪', 
+        cost: 50, 
+        intimacy: 60,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/Fn3g/696X621/IMG_20260827_100715.png/webp',
+        type: 'premium'
+    },
+    { 
+        name: '糖果', 
+        icon: '🍬', 
+        cost: 50, 
+        intimacy: 60,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/5hcK/686X630/IMG_20260827_100723.png/webp',
+        type: 'premium'
+    },
+    { 
+        name: '冰淇淋', 
+        icon: '🍦', 
+        cost: 50, 
+        intimacy: 60,
+        img: 'https://img2.tofaka.com/autoupload/f/3alms/20260827/cIJI/549X579/IMG_20260827_100753.png/webp',
+        type: 'premium'
+    }
 ];
 
 function renderFirePage(friend) {
@@ -6803,40 +6864,9 @@ function renameFirePet() {
 }
 
 function feedFirePet(idx) {
-    const friend = currentFireFriend;
-    const data = friend.fireData;
-    const food = FOODS[idx];
-    const today = new Date().toLocaleDateString();
-    const isFirstFeed = data.lastFeedDate !== today;
-    
-    let actualCost = food.cost;
-    if (isFirstFeed && idx === 0) {
-        actualCost = 0;
-    }
-    
-    if (data.chatPoints < actualCost) {
-        return alert("聊天点数不足，快去和角色聊天获得吧！");
-    }
-    
-    // 执行喂食
-    data.chatPoints -= actualCost;
-    data.intimacy = (data.intimacy || 0) + food.intimacy;
-    data.lastFeedDate = today;
-    
-    // 动画效果
-    const pet = document.querySelector('.fire-pet');
-    pet.style.animation = 'none';
-    setTimeout(() => pet.style.animation = 'fire-bounce 0.5s 2 ease-in-out', 10);
-    
-    saveData();
-    renderFirePage(friend);
-    
-    // 飘字提示
-    const tip = document.createElement('div');
-    tip.innerText = `+${food.intimacy} 亲密度`;
-    tip.style.cssText = `position:fixed; left:50%; top:40%; transform:translateX(-50%); color:#ff4500; font-weight:bold; font-size:20px; z-index:10000; animation: fade-up 1s forwards;`;
-    document.body.appendChild(tip);
-    setTimeout(() => tip.remove(), 1000);
+    // 这个函数已经被新的 feedWithFood 函数替代
+    // 保留作为向后兼容
+    openFoodShop();
 }
 
 function closeFirePage() {
@@ -8214,7 +8244,7 @@ function applyHeaderAndInputBarStyles(friendName) {
         <!-- 顶端蓝色椭圆积分胶囊 -->
         <div class="fire-points-capsule handdrawn-box" id="fire-chat-points">点数: 0</div>
         <!-- 右上角设置 -->
-<div class="fire-settings-btn handdrawn-btn" onclick="renameFirePet()">
+<div class="fire-settings-btn handdrawn-btn" onclick="openFireSettingsModal()">
     <svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
         <circle cx="12" cy="12" r="3"></circle>
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -8249,7 +8279,7 @@ function applyHeaderAndInputBarStyles(friendName) {
         </svg>
         <span>种子发芽</span>
     </div>
-    <div class="organic-col-card handdrawn-box" onclick="alert('快去聊天赢取投喂道具吧！')">
+    <div class="organic-col-card handdrawn-box" onclick="openFoodShop()">
         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;">
             <path d="M3 12h18M5 12c0 5 3 7 7 7s7-2 7-7M9 7c0-2 1-3 1-3M12 7c0-2 1-3 1-3M15 7c0-2 1-3 1-3"></path>
         </svg>
@@ -8515,8 +8545,74 @@ function closeReadingSystem() {
         </div>
     </div>
 </div>
-<!-- MCP工具弹窗 -->
-<div id="mcp-modal" class="glass-modal" style="z-index: 9900; align-items: flex-end;">
+<!-- 小火人设置弹窗 -->
+<div id="fire-settings-modal" class="glass-modal" style="z-index: 9850; align-items: flex-end;">
+    <div style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 25px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(25px + env(safe-area-inset-bottom)); border: 2px solid #888880;">
+        <!-- 关闭按钮 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <span style="font-size: 18px; color: #888880; cursor: pointer; font-weight: bold;" onclick="closeFireSettingsModal()">〈 返回</span>
+            <span style="font-size: 18px; color: #888880; font-weight: bold;">小火人设置</span>
+            <span style="width: 40px;"></span>
+        </div>
+
+        <!-- 名字设置栏 -->
+        <div style="background: white; border-radius: 15px; padding: 18px; margin-bottom: 15px; border: 2px solid #888880; cursor: pointer;" onclick="editFirePetName()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 14px; color: #888880; font-weight: bold; margin-bottom: 6px;">小火人名称</div>
+                    <div id="fire-pet-name-display" style="font-size: 16px; color: #D5B09D; font-weight: bold;">火灵儿</div>
+                </div>
+                <div style="font-size: 20px; color: #888880;">〉</div>
+            </div>
+        </div>
+
+        <!-- 形象设置栏 -->
+        <div style="background: white; border-radius: 15px; padding: 18px; border: 2px solid #888880; cursor: pointer;" onclick="openFirePetAvatarChoice()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                    <div style="font-size: 14px; color: #888880; font-weight: bold; margin-bottom: 8px;">小火人形象</div>
+                    <div id="fire-pet-avatar-preview" style="width: 60px; height: 60px; border-radius: 10px; background: #D5B09D; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #888880;">
+                        <img src="https://img2.tofaka.com/autoupload/f/3alms/20260826/xDXE/448X409/IMG_20260826_193954.png/webp" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                </div>
+                <div style="font-size: 20px; color: #888880;">〉</div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 食物店铺弹窗 -->
+<div id="food-shop-modal" class="glass-modal" style="z-index: 9850; align-items: flex-end; display: none;">
+    <div style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; padding-bottom: calc(20px + env(safe-area-inset-bottom)); border: 2px solid #888880;">
+        <!-- 标题栏 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span style="font-size: 18px; color: #888880; cursor: pointer; font-weight: bold;" onclick="closeFoodShop()">〈 返回</span>
+            <span style="font-size: 18px; color: #888880; font-weight: bold;">食物商店</span>
+            <span style="font-size: 18px; color: #D5B09D; font-weight: bold;" id="food-shop-points">点数: 0</span>
+        </div>
+
+        <!-- 食物网格 -->
+        <div id="food-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
+            <!-- 这里会动态生成 -->
+        </div>
+
+        <!-- 底部提示 -->
+        <div style="text-align: center; font-size: 12px; color: #888880; border-top: 2px solid #D5B09D; padding-top: 15px;">
+            💡 点击食物卡片可以兑换投喂
+        </div>
+    </div>
+</div>
+<!-- 小火人形象选择弹窗 -->
+<div id="fire-pet-avatar-choice-modal" class="glass-modal" style="z-index: 9851;">
+    <div class="glass-card" style="width: 280px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880;">
+        <h3 style="text-align: center; margin-bottom: 20px; color: #D5B09D; font-size: 16px; font-weight: bold;">修改小火人形象</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="triggerFirePetAvatarUpload()">从相册选择</button>
+            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="openFirePetAvatarUrl()">粘贴图片 URL</button>
+            <button style="background: white; border: 2px solid #888880; border-radius: 12px; padding: 12px; font-size: 14px; color: #888880; font-weight: bold; cursor: pointer;" onclick="resetFirePetAvatar()">恢复默认形象</button>
+        </div>
+        <div style="text-align: center; margin-top: 15px; cursor: pointer; color: #888880; font-weight: bold;" onclick="closeFirePetAvatarChoiceModal()">取消</div>
+    </div>
+</div>
     <div style="background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(20px + env(safe-area-inset-bottom));">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="margin: 0; font-size: 17px; color: #333;">MCP工具</h3>
@@ -9171,6 +9267,278 @@ function toggleAutoTranslate(val) {
         f.autoTranslate = val;
         saveData();
     }
+}
+// ===== 小火人设置弹窗相关函数 =====
+
+// 打开小火人设置弹窗
+function openFireSettingsModal() {
+    if (!currentFireFriend) return alert("请先从聊天中打开小火人");
+    
+    const data = currentFireFriend.fireData;
+    document.getElementById('fire-pet-name-display').innerText = data.petName || "火灵儿";
+    
+    // 更新头像预览
+    const avatarPreview = document.getElementById('fire-pet-avatar-preview');
+    if (data.petAvatarUrl) {
+        if (data.petAvatarUrl.startsWith('indexeddb-')) {
+            getAvatarBlob(data.petAvatarUrl).then(blob => {
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    avatarPreview.innerHTML = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+            });
+        } else {
+            avatarPreview.innerHTML = `<img src="${data.petAvatarUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        }
+    } else {
+        avatarPreview.innerHTML = `<img src="https://img2.tofaka.com/autoupload/f/3alms/20260826/xDXE/448X409/IMG_20260826_193954.png/webp" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    document.getElementById('fire-settings-modal').style.display = 'flex';
+}
+
+// 关闭小火人设置弹窗
+function closeFireSettingsModal() {
+    document.getElementById('fire-settings-modal').style.display = 'none';
+}
+
+// 编辑小火人名称
+function editFirePetName() {
+    if (!currentFireFriend) return;
+    const data = currentFireFriend.fireData;
+    const currentName = data.petName || "火灵儿";
+    const newName = prompt("请修改小火人的名字：", currentName);
+    
+    if (newName !== null && newName.trim() !== "") {
+        const cleanName = newName.trim();
+        data.petName = cleanName;
+        document.getElementById('fire-pet-name-display').innerText = cleanName;
+        document.getElementById('fire-pet-name').innerText = cleanName;
+        saveData();
+        alert("小火人名字已修改为：" + cleanName);
+    }
+}
+
+// 打开小火人形象选择弹窗
+function openFirePetAvatarChoice() {
+    document.getElementById('fire-pet-avatar-choice-modal').style.display = 'flex';
+}
+
+// 关闭小火人形象选择弹窗
+function closeFirePetAvatarChoiceModal() {
+    document.getElementById('fire-pet-avatar-choice-modal').style.display = 'none';
+}
+
+// 上传小火人头像
+function triggerFirePetAvatarUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function() {
+        if (this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                const uniqueId = `indexeddb-fire-pet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const blob = dataURLtoBlob(base64Data);
+                
+                try {
+                    await saveAvatarBlob(uniqueId, blob);
+                    currentFireFriend.fireData.petAvatarUrl = uniqueId;
+                    
+                    // 更新预览
+                    const blobUrl = URL.createObjectURL(blob);
+                    document.getElementById('fire-pet-avatar-preview').innerHTML = `<img src="${blobUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    document.querySelector('.fire-pet-showcase img').src = blobUrl;
+                    
+                    saveData();
+                    closeFirePetAvatarChoiceModal();
+                    alert("小火人形象已更新");
+                } catch (err) {
+                    console.error("头像保存失败", err);
+                    alert("头像保存失败，请重试");
+                }
+            };
+            reader.readAsDataURL(this.files[0]);
+        }
+    };
+    input.click();
+}
+
+// 输入小火人头像URL
+function openFirePetAvatarUrl() {
+    const url = prompt("请输入小火人的图片 URL：");
+    if (url && url.trim() !== "") {
+        currentFireFriend.fireData.petAvatarUrl = url;
+        
+        // 更新预览
+        document.getElementById('fire-pet-avatar-preview').innerHTML = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        document.querySelector('.fire-pet-showcase img').src = url;
+        
+        saveData();
+        closeFirePetAvatarChoiceModal();
+        alert("小火人形象已更新");
+    }
+}
+
+// 恢复小火人默认形象
+function resetFirePetAvatar() {
+    if (confirm("确定要恢复小火人的默认形象吗？")) {
+        const defaultUrl = "https://img2.tofaka.com/autoupload/f/3alms/20260826/xDXE/448X409/IMG_20260826_193954.png/webp";
+        currentFireFriend.fireData.petAvatarUrl = null;
+        
+        // 更新预览
+        document.getElementById('fire-pet-avatar-preview').innerHTML = `<img src="${defaultUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        document.querySelector('.fire-pet-showcase img').src = defaultUrl;
+        
+        saveData();
+        closeFirePetAvatarChoiceModal();
+        alert("已恢复小火人的默认形象");
+    }
+}
+// ===== 食物店铺相关函数 =====
+
+// 打开食物店铺
+function openFoodShop() {
+    if (!currentFireFriend) return alert("请先从聊天中打开小火人");
+    
+    // 更新点数显示
+    document.getElementById('food-shop-points').innerText = `点数: ${currentFireFriend.fireData.chatPoints || 0}`;
+    
+    // 初始化食物店铺数据
+    if (!currentFireFriend.fireData.foodLog) {
+        currentFireFriend.fireData.foodLog = {};
+    }
+    
+    renderFoodGrid();
+    document.getElementById('food-shop-modal').style.display = 'flex';
+}
+
+// 关闭食物店铺
+function closeFoodShop() {
+    document.getElementById('food-shop-modal').style.display = 'none';
+    renderFirePage(currentFireFriend); // 刷新小火人页面的数据
+}
+
+// 渲染食物网格
+function renderFoodGrid() {
+    const grid = document.getElementById('food-grid');
+    const foodLog = currentFireFriend.fireData.foodLog || {};
+    const today = new Date().toLocaleDateString();
+    
+    grid.innerHTML = FOODS.map((food, idx) => {
+        let status = '兑换';
+        let disabled = false;
+        let costText = food.cost + '点数';
+        
+        // 免费食物逻辑
+        if (food.type === 'free') {
+            const lastFreeDate = foodLog[`free_date_${idx}`];
+            if (lastFreeDate === today) {
+                status = '已领取';
+                costText = '明天再来';
+                disabled = true;
+            } else {
+                costText = '免费';
+            }
+        } else if (food.type === 'paid') {
+            costText = food.cost + '点数';
+        } else if (food.type === 'premium') {
+            costText = food.cost + '点数';
+        }
+        
+        // 点数不足检查
+        if (!disabled && currentFireFriend.fireData.chatPoints < food.cost) {
+            status = '点数不足';
+            disabled = true;
+        }
+        
+        return `
+            <div style="background: white; border: 2px solid #888880; border-radius: 15px; padding: 12px; text-align: center; cursor: ${disabled ? 'not-allowed' : 'pointer'}; opacity: ${disabled ? '0.6' : '1'}; transition: all 0.2s;" 
+                 onclick="${disabled ? '' : `feedWithFood(${idx})`}"
+                 onmousedown="this.style.background='#f5f5f5'" 
+                 onmouseup="this.style.background='white'"
+                 ontouchstart="this.style.background='#f5f5f5'" 
+                 ontouchend="this.style.background='white'">
+                <img src="${food.img}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;">
+                <div style="font-size: 14px; font-weight: bold; color: #888880; margin-bottom: 4px;">${food.name}</div>
+                <div style="font-size: 11px; color: #D5B09D; margin-bottom: 6px;">+${food.intimacy}亲密度</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">${costText}</div>
+                <div style="font-size: 11px; background: ${disabled ? '#ddd' : '#D5B09D'}; color: white; padding: 4px 8px; border-radius: 8px; font-weight: bold;">${status}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 用食物喂小火人
+function feedWithFood(idx) {
+    if (!currentFireFriend) return;
+    
+    const food = FOODS[idx];
+    const data = currentFireFriend.fireData;
+    
+    // 检查点数
+    if (data.chatPoints < food.cost) {
+        alert("聊天点数不足，快去和角色聊天获得吧！");
+        return;
+    }
+    
+    // 免费食物特殊逻辑
+    if (food.type === 'free') {
+        if (!data.foodLog) data.foodLog = {};
+        
+        const today = new Date().toLocaleDateString();
+        const lastFreeDate = data.foodLog[`free_date_${idx}`];
+        
+        if (lastFreeDate === today) {
+            alert("每日免费食物已领取，明天再来吧！");
+            return;
+        }
+        
+        // 标记为已领取
+        data.foodLog[`free_date_${idx}`] = today;
+        // 第一份免费，从第二份开始扣10点数
+        // 这里不扣点数，因为是免费的
+    } else {
+        // 付费食物，扣除点数
+        data.chatPoints -= food.cost;
+    }
+    
+    // 增加亲密度
+    data.intimacy = (data.intimacy || 0) + food.intimacy;
+    
+    // 播放喂食动画
+    const pet = document.querySelector('.fire-pet');
+    if (pet) {
+        pet.style.animation = 'none';
+        setTimeout(() => pet.style.animation = 'fire-bounce 0.5s 2 ease-in-out', 10);
+    }
+    
+    saveData();
+    renderFoodGrid(); // 刷新店铺
+    
+    // 飘字提示
+    const tip = document.createElement('div');
+    tip.innerText = `+${food.intimacy} 亲密度`;
+    tip.style.cssText = `
+        position: fixed; 
+        left: 50%; 
+        top: 40%; 
+        transform: translateX(-50%); 
+        color: #D5B09D; 
+        font-weight: bold; 
+        font-size: 20px; 
+        z-index: 10000; 
+        animation: fade-up 1s forwards;
+        pointer-events: none;
+    `;
+    document.body.appendChild(tip);
+    setTimeout(() => tip.remove(), 1000);
+    
+    // 更新显示
+    document.getElementById('food-shop-points').innerText = `点数: ${data.chatPoints}`;
+    
+    alert(`成功投喂${food.name}，小火人获得${food.intimacy}亲密度！`);
 }
 </script>
 
