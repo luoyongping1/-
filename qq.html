@@ -8093,7 +8093,7 @@ function applyHeaderAndInputBarStyles(friendName) {
 
 <!-- ================= 1. 新增：小火人身份关系设置弹窗 ================= -->
 <div id="fire-identity-modal" class="glass-modal" style="z-index: 9900; align-items: center; display: none;">
-    <div class="glass-card" onclick="event.stopPropagation()" style="width: 290px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
+    <div class="glass-card" style="width: 290px; padding: 20px; border-radius: 15px; background: #F8E8D8; border: 2px solid #888880; color: #888880; font-family: sans-serif;">
         <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px; color: #D5B09D;">👪 设定小火人的父母</h3>
         
         <div style="margin-bottom: 15px;">
@@ -8242,14 +8242,16 @@ function applyHeaderAndInputBarStyles(friendName) {
 
 <!-- ================= 2. 新增：三人家园聊天室全屏页面 ================= -->
 <div id="fire-chatroom-page" class="page" style="z-index: 1240; background-color: #F8E8D8; display: none; flex-direction: column; color: #888880; box-sizing: border-box; padding: calc(10px + env(safe-area-inset-top)) 0 calc(10px + env(safe-area-inset-bottom)) 0; height: 100%; width: 100%; position: fixed; top: 0; left: 0;">
-<!-- 头部操作栏 -->
-<div class="fire-top-section" style="margin-bottom: 10px; flex-shrink: 0; padding: 0 15px; position: relative;">
-    <div class="fire-close-btn handdrawn-btn" onclick="closeFireChatroom()">〈</div>
-    <div style="font-size: 16px; font-weight: bold; position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; white-space: nowrap; pointer-events: none;">
-        <span>🏡 三人家园聊天室</span>
+    <!-- 头部操作栏 -->
+    <div class="fire-top-section" style="margin-bottom: 10px; flex-shrink: 0; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; position: relative;">
+        <div class="fire-close-btn handdrawn-btn" style="z-index: 2;" onclick="closeFireChatroom()">〈</div>
+        <div style="position: absolute; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 6px; pointer-events: none; z-index: 1;">
+            <span>🏡 三人家园聊天室</span>
+            <span style="font-size: 11px; color: #ff4d4f; font-weight: bold;" id="fire-chatroom-status"></span>
+        </div>
+        <!-- 保持右侧对称的占位区 -->
+        <div style="width: 38px; height: 38px; z-index: 2;"></div>
     </div>
-    <div style="font-size: 12px; color: #D5B09D; font-weight: bold; min-width: 38px; text-align: right;" id="fire-chatroom-status"></div>
-</div>
 
     <!-- 聊天气泡显示区域：去掉了原先的2px外边框与卡片圆角，完全通铺全屏 -->
     <div id="fire-chatroom-messages" style="flex: 1; overflow-y: auto; background: rgba(255, 255, 255, 0.25); padding: 15px; box-sizing: border-box; margin-bottom: 12px; display: flex; flex-direction: column; gap: 12px; width: 100%;">
@@ -8793,7 +8795,7 @@ function closeReadingSystem() {
 </div>
 <!-- 小火人设置弹窗 -->
 <div id="fire-settings-modal" class="glass-modal" style="z-index: 9850; align-items: flex-end;">
-    <div onclick="event.stopPropagation()" style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 25px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(25px + env(safe-area-inset-bottom)); border: 2px solid #888880;">
+    <div style="background: #F8E8D8; width: 100%; border-radius: 20px 20px 0 0; padding: 25px; box-sizing: border-box; max-height: 85vh; overflow-y: auto; padding-bottom: calc(25px + env(safe-area-inset-bottom)); border: 2px solid #888880;">
         <!-- 关闭按钮 -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <span style="font-size: 18px; color: #888880; cursor: pointer; font-weight: bold;" onclick="closeFireSettingsModal()">〈 返回</span>
@@ -9944,8 +9946,13 @@ function updateFirePetSize(val) {
 function openFireIdentityModal() {
     if (!currentFireFriend) return;
     const data = currentFireFriend.fireData;
-    document.getElementById('fire-identity-papa').value = data.papa || 'user';
-    document.getElementById('fire-identity-mama').value = data.mama || 'char';
+    
+    // 强制确保变量中有默认字段，防止未初始化时报错
+    if (data.papa === undefined) data.papa = 'user';
+    if (data.mama === undefined) data.mama = 'char';
+    
+    document.getElementById('fire-identity-papa').value = data.papa;
+    document.getElementById('fire-identity-mama').value = data.mama;
     document.getElementById('fire-identity-modal').style.display = 'flex';
 }
 
@@ -9953,17 +9960,36 @@ function closeFireIdentityModal() {
     document.getElementById('fire-identity-modal').style.display = 'none';
 }
 
-// 保存父母身份
+// 保存父母身份并立即刷新页面数据
 function saveFireIdentities() {
     if (!currentFireFriend) return;
     const data = currentFireFriend.fireData;
-    data.papa = document.getElementById('fire-identity-papa').value;
-    data.mama = document.getElementById('fire-identity-mama').value;
     
+    const selectedPapa = document.getElementById('fire-identity-papa').value;
+    const selectedMama = document.getElementById('fire-identity-mama').value;
+    
+    // 把设置的新数据直接写入数据库结构中
+    data.papa = selectedPapa;
+    data.mama = selectedMama;
+    
+    // 1. 保存到本地存储
     saveData();
+    
+    // 2. 关闭身份设置小弹窗
     closeFireIdentityModal();
-    renderFirePage(currentFireFriend); // 刷新显示
-    alert("身份关系已成功保存！日记生成提示词将自动根据此关系调整。");
+    
+    // 3. 同时也重新渲染下层的大设置弹窗，使文字预览立刻刷新
+    const idDisplay = document.getElementById('fire-identity-display');
+    if (idDisplay) {
+        const pLabel = (selectedPapa === 'user') ? '爸爸(我)' : `爸爸(${currentFireFriend.name})`;
+        const mLabel = (selectedMama === 'char') ? `妈妈(${currentFireFriend.name})` : '妈妈(我)';
+        idDisplay.innerText = `${pLabel} & ${mLabel}`;
+    }
+    
+    // 4. 全局重新加载小火人主页数据
+    renderFirePage(currentFireFriend);
+    
+    alert("身份关系已保存！");
 }
 
 // 打开/关闭抽奖面板
@@ -10541,17 +10567,6 @@ function sendFireChatroomMsg() {
 // 呼叫 API：让妈妈/爸爸和小火人角色产生基于人设的连发回复
 async function triggerFireChatroomAiReply() {
     if (!currentFireFriend) return;
-    
-    // 强制同步主页面的最新 API 设置
-    let savedAiConfig = localStorage.getItem('ai_config');
-    if (savedAiConfig) {
-        try {
-            aiConfig = JSON.parse(savedAiConfig);
-        } catch(e) {
-            console.error("同步 ai_config 失败", e);
-        }
-    }
-    
     const data = currentFireFriend.fireData;
     const history = data.chatroomHistory;
 
@@ -10561,9 +10576,20 @@ async function triggerFireChatroomAiReply() {
         return;
     }
 
+    // 强制与主页面的最新 API 设置保持同步
+    let savedAiConfig = localStorage.getItem('ai_config');
+    if (savedAiConfig) {
+        try {
+            aiConfig = JSON.parse(savedAiConfig);
+        } catch(e) {
+            console.error("同步 ai_config 失败", e);
+        }
+    }
+    if (!aiConfig.key) return alert("请先在 [我 - API与模型设置] 中配置并保存您的 API Key");
+
     // 1. 显示正在输入状态
     const statusEl = document.getElementById('fire-chatroom-status');
-    statusEl.innerText = "对方正在输入中...";
+    statusEl.innerText = " (对方正在输入中...)";
 
     // 2. 调制关系人设前置规则
     const petName = data.petName || '火灵儿';
@@ -10610,7 +10636,7 @@ ${contextText}
     try {
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': 'Bearer ' + aiConfig.key, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: aiConfig.model,
                 messages: [{ role: "system", content: sysPrompt }],
