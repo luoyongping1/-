@@ -10612,26 +10612,27 @@ async function triggerFireChatroomAiReply() {
 最近的对话记录：
 ${contextText}
 
-你的任务是生成接下来${charName}和${petName}的回复。
+你的任务是同时生成接下来${charName}和${petName}的回复。
 
-要求：
-1. ${charName}必须按照"${currentFireFriend.persona}"的人设说话
-2. ${petName}必须按照"${data.petPersona || '可爱、温暖'}"的人设说话
-3. ${petName}称呼${papaName}为"爸爸"，称呼${mamaName}为"妈妈"
-4. ${charName}知道自己是${(data.mama === 'char') ? '妈妈' : '爸爸'}
-5. 不要使用任何Markdown格式，只输出纯文本
-6. 字数在50-100字之间，语气温暖亲切
+【要求与输出格式】：
+1. ${charName}必须按照"${currentFireFriend.persona}"的人设说话。
+2. ${petName}必须按照"${data.petPersona || '可爱、温暖'}"的人设说话。
+3. ${petName}称呼${papaName}为"爸爸"，称呼${mamaName}为"妈妈"。
+4. ${charName}知道自己是${(data.mama === 'char') ? '妈妈' : '爸爸'}。
+5. 必须且只能按照以下特定的标签格式输出，不要输出任何多余的Markdown标记（如 * 或 **）或任何解释性、闲聊文字：
 
-按照以下格式输出（注意冒号后面要有一个空格）：
+[CHAR]
+这里写${charName}说的话，支持换行
+[/CHAR]
 
-${charName}: （这里是${charName}要说的话）
-
-${petName}: （这里是${petName}要说的话）`;
+[PET]
+这里写${petName}说的话，支持换行
+[/PET]`;
 
     try {
         const res = await fetch(`${aiConfig.url.replace(/\/$/, "")}/chat/completions`, {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + aiConfig.key, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `Bearer ${aiConfig.key}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: aiConfig.model,
                 messages: [{ role: "system", content: sysPrompt }],
@@ -10650,44 +10651,48 @@ ${petName}: （这里是${petName}要说的话）`;
 
         const rawReply = apiData.choices[0].message.content.trim();
         
-        // 按两个角色的名字来分割回复
-        const charPattern = new RegExp(`${charName}\\s*[:：]\\s*([^\\n]+)`, 'i');
-        const petPattern = new RegExp(`${petName}\\s*[:：]\\s*([^\\n]+)`, 'i');
-        
-        const charMatch = rawReply.match(charPattern);
-        const petMatch = rawReply.match(petPattern);
+        // 提取 [CHAR] 和 [PET] 标签中的内容
+        const charMatch = rawReply.match(/\[CHAR\]([\s\S]*?)\[\/CHAR\]/i);
+        const petMatch = rawReply.match(/\[PET\]([\s\S]*?)\[\/PET\]/i);
+
+        let charReply = charMatch ? charMatch[1].trim() : "";
+        let petReply = petMatch ? petMatch[1].trim() : "";
+
+        // 备用解析逻辑（如果AI偶尔没有使用标签，尝试匹配常规格式，比如带有星号的格式）
+        if (!charReply) {
+            const charFallback = rawReply.match(new RegExp(`(?:\\*?\\s*${charName}|角色)\\s*[:：]\\s*([^\\n\\[]+)`, 'i'));
+            charReply = charFallback ? charFallback[1].trim() : "";
+        }
+        if (!petReply) {
+            const petFallback = rawReply.match(new RegExp(`(?:\\*?\\s*${petName}|孩子|宠物)\\s*[:：]\\s*([^\\n\\[]+)`, 'i'));
+            petReply = petFallback ? petFallback[1].trim() : "";
+        }
 
         // 先添加角色的回复
-        if (charMatch && charMatch[1]) {
-            const charReply = charMatch[1].trim();
-            if (charReply) {
-                history.push({
-                    sender: 'char',
-                    text: charReply,
-                    time: Date.now()
-                });
-                saveData();
-                renderFireChatroomMessages();
-                await new Promise(r => setTimeout(r, 1000));
-            }
+        if (charReply) {
+            history.push({
+                sender: 'char',
+                text: charReply,
+                time: Date.now()
+            });
+            saveData();
+            renderFireChatroomMessages();
+            await new Promise(r => setTimeout(r, 1000));
         }
 
         // 再添加小火人的回复
-        if (petMatch && petMatch[1]) {
-            const petReply = petMatch[1].trim();
-            if (petReply) {
-                history.push({
-                    sender: 'pet',
-                    text: petReply,
-                    time: Date.now()
-                });
-                saveData();
-                renderFireChatroomMessages();
-            }
+        if (petReply) {
+            history.push({
+                sender: 'pet',
+                text: petReply,
+                time: Date.now()
+            });
+            saveData();
+            renderFireChatroomMessages();
         }
 
         // 如果都没有匹配到，提示用户
-        if (!charMatch && !petMatch) {
+        if (!charReply && !petReply) {
             alert("API 返回的格式不符合要求，请重试。返回内容：\n" + rawReply.substring(0, 100));
         }
 
