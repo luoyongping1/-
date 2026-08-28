@@ -759,6 +759,29 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        /* 返回选择角色页面的按钮样式 */
+        .back-btn {
+            position: absolute;
+            top: calc(var(--ai-phone-app-safe-top, 44px) + 5px);
+            left: 15px;
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1.5px dashed var(--primary); /* 与整体手账缝线风格契合 */
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+            z-index: 12;
+        }
+
+        .back-btn:active {
+            transform: scale(0.95);
+            background-color: #f4f7f4;
+        }
     </style>
 </head>
 <body>
@@ -777,6 +800,9 @@
 
     <!-- 顶栏：仅在大厅显示 -->
     <div class="header" id="mainHeader">
+        <!-- 新增返回按钮 -->
+        <button class="back-btn" onclick="backToCharSelect()">⇠ 返回</button>
+
         <div class="header-title-area">
             <span class="welcome-tag">Welcome Home</span>
             <h1 class="main-title" id="mainTitle">我 <span style="color: var(--primary)">♥</span> 伴侣</h1>
@@ -2210,6 +2236,11 @@
                 <p style="font-size:11px; color:var(--text-sub);">获得情侣空间积分 +${points}！</p>
                 <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top: 10px;" onclick="closeModal()">确认</button>
             `);
+        }
+
+        // 新增：点击返回重新显示角色选择界面的函数
+        function backToCharSelect() {
+            document.getElementById('char-select-screen').style.display = 'flex';
         }
 
         window.onload = init;
