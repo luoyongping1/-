@@ -1107,16 +1107,29 @@
                     return data;
                 }
             },
-            ai: {
-                generate: async ({ characterId, instruction, appTags }) => {
-                    await initDB();
-                    const aiConfig = await getKV('ai_config', { url: '', key: '', model: '' });
-                    const friends = await getKV('qq_friends', []);
-                    const friend = friends.find(f => f.name === characterId) || { persona: '开朗温柔' };
-                    
-                    if (!aiConfig.key) {
-                        throw new Error("请先在主屏幕[设置]中配置 API 密钥");
-                    }
+ai: {
+    generate: async ({ characterId, instruction, appTags }) => {
+        await initDB();
+        // 优先读取本地 IndexedDB，若无则尝试读取主屏幕 index.html 存储在 localStorage 中的 API 密钥
+        let aiConfig = await getKV('ai_config', null);
+        if (!aiConfig) {
+            try {
+                const localConfig = localStorage.getItem('ai_config');
+                if (localConfig) {
+                    aiConfig = JSON.parse(localConfig);
+                }
+            } catch (e) {
+                console.error("读取主屏幕 API 配置失败:", e);
+            }
+        }
+        if (!aiConfig || !aiConfig.key) {
+            aiConfig = { url: '', key: '', model: '' };
+        }
+        const friends = await getKV('qq_friends', []);
+        
+        if (!aiConfig.key) {
+            throw new Error("请先在主屏幕[设置]中配置 API 密钥");
+        }
 
                     const sysPrompt = `你现在是用户的情侣/爱人，名字叫[${characterId}]。你的性格设定是：[${friend.persona}]。
 当前场景：你们在“情侣空间”中养崽崽或玩游戏。
@@ -2024,82 +2037,136 @@
         }
 
 
-        // ==================== 小游戏核心 ====================
+// ==================== 小游戏核心 ====================
 
-        let qaStep = 0;
-        const qaQuestions = [
-            "我们第一次相遇是在什么时候/什么场景？",
-            "如果我们要去旅游，你最想和TA去哪里？",
-            "你觉得对方身上最吸引你的一个优点是？",
-            "当对方心情不好的时候，你会怎么安慰TA？",
-            "想象一下，我们5年后的生活会是什么样子的？"
-        ];
-        let userQAAnswers = [];
+let qaStep = 0;
+const qaQuestions = [
+    "我们第一次相遇是在什么时候/什么场景？",
+    "如果我们要去旅游，你最想和TA去哪里？",
+    "你觉得对方身上最吸引你的一个优点是？",
+    "当对方心情不好的时候，你会怎么安慰TA？",
+    "想象一下，我们5年后的生活会是什么样子的？"
+];
+let userQAAnswers = [];
 
-        function openQAIntro() {
-            showModal(`
-                <h3 style="margin-top:0; color: var(--primary);">💖 默契情侣问答</h3>
-                <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5;">系统将给出 5 道关于你们关系与未来的灵魂提问，你和角色都会进行回答。完成可获得 30 经验值！</p>
-                <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top: 10px;" onclick="startQAGame()">开始问答之旅</button>
-            `);
+function openQAIntro() {
+    showModal(`
+        <h3 style="margin-top:0; color: var(--primary);">💖 默契情侣问答</h3>
+        <p style="font-size: 12px; color: var(--text-sub); line-height: 1.5;">系统将给出 5 道关于你们关系与未来的灵魂提问，你和角色都会进行回答。完成可获得 30 经验值！</p>
+        <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top: 10px;" onclick="startQAGame()">开始问答之旅</button>
+    `);
+}
+
+async function startQAGame() {
+    qaStep = 0;
+    userQAAnswers = [];
+    
+    // 备份默认问题，防止网络超时或API异常时游戏卡住
+    const defaultQuestions = [
+        "我们第一次相遇是在什么时候/什么场景？",
+        "如果我们要去旅游，你最想和TA去哪里？",
+        "你觉得对方身上最吸引你的一个优点是？",
+        "当对方心情不好的时候，你会怎么安慰TA？",
+        "想象一下，我们5年后的生活会是什么样子的？"
+    ];
+    
+    api.ui.toast('正在构思本轮专属默契问题...');
+    
+    try {
+        const prompt = `请为我们生成5个温馨有趣、新颖的情侣默契问答题目。要求：仅输出这5个题目，每行输出一个，不要带序号或任何多余的废话。`;
+        const res = await api.ai.generate({
+            characterId: currentPartner.id,
+            instruction: prompt,
+            appTags: ['couple_qa_init']
+        });
+        
+        // 按换行拆分题目，并过滤掉多余的标号数字如 "1. "
+        let lines = res.text.split('\n')
+            .map(line => line.trim().replace(/^\d+[\.\s、]+/, ''))
+            .filter(line => line.length > 2);
+        
+        if (lines.length >= 5) {
+            qaQuestions.length = 0; 
+            qaQuestions.push(...lines.slice(0, 5));
+        } else {
+            qaQuestions.length = 0;
+            qaQuestions.push(...defaultQuestions);
         }
+    } catch (e) {
+        console.warn("AI生成问题失败，已启用默认备用问题：", e);
+        qaQuestions.length = 0;
+        qaQuestions.push(...defaultQuestions);
+    }
+    
+    showQAPage();
+}
 
-        function startQAGame() {
-            qaStep = 0;
-            userQAAnswers = [];
-            showQAPage();
-        }
+function showQAPage() {
+    let dots = '';
+    for (let i = 0; i < 5; i++) {
+        dots += `<div class="step-dot ${i === qaStep ? 'active' : ''}"></div>`;
+    }
 
-        function showQAPage() {
-            let dots = '';
+    showModal(`
+        <div class="step-indicator">${dots}</div>
+        <h3 style="margin-top:0; font-size:14px;">问题 ${qaStep + 1}/5</h3>
+        <p style="font-weight:bold; margin-bottom:15px; font-size: 13px;" id="qaQuestionText">${qaQuestions[qaStep]}</p>
+        <input type="text" id="qaAnswerInput" class="input-sweet" placeholder="输入你的真心话回答...">
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="nextQA()">下一题</button>
+    `);
+}
+
+async function nextQA() {
+    const ans = document.getElementById('qaAnswerInput').value.trim();
+    if (!ans) {
+        api.ui.toast('请填写你的回答~');
+        return;
+    }
+    userQAAnswers.push(ans);
+    qaStep++;
+
+    if (qaStep < 5) {
+        showQAPage();
+    } else {
+        api.ui.toast('正在采集对方的默契回答...');
+        try {
+            // 构建包含所有问题和玩家回答的完整记录，以便 AI 能够理解并针对性回答
+            let qaDetails = [];
             for (let i = 0; i < 5; i++) {
-                dots += `<div class="step-dot ${i === qaStep ? 'active' : ''}"></div>`;
+                qaDetails.push(`问题${i + 1}：${qaQuestions[i]}\n我的回答：${userQAAnswers[i]}`);
             }
+            
+            const prompt = `我们刚刚完成了一轮情侣问答。以下是本轮的问题和我的回答：\n\n${qaDetails.join('\n\n')}\n\n请针对上述的5个问题，分别给出你的对应答案，并在最后对我们本轮的默契程度进行一段深情、甜蜜或调皮的评价。`;
+            
+            const res = await api.ai.generate({
+                characterId: currentPartner.id,
+                instruction: prompt,
+                appTags: ['couple_qa']
+            });
 
+            await api.chat.writeHistory({
+                characterId: currentPartner.id,
+                role: 'assistant',
+                content: `📊 [系统：情侣问答完成]\n\n我的回答与默契点评：\n${res.text}`
+            });
+
+            await addExp(30);
+            
+            // 修改：不直接关闭弹窗，而是在弹窗中清晰展示 AI 伴侣的回复
             showModal(`
-                <div class="step-indicator">${dots}</div>
-                <h3 style="margin-top:0; font-size:14px;">问题 ${qaStep + 1}/5</h3>
-                <p style="font-weight:bold; margin-bottom:15px; font-size: 13px;" id="qaQuestionText">${qaQuestions[qaStep]}</p>
-                <input type="text" id="qaAnswerInput" class="input-sweet" placeholder="输入你的真心话回答...">
-                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="nextQA()">下一题</button>
+                <h3 style="margin-top:0; color: var(--primary);">💖 问答完成！</h3>
+                <p style="font-size: 11px; color: var(--text-sub); margin-bottom: 8px;">以下是来自 ${currentPartner.name} 的默契答复：</p>
+                <div style="font-size: 12px; background: #fafbfa; border: 1px dashed var(--border-color); padding: 12px; border-radius: 10px; line-height: 1.5; text-align: left; max-height: 200px; overflow-y: auto; white-space: pre-wrap; color: var(--text-main); margin-bottom: 12px;">${res.text}</div>
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="closeModal()">太棒了，返回空间</button>
             `);
+            
+            api.ui.toast('🎉 问答结果已同步同步至 QQ 消息！');
+        } catch (e) {
+            console.error("问答分析失败：", e);
+            api.ui.toast('AI 生成失败，请重试');
         }
-
-        async function nextQA() {
-            const ans = document.getElementById('qaAnswerInput').value.trim();
-            if (!ans) {
-                api.ui.toast('请填写你的回答~');
-                return;
-            }
-            userQAAnswers.push(ans);
-            qaStep++;
-
-            if (qaStep < 5) {
-                showQAPage();
-            } else {
-                api.ui.toast('正在采集对方的默契回答...');
-                try {
-                    const prompt = `我们刚刚完成了一轮情侣问答，这是我的答案：${userQAAnswers.join(' | ')}。请给出你的对应回答，并生成一段评价我们默契度的话。`;
-                    const res = await api.ai.generate({
-                        characterId: currentPartner.id,
-                        instruction: prompt,
-                        appTags: ['couple_qa']
-                    });
-
-                    await api.chat.writeHistory({
-                        characterId: currentPartner.id,
-                        role: 'assistant',
-                        content: `📊 [系统：情侣问答完成]\n\n我的回答与默契点评：\n${res.text}`
-                    });
-
-                    await addExp(30);
-                    closeModal();
-                    api.ui.toast('🎉 问答已同步上传至 QQ 中，快去看看TA的回答吧！');
-                } catch (e) {
-                    api.ui.toast('AI 生成失败，请重试');
-                }
-            }
-        }
+    }
+}
 
         function openDrawIntro() {
             showModal(`
