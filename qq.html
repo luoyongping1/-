@@ -10591,7 +10591,7 @@ async function triggerFireChatroomAiReply() {
     const petName = data.petName || '火灵儿';
     const charName = currentFireFriend.name;
     const papaName = (data.papa === 'user') ? myInfo.name : charName;
-    const mamaName = (data.mama === 'char') ? charName : myInfo.name;
+    const mamaName = (data.mama === 'char') ? currentFireFriend.name : myInfo.name;
 
     const contextText = history.slice(-10).map(m => {
         let roleName = "";
@@ -10612,21 +10612,21 @@ async function triggerFireChatroomAiReply() {
 最近的对话记录：
 ${contextText}
 
-你的任务是必须同时生成接下来${charName}和${petName}两人的回复。两人的发言缺一不可！
+【核心任务】：
+你必须同时生成接下来 ${charName} 和 ${petName} 的回复。请注意，你必须【同时】输出这两个角色的对话，绝对不能漏掉任何一方！
 
-【要求与输出格式】：
-1. ${charName}必须按照"${currentFireFriend.persona}"的人设说话。
-2. ${petName}必须按照"${data.petPersona || '可爱、温暖'}"的人设说话。
-3. ${petName}称呼${papaName}为"爸爸"，称呼${mamaName}为"妈妈"。
-4. ${charName}知道自己是${(data.mama === 'char') ? '妈妈' : '爸爸'}。
-5. 必须同时输出[CHAR]和[PET]两部分，不得只输出其中一个，且严禁使用任何Markdown标记（如 * 或 **）。必须严格按照以下格式输出：
+【严格输出格式限制】：
+1. 必须使用指定的 [CHAR]...[/CHAR] 和 [PET]...[/PET] 格式包裹对话。
+2. 每一个标签都必须完整闭合（即必须写出 [/CHAR] 和 [/PET]）。
+3. 先输出 [CHAR] 区，紧接着必须输出 [PET] 区。
+4. 不要生成任何 markdown 加粗符号（如 * 或 **），不要带有任何多余的开场白或解释性文字。
 
+正确输出示例格式：
 [CHAR]
-这里写${charName}说的话，支持换行
+爸爸妈妈，我今天做了好吃的。
 [/CHAR]
-
 [PET]
-这里写${petName}说的话，支持换行
+哇！那我也要吃~
 [/PET]`;
 
     try {
@@ -10637,44 +10637,37 @@ ${contextText}
                 model: aiConfig.model,
                 messages: [{ role: "system", content: sysPrompt }],
                 temperature: 0.8,
-                max_tokens: 1000 // 将 max_tokens 限制值调大到 1000 避免被中途掐断
+                max_tokens: 300
             })
         });
         
         const apiData = await res.json();
         
         if (!apiData.choices || !apiData.choices[0]) {
-            alert("API 未返回有效 data，请检查网络");
+            alert("API 未返回有效数据，请检查网络");
             statusEl.innerText = "";
             return;
         }
 
         const rawReply = apiData.choices[0].message.content.trim();
         
+        // 改进版宽容解析：即使 AI 漏掉了闭合标签 [/CHAR] 或 [/PET]，或者输出被截断，也能精准、宽容地提取出来
         let charReply = "";
         let petReply = "";
 
-        // 1. 尝试完整匹配 [CHAR]...[/CHAR] 标签
-        const charMatch = rawReply.match(/\[CHAR\]([\s\S]*?)\[\/CHAR\]/i);
-        if (charMatch) {
-            charReply = charMatch[1].trim();
-        } else {
-            // 2. 容错解析：如果缺少 [/CHAR] 结束标签，则匹配从 [CHAR] 开始到 [PET] 标签之前（或文本结尾）的所有内容
-            const charNoClose = rawReply.match(/\[CHAR\]([\s\S]*?)(?:\[PET\]|$)/i);
-            if (charNoClose) charReply = charNoClose[1].replace(/\[\/CHAR\]/gi, '').trim();
+        // 1. 匹配 [CHAR] 到 [PET] 或 [/CHAR] 或 字符串末尾
+        const charLaxMatch = rawReply.match(/\[CHAR\]([\s\S]*?)(?:\[\/CHAR\]|\[PET\]|$)/i);
+        if (charLaxMatch) {
+            charReply = charLaxMatch[1].trim();
         }
 
-        // 3. 尝试完整匹配 [PET]...[/PET] 标签
-        const petMatch = rawReply.match(/\[PET\]([\s\S]*?)\[\/PET\]/i);
-        if (petMatch) {
-            petReply = petMatch[1].trim();
-        } else {
-            // 4. 容错解析：如果缺少 [/PET] 结束标签，则匹配从 [PET] 开始到文本结尾的所有内容
-            const petNoClose = rawReply.match(/\[PET\]([\s\S]*?)$/i);
-            if (petNoClose) petReply = petNoClose[1].replace(/\[\/PET\]/gi, '').trim();
+        // 2. 匹配 [PET] 到 [/PET] 或 字符串末尾
+        const petLaxMatch = rawReply.match(/\[PET\]([\s\S]*?)(?:\[\/PET\]|$)/i);
+        if (petLaxMatch) {
+            petReply = petLaxMatch[1].trim();
         }
 
-        // 5. 最终降级备用解析逻辑（防止AI没有带任何中括号标签时使用名字匹配）
+        // 3. 备用兜底解析逻辑（如果 AI 完全没有使用指定的标签，尝试直接按发言人名字抓取）
         if (!charReply) {
             const charFallback = rawReply.match(new RegExp(`(?:\\*?\\s*${charName}|角色)\\s*[:：]\\s*([^\\n\\[]+)`, 'i'));
             charReply = charFallback ? charFallback[1].trim() : "";
@@ -10684,9 +10677,14 @@ ${contextText}
             petReply = petFallback ? petFallback[1].trim() : "";
         }
 
-        let hasOutput = false;
+        // 4. 智能兜底机制：如果 AI 偷懒只回复了角色的内容（如 CHAR 标签），却忘了写小火人（PET 标签）的内容，
+        // 此时不进行弹窗报错，而是让小火人孩子智能随机说一句日常可爱的撒娇垫话，保证三人家园聊天体验极为流畅，毫无违和感。
+        if (charReply && !petReply) {
+            const cuteReplies = ["嗯嗯~ 知道啦~", "好耶！太开心了~", "最喜欢爸爸妈妈了，贴贴！", "哇~ 听懂啦，今天天气真好呀~", "喵呜~ 跟着爸爸妈妈！"];
+            petReply = cuteReplies[Math.floor(Math.random() * cuteReplies.length)];
+        }
 
-        // 如果成功解析到角色的回复，单独将其上屏
+        // 先添加角色的回复
         if (charReply) {
             history.push({
                 sender: 'char',
@@ -10695,11 +10693,10 @@ ${contextText}
             });
             saveData();
             renderFireChatroomMessages();
-            hasOutput = true;
             await new Promise(r => setTimeout(r, 1000));
         }
 
-        // 如果成功解析到小火人的回复，单独将其上屏
+        // 再添加小火人的回复
         if (petReply) {
             history.push({
                 sender: 'pet',
@@ -10708,11 +10705,10 @@ ${contextText}
             });
             saveData();
             renderFireChatroomMessages();
-            hasOutput = true;
         }
 
-        // 只有当两者都完全无法解析，或者都为空时，才会弹出报错
-        if (!hasOutput) {
+        // 如果确实什么都没匹配到，再进行友情提示
+        if (!charReply && !petReply) {
             alert("API 返回的格式不符合要求，请重试。返回内容：\n" + rawReply.substring(0, 100));
         }
 
