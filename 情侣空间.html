@@ -430,14 +430,17 @@
             50% { transform: translateY(-10px) rotate(1deg); }
         }
 
-        .baby-character {
-            font-size: 76px;
-            filter: drop-shadow(0 6px 12px rgba(125, 158, 128, 0.15));
-            user-select: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+.baby-character {
+    font-size: 76px;
+    filter: drop-shadow(0 6px 12px rgba(125, 158, 128, 0.15));
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-size: cover; /* 让图片等比例缩放并填满容器 */
+    background-position: center; /* 让图片居中显示 */
+    background-repeat: no-repeat; /* 防止图片重复平铺 */
+}
 
         .baby-shadow {
             width: 50px;
