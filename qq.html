@@ -10612,14 +10612,14 @@ async function triggerFireChatroomAiReply() {
 最近的对话记录：
 ${contextText}
 
-你的任务是同时生成接下来${charName}和${petName}的回复。
+你的任务是必须同时生成接下来${charName}和${petName}两人的回复。两人的发言缺一不可！
 
 【要求与输出格式】：
 1. ${charName}必须按照"${currentFireFriend.persona}"的人设说话。
 2. ${petName}必须按照"${data.petPersona || '可爱、温暖'}"的人设说话。
 3. ${petName}称呼${papaName}为"爸爸"，称呼${mamaName}为"妈妈"。
 4. ${charName}知道自己是${(data.mama === 'char') ? '妈妈' : '爸爸'}。
-5. 必须且只能按照以下特定的标签格式输出，不要输出任何多余的Markdown标记（如 * 或 **）或任何解释性、闲聊文字：
+5. 必须同时输出[CHAR]和[PET]两部分，不得只输出其中一个，且严禁使用任何Markdown标记（如 * 或 **）。必须严格按照以下格式输出：
 
 [CHAR]
 这里写${charName}说的话，支持换行
@@ -10637,28 +10637,44 @@ ${contextText}
                 model: aiConfig.model,
                 messages: [{ role: "system", content: sysPrompt }],
                 temperature: 0.8,
-                max_tokens: 300
+                max_tokens: 1000 // 将 max_tokens 限制值调大到 1000 避免被中途掐断
             })
         });
         
         const apiData = await res.json();
         
         if (!apiData.choices || !apiData.choices[0]) {
-            alert("API 未返回有效数据，请检查网络");
+            alert("API 未返回有效 data，请检查网络");
             statusEl.innerText = "";
             return;
         }
 
         const rawReply = apiData.choices[0].message.content.trim();
         
-        // 提取 [CHAR] 和 [PET] 标签中的内容
+        let charReply = "";
+        let petReply = "";
+
+        // 1. 尝试完整匹配 [CHAR]...[/CHAR] 标签
         const charMatch = rawReply.match(/\[CHAR\]([\s\S]*?)\[\/CHAR\]/i);
+        if (charMatch) {
+            charReply = charMatch[1].trim();
+        } else {
+            // 2. 容错解析：如果缺少 [/CHAR] 结束标签，则匹配从 [CHAR] 开始到 [PET] 标签之前（或文本结尾）的所有内容
+            const charNoClose = rawReply.match(/\[CHAR\]([\s\S]*?)(?:\[PET\]|$)/i);
+            if (charNoClose) charReply = charNoClose[1].replace(/\[\/CHAR\]/gi, '').trim();
+        }
+
+        // 3. 尝试完整匹配 [PET]...[/PET] 标签
         const petMatch = rawReply.match(/\[PET\]([\s\S]*?)\[\/PET\]/i);
+        if (petMatch) {
+            petReply = petMatch[1].trim();
+        } else {
+            // 4. 容错解析：如果缺少 [/PET] 结束标签，则匹配从 [PET] 开始到文本结尾的所有内容
+            const petNoClose = rawReply.match(/\[PET\]([\s\S]*?)$/i);
+            if (petNoClose) petReply = petNoClose[1].replace(/\[\/PET\]/gi, '').trim();
+        }
 
-        let charReply = charMatch ? charMatch[1].trim() : "";
-        let petReply = petMatch ? petMatch[1].trim() : "";
-
-        // 备用解析逻辑（如果AI偶尔没有使用标签，尝试匹配常规格式，比如带有星号的格式）
+        // 5. 最终降级备用解析逻辑（防止AI没有带任何中括号标签时使用名字匹配）
         if (!charReply) {
             const charFallback = rawReply.match(new RegExp(`(?:\\*?\\s*${charName}|角色)\\s*[:：]\\s*([^\\n\\[]+)`, 'i'));
             charReply = charFallback ? charFallback[1].trim() : "";
@@ -10668,7 +10684,9 @@ ${contextText}
             petReply = petFallback ? petFallback[1].trim() : "";
         }
 
-        // 先添加角色的回复
+        let hasOutput = false;
+
+        // 如果成功解析到角色的回复，单独将其上屏
         if (charReply) {
             history.push({
                 sender: 'char',
@@ -10677,10 +10695,11 @@ ${contextText}
             });
             saveData();
             renderFireChatroomMessages();
+            hasOutput = true;
             await new Promise(r => setTimeout(r, 1000));
         }
 
-        // 再添加小火人的回复
+        // 如果成功解析到小火人的回复，单独将其上屏
         if (petReply) {
             history.push({
                 sender: 'pet',
@@ -10689,10 +10708,11 @@ ${contextText}
             });
             saveData();
             renderFireChatroomMessages();
+            hasOutput = true;
         }
 
-        // 如果都没有匹配到，提示用户
-        if (!charReply && !petReply) {
+        // 只有当两者都完全无法解析，或者都为空时，才会弹出报错
+        if (!hasOutput) {
             alert("API 返回的格式不符合要求，请重试。返回内容：\n" + rawReply.substring(0, 100));
         }
 
